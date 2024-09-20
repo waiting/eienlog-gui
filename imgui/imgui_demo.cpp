@@ -1,4 +1,4 @@
-// dear imgui, v1.91.1 WIP
+﻿// dear imgui, v1.91.1 WIP
 // (demo code)
 
 // Help:
@@ -105,6 +105,7 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #ifndef IMGUI_DISABLE
 
 // System includes
@@ -9090,6 +9091,9 @@ static void ShowExampleAppLongText(bool* p_open)
             log.appendf("%i The quick brown fox jumps over the lazy dog\n", lines + i);
         lines += 1000;
     }
+    ImGui::SameLine();
+    static bool yScrollBottom = false;
+    ImGui::Checkbox(u8"固定滚动条到底", &yScrollBottom);
     ImGui::BeginChild("Log");
     switch (test_type)
     {
@@ -9105,7 +9109,7 @@ static void ShowExampleAppLongText(bool* p_open)
             clipper.Begin(lines);
             while (clipper.Step())
                 for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-                    ImGui::Text("%i The quick brown fox jumps over the lazy dog", i);
+                    ImGui::Text("%i Multiple calls to Text(), manually coarsely clipped", i);
             ImGui::PopStyleVar();
             break;
         }
@@ -9113,11 +9117,20 @@ static void ShowExampleAppLongText(bool* p_open)
         // Multiple calls to Text(), not clipped (slow)
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
         for (int i = 0; i < lines; i++)
-            ImGui::Text("%i The quick brown fox jumps over the lazy dog", i);
+            ImGui::Text("%i Multiple calls to Text(), not clipped (slow)", i);
         ImGui::PopStyleVar();
         break;
     }
+
+    if ( yScrollBottom ) ImGui::SetScrollHereY(1.0f);
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiID active_id = ImGui::GetActiveID();
+    bool scrollbar_x_active = active_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_X);
+    bool scrollbar_y_active = active_id == ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y);
+    if (scrollbar_y_active) yScrollBottom = false;
+
     ImGui::EndChild();
+
     ImGui::End();
 }
 
