@@ -887,6 +887,7 @@ DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 typedef HRESULT(WINAPI* PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib + dll, Windows 8.1+
 typedef HRESULT(WINAPI* PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);        // Shcore.lib + dll, Windows 8.1+
 typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT); // User32.lib + dll, Windows 10 v1607+ (Creators Update)
+typedef BOOL(WINAPI* PFN_SetProcessDPIAware)(VOID);
 
 // Helper function to enable DPI awareness without setting up a manifest
 void ImGui_ImplWin32_EnableDpiAwareness()
@@ -895,9 +896,10 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     if (ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData())
         bd->WantUpdateMonitors = true;
 
+    static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
+
     if (_IsWindows10OrGreater())
     {
-        static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
         if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
         {
             SetThreadDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -914,7 +916,11 @@ void ImGui_ImplWin32_EnableDpiAwareness()
         }
     }
 #if _WIN32_WINNT >= 0x0600
-    ::SetProcessDPIAware();
+    //::SetProcessDPIAware();
+    if (PFN_SetProcessDPIAware SetProcessDPIAwareFn = (PFN_SetProcessDPIAware)::GetProcAddress(user32_dll, "SetProcessDPIAware") )
+    {
+        SetProcessDPIAwareFn();
+    }
 #endif
 }
 

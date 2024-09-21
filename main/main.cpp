@@ -14,6 +14,120 @@
 
 #include "resource.h"
 
+// DirectX相关
+struct D3D
+{
+    // Helper functions
+    bool createDeviceD3D(HWND hWnd)
+    {
+        if ((this->pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == nullptr)
+            return false;
+
+        // Create the D3DDevice
+        ZeroMemory(&this->d3dpp, sizeof(this->d3dpp));
+        this->d3dpp.Windowed = TRUE;
+        this->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+        this->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN; // Need to use an explicit format with alpha if needing per-pixel alpha composition.
+        this->d3dpp.EnableAutoDepthStencil = TRUE;
+        this->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
+        this->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;           // Present with vsync
+        //this->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync, maximum unthrottled framerate
+        if (this->pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &this->d3dpp, &this->pd3dDevice) < 0)
+            return false;
+
+        return true;
+    }
+
+    void cleanupDeviceD3D()
+    {
+        if (this->pd3dDevice)
+        {
+            this->pd3dDevice->Release();
+            this->pd3dDevice = nullptr;
+        }
+        if (this->pD3D)
+        {
+            this->pD3D->Release();
+            this->pD3D = nullptr;
+        }
+    }
+
+    void resetDevice()
+    {
+        ImGui_ImplDX9_InvalidateDeviceObjects();
+        HRESULT hr = this->pd3dDevice->Reset(&this->d3dpp);
+        if (hr == D3DERR_INVALIDCALL)
+            IM_ASSERT(0);
+        ImGui_ImplDX9_CreateDeviceObjects();
+    }
+
+    LPDIRECT3D9 pD3D = nullptr;
+    LPDIRECT3DDEVICE9 pd3dDevice = nullptr;
+    bool deviceLost = false;
+    UINT resizeWidth = 0, resizeHeight = 0;
+    D3DPRESENT_PARAMETERS d3dpp = {};
+};
+
+// Win32窗口相关
+struct Win32Window
+{
+    static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+    bool registerWndClass( LPCWSTR wndClassName )
+    {
+        return true;
+    }
+
+    void unregisterWndClass()
+    {
+    }
+
+    bool createWindow()
+    {
+        return true;
+    }
+
+    void destroyWindow()
+    {
+    }
+
+    WNDCLASSEXW wc;
+    HWND hWnd;
+    HICON hIcon;
+
+};
+
+// 本应用程序
+struct Application
+{
+    Application( HINSTANCE hInstance ) : hInstance(hInstance)
+    {
+    }
+    ~Application()
+    {
+    }
+
+    bool initInstance()
+    {
+        return true;
+    }
+
+    void exitInstance()
+    {
+    }
+
+    // 消息循环
+    int run()
+    {
+        return 0;
+    }
+
+    HINSTANCE hInstance;
+    D3D dx; // DirectX 3D
+    Win32Window w32wnd; // Win32 Window
+    ImGuiContext * ctx; // ImGui Context
+};
+
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = nullptr;
@@ -25,13 +139,14 @@ static D3DPRESENT_PARAMETERS    g_d3dpp = {};
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void ResetDevice();
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Main code
-int APIENTRY _tWinMain(
+int APIENTRY wWinMain(
     HINSTANCE   hInstance,
     HINSTANCE   hPrevInstance,
-    LPTSTR      lpCmdLine,
+    LPWSTR      lpCmdLine,
     int         nCmdShow
 )
 {
@@ -100,9 +215,9 @@ int APIENTRY _tWinMain(
 
     // 设置微软雅黑字体，并指定字体大小
     ImFont* font = io.Fonts->AddFontFromFileTTF(
-        "C:\\Windows\\Fonts\\msyh.ttc",
-        //"C:\\Windows\\Fonts\\simsun.ttc",
-        18,
+        //"C:\\Windows\\Fonts\\msyh.ttc",
+        "C:\\Windows\\Fonts\\simhei.ttf",
+        16,
         nullptr,
         // 设置加载中文
         io.Fonts->GetGlyphRangesChineseSimplifiedCommon()
@@ -173,7 +288,7 @@ int APIENTRY _tWinMain(
 
             ImGui::Text(u8"这是一些无用的文本，测试中文显示。" );               // Display some text (you can use a format strings too)
             ImGui::SameLine();
-            ImGui::Button("OK");
+            if ( ImGui::Button("OK") ) MessageBoxW( hwnd, L"msgbox", L"", 0 );
             ImGui::Separator();
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
