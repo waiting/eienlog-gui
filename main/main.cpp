@@ -12,6 +12,8 @@
 #include <d3d9.h>
 #include <tchar.h>
 
+#include <thread>
+
 #include "resource.h"
 
 #ifndef WM_DPICHANGED
@@ -211,25 +213,36 @@ bool App::initInstance()
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+    //ImFont * font = this->ctx->IO.Fonts->AddFontDefault();
+    //ImFont * font = this->ctx->IO.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //ImFont * font = this->ctx->IO.Fonts->AddFontFromFileTTF(
+    //    "C:\\Windows\\Fonts\\ArialUni.ttf",
+    //    18.0f,
+    //    nullptr,
+    //    this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon()
+    //);
     //IM_ASSERT(font != nullptr);
 
-    // 设置微软雅黑字体，并指定字体大小
-    ImFont* font = this->ctx->IO.Fonts->AddFontFromFileTTF(
-        //"C:\\Windows\\Fonts\\msyh.ttc",
-        "C:\\Windows\\Fonts\\simhei.ttf",
-        16,
-        nullptr,
-        // 设置加载中文
-        this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon()
-    );
-    // 必须判断一下字体有没有加载成功
-    IM_ASSERT(font != nullptr);
+    //ImFont* font1 = this->ctx->IO.Fonts->AddFontFromFileTTF(
+    //    "C:\\Windows\\Fonts\\msyh.ttc",
+    //    20,
+    //    nullptr,
+    //    this->ctx->IO.Fonts->GetGlyphRangesChineseFull()
+    //);
+    //IM_ASSERT(font1 != nullptr);
+
+    //std::thread th( [this] {
+        ImFont* font2 = this->ctx->IO.Fonts->AddFontFromFileTTF(
+            "C:\\Windows\\Fonts\\simhei.ttf",
+            16,
+            nullptr,
+            this->ctx->IO.Fonts->GetGlyphRangesChineseFull()
+        );
+        IM_ASSERT(font2 != nullptr);
+    //} ); th.detach();
 
     return true;
 }
@@ -364,7 +377,7 @@ void App::renderUI()
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (opt_fullscreen)
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -393,7 +406,7 @@ void App::renderUI()
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
     if (!opt_padding)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+    ImGui::Begin("EienLog DockSpace", nullptr, window_flags);
     if (!opt_padding)
         ImGui::PopStyleVar();
 
@@ -418,13 +431,42 @@ void App::renderUI()
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Options"))
+        if ( ImGui::BeginMenu(u8"文件") )
+        {
+            ImGui::Separator();
+            if ( ImGui::MenuItem(u8"退出") )
+            {
+                PostQuitMessage(0);
+            }
+            ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu(u8"主题") )
+        {
+            static int colorsTheme = 2;
+            if ( ImGui::MenuItem( u8"暗黑（Dark）", nullptr, colorsTheme == 0 ) )
+            {
+                colorsTheme = 0;
+                ImGui::StyleColorsDark();
+            }
+            if ( ImGui::MenuItem( u8"明亮（Light）", nullptr, colorsTheme == 1 ) )
+            {
+                colorsTheme = 1;
+                ImGui::StyleColorsLight();
+            }
+            if ( ImGui::MenuItem( u8"经典（Classic）", nullptr, colorsTheme == 2 ) )
+            {
+                colorsTheme = 2;
+                ImGui::StyleColorsClassic();
+            }
+            ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu(u8"工作区") )
         {
             // Disabling fullscreen would allow the window to be moved to the front of other windows,
             // which we can't undo at the moment without finer window depth/z control.
-            //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
-            //ImGui::MenuItem("Padding", NULL, &opt_padding);
-            //ImGui::Separator();
+            ImGui::MenuItem( u8"全窗显示", nullptr, &opt_fullscreen );
+            ImGui::MenuItem( u8"Padding", nullptr, &opt_padding );
+            ImGui::Separator();
 
             if (ImGui::MenuItem("Flag: NoDockingOverCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingOverCentralNode) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingOverCentralNode; }
             if (ImGui::MenuItem("Flag: NoDockingSplit",         "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingSplit) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingSplit; }
@@ -438,15 +480,14 @@ void App::renderUI()
                 *p_open = false;*/
             ImGui::EndMenu();
         }
+
         HelpMarker(
-            "When docking is enabled, you can ALWAYS dock MOST window into another! Try it now!" "\n"
-            "- Drag from window title bar or their tab to dock/undock." "\n"
-            "- Drag from window menu button (upper-left button) to undock an entire node (all windows)." "\n"
-            "- Hold SHIFT to disable docking (if io.ConfigDockingWithShift == false, default)" "\n"
-            "- Hold SHIFT to enable docking (if io.ConfigDockingWithShift == true)" "\n"
-            "This demo app has nothing to do with enabling docking!" "\n\n"
-            "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to manually create a docking node _within_ another window." "\n\n"
-            "Read comments in ShowExampleAppDockSpace() for more details.");
+            u8"启用停靠功能后，您始终可以将大多数窗口停靠到另一个窗口中！" "\n"
+            u8"- 从窗口标题栏或其标签拖动到停靠/解停靠。" "\n"
+            u8"- 从窗口菜单按钮（左上角按钮）拖动可解除整个节点（所有窗口）的停靠。" "\n"
+            u8"- 按住 SHIFT 键可禁用停靠（如果 io.ConfigDockingWithShift == false，默认值）" "\n"
+            u8"- 按住 SHIFT 键启用停靠（如果 io.ConfigDockingWithShift == true）"
+        );
 
         ImGui::EndMenuBar();
     }
