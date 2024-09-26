@@ -149,7 +149,24 @@ struct App
     // 消息循环
     int run();
 
+    // 渲染界面
     void renderUI();
+
+    void renderDockSpace();
+    void renderDockSpaceMenuBar();
+
+    // 渲染Tooltip
+    static void HelpMarker(const char* desc)
+    {
+        ImGui::TextDisabled("(?)");
+        if ( ImGui::BeginItemTooltip() )
+        {
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(desc);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
 
     HINSTANCE hInstance;
     int nCmdShow;
@@ -161,6 +178,12 @@ struct App
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // Dock space state
+    ImGuiID dockspace_id;
+    bool opt_fullscreen = true;
+    bool opt_padding = false;
+    ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 };
 
 App * App::app;
@@ -357,145 +380,9 @@ int App::run()
     return 0;
 }
 
-static void HelpMarker(const char* desc)
-{
-    ImGui::TextDisabled("(?)");
-    if (ImGui::BeginItemTooltip())
-    {
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
-
 void App::renderUI()
 {
-    static bool opt_fullscreen = true;
-    static bool opt_padding = false;
-    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
-    // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-    // because it would be confusing to have two docking targets within each others.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus;
-    if ( opt_fullscreen )
-    {
-        const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->WorkPos);
-        ImGui::SetNextWindowSize(viewport->WorkSize);
-        ImGui::SetNextWindowViewport(viewport->ID);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    }
-    else
-    {
-        dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
-    }
-
-    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-    // and handle the pass-thru hole, so we ask Begin() to not render a background.
-    if ( dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode ) window_flags |= ImGuiWindowFlags_NoBackground;
-
-    // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-    // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
-    // all active windows docked into it will lose their parent and become undocked.
-    // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
-    // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-    if ( !opt_padding ) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-    ImGui::Begin("EienLog DockSpace", nullptr, window_flags);
-
-    if (!opt_padding) ImGui::PopStyleVar();
-
-    if (opt_fullscreen) ImGui::PopStyleVar(2);
-
-    // Submit the DockSpace
-    ImGuiIO& io = this->ctx->IO;
-    ImGuiID dockspace_id;
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-    {
-        dockspace_id = ImGui::GetID("EienLogGuiDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-    }
-    else
-    {
-        ImGui::Text("ERROR: Docking is not enabled! See Demo > Configuration.");
-        ImGui::Text("Set io.ConfigFlags |= ImGuiConfigFlags_DockingEnable in your code, or ");
-        ImGui::SameLine(0.0f, 0.0f);
-        if (ImGui::SmallButton("click here"))
-            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    }
-
-    if (ImGui::BeginMenuBar())
-    {
-        if ( ImGui::BeginMenu(u8"文件") )
-        {
-            if ( ImGui::MenuItem(u8"新建") )
-            {
-                MessageBox( w32wnd.hWnd, L"New", L"New viewer", 0 );
-            }
-            ImGui::Separator();
-            if ( ImGui::MenuItem(u8"退出") )
-            {
-                PostQuitMessage(0);
-            }
-            ImGui::EndMenu();
-        }
-        if ( ImGui::BeginMenu(u8"主题") )
-        {
-            static int colorsTheme = 2;
-            if ( ImGui::MenuItem( u8"暗黑（Dark）", nullptr, colorsTheme == 0 ) )
-            {
-                colorsTheme = 0;
-                ImGui::StyleColorsDark();
-            }
-            if ( ImGui::MenuItem( u8"明亮（Light）", nullptr, colorsTheme == 1 ) )
-            {
-                colorsTheme = 1;
-                ImGui::StyleColorsLight();
-            }
-            if ( ImGui::MenuItem( u8"经典（Classic）", nullptr, colorsTheme == 2 ) )
-            {
-                colorsTheme = 2;
-                ImGui::StyleColorsClassic();
-            }
-            ImGui::EndMenu();
-        }
-        if ( ImGui::BeginMenu(u8"工作区") )
-        {
-            // Disabling fullscreen would allow the window to be moved to the front of other windows,
-            // which we can't undo at the moment without finer window depth/z control.
-            ImGui::MenuItem( u8"全窗显示", nullptr, &opt_fullscreen );
-            ImGui::MenuItem( u8"Padding", nullptr, &opt_padding );
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Flag: NoDockingOverCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingOverCentralNode) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingOverCentralNode; }
-            if (ImGui::MenuItem("Flag: NoDockingSplit",         "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingSplit) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingSplit; }
-            if (ImGui::MenuItem("Flag: NoUndocking",            "", (dockspace_flags & ImGuiDockNodeFlags_NoUndocking) != 0))                { dockspace_flags ^= ImGuiDockNodeFlags_NoUndocking; }
-            if (ImGui::MenuItem("Flag: NoResize",               "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                   { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
-            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
-            if (ImGui::MenuItem("Flag: PassthruCentralNode",    "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
-            //ImGui::Separator();
-
-            /*if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
-                *p_open = false;*/
-            ImGui::EndMenu();
-        }
-
-        HelpMarker(
-            u8"启用停靠功能后，您始终可以将大多数窗口停靠到另一个窗口中！" "\n"
-            u8"- 从窗口标题栏或其标签拖动到停靠/解停靠。" "\n"
-            u8"- 从窗口菜单按钮（左上角按钮）拖动可解除整个节点（所有窗口）的停靠。" "\n"
-            u8"- 按住 SHIFT 键可禁用停靠（如果 io.ConfigDockingWithShift == false，默认值）" "\n"
-            u8"- 按住 SHIFT 键启用停靠（如果 io.ConfigDockingWithShift == true）"
-        );
-
-        ImGui::EndMenuBar();
-    }
-
-    ImGui::End();
+    this->renderDockSpace();
 
     ImGuiWindowClass window_class;
     //window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoWindowMenuButton;
@@ -534,7 +421,177 @@ void App::renderUI()
         dx.forceReset = true;
     }
     ImGui::End();
+}
 
+void App::renderDockSpace()
+{
+    // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+    // because it would be confusing to have two docking targets within each others.
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus;
+    if ( opt_fullscreen )
+    {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    }
+    else
+    {
+        dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
+    }
+
+    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
+    // and handle the pass-thru hole, so we ask Begin() to not render a background.
+    if ( dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode ) window_flags |= ImGuiWindowFlags_NoBackground;
+
+    // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
+    // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
+    // all active windows docked into it will lose their parent and become undocked.
+    // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
+    // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
+    if ( !opt_padding ) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+    ImGui::Begin("EienLog DockSpace", nullptr, window_flags);
+
+    if (!opt_padding) ImGui::PopStyleVar();
+
+    if (opt_fullscreen) ImGui::PopStyleVar(2);
+
+    // Submit the DockSpace
+    ImGuiIO& io = this->ctx->IO;
+
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        dockspace_id = ImGui::GetID("EienLogGuiDockSpace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+    }
+    else
+    {
+        ImGui::Text("ERROR: Docking is not enabled! See Demo > Configuration.");
+        ImGui::Text("Set io.ConfigFlags |= ImGuiConfigFlags_DockingEnable in your code, or ");
+        ImGui::SameLine(0.0f, 0.0f);
+        if (ImGui::SmallButton("click here"))
+            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    }
+
+    this->renderDockSpaceMenuBar();
+
+    ImGui::End();
+}
+
+void App::renderDockSpaceMenuBar()
+{
+    if (ImGui::BeginMenuBar())
+    {
+        //static bool open_modal_window = false;
+        static bool toggle_popup = false;
+        if ( ImGui::BeginMenu(u8"文件") )
+        {
+            if ( ImGui::MenuItem(u8"新建...") )
+            {
+                //open_modal_window = true;
+                toggle_popup = true;
+            }
+            ImGui::Separator();
+            if ( ImGui::MenuItem(u8"退出") )
+            {
+                PostQuitMessage(0);
+            }
+            ImGui::EndMenu();
+        }
+        //if ( open_modal_window )
+        {
+            if ( toggle_popup ) { ImGui::OpenPopup("New..."); toggle_popup = false; }
+            // Always center this window when appearing
+            //ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+            //ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+
+            if ( ImGui::BeginPopupModal( "New...", NULL, ImGuiWindowFlags_AlwaysAutoResize ) )
+            {
+                ImGui::Text( u8"新建一个监听窗口，监听日志信息" );
+                //ImGui::Separator();
+                static int port = 23456;
+                // 对齐标签文本
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text(u8"监听端口"); // 这将是左侧的标签
+                ImGui::SameLine( 0.0f, 0.5f );
+                // 设置输入框的宽度
+                //ImGui::PushItemWidth(-1);
+                ImGui::InputInt( u8"##listen_port", &port, 1, 65535 );
+
+                static bool dont_ask_me_next_time = false;
+                ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
+                ImGui::Checkbox( "Don't ask me next time", &dont_ask_me_next_time );
+                ImGui::PopStyleVar();
+
+                if ( ImGui::Button( "OK", ImVec2( 120, 0 ) ) ) {
+                    ImGui::CloseCurrentPopup();
+                    //open_modal_window = false;
+                }
+                ImGui::SetItemDefaultFocus();
+                ImGui::SameLine();
+                if ( ImGui::Button( "Cancel", ImVec2( 120, 0 ) ) ) {
+                    ImGui::CloseCurrentPopup();
+                    //open_modal_window = false;
+                }
+                ImGui::EndPopup();
+            }
+        }
+        if ( ImGui::BeginMenu(u8"主题") )
+        {
+            static int colorsTheme = 2;
+            if ( ImGui::MenuItem( u8"暗黑（Dark）", nullptr, colorsTheme == 0 ) )
+            {
+                colorsTheme = 0;
+                ImGui::StyleColorsDark();
+            }
+            if ( ImGui::MenuItem( u8"明亮（Light）", nullptr, colorsTheme == 1 ) )
+            {
+                colorsTheme = 1;
+                ImGui::StyleColorsLight();
+            }
+            if ( ImGui::MenuItem( u8"经典（Classic）", nullptr, colorsTheme == 2 ) )
+            {
+                colorsTheme = 2;
+                ImGui::StyleColorsClassic();
+            }
+            ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu(u8"工作区") )
+        {
+            // Disabling fullscreen would allow the window to be moved to the front of other windows,
+            // which we can't undo at the moment without finer window depth/z control.
+            ImGui::MenuItem( u8"全窗显示", nullptr, &opt_fullscreen );
+            ImGui::MenuItem( u8"Padding", nullptr, &opt_padding );
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Flag: NoDockingOverCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingOverCentralNode) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingOverCentralNode; }
+            if (ImGui::MenuItem("Flag: NoDockingSplit",         "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingSplit) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingSplit; }
+            if (ImGui::MenuItem("Flag: NoUndocking",            "", (dockspace_flags & ImGuiDockNodeFlags_NoUndocking) != 0))                { dockspace_flags ^= ImGuiDockNodeFlags_NoUndocking; }
+            if (ImGui::MenuItem("Flag: NoResize",               "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                   { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
+            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
+            if (ImGui::MenuItem("Flag: PassthruCentralNode",    "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
+            //ImGui::Separator();
+
+            /*if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
+            *p_open = false;*/
+            ImGui::EndMenu();
+        }
+
+        HelpMarker(
+            u8"启用停靠功能后，您始终可以将大多数窗口停靠到另一个窗口中！" "\n"
+            u8"- 从窗口标题栏或其标签拖动到停靠/解停靠。" "\n"
+            u8"- 从窗口菜单按钮（左上角按钮）拖动可解除整个节点（所有窗口）的停靠。" "\n"
+            u8"- 按住 SHIFT 键可禁用停靠（如果 io.ConfigDockingWithShift == false，默认值）" "\n"
+            u8"- 按住 SHIFT 键启用停靠（如果 io.ConfigDockingWithShift == true）"
+        );
+
+        ImGui::EndMenuBar();
+    }
 }
 
 
