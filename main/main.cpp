@@ -9,10 +9,12 @@
 #include "imgui_internal.h"
 #include "imgui_impl_dx9.h"
 #include "imgui_impl_win32.h"
+#include "misc/cpp/imgui_stdlib.h"
 #include <d3d9.h>
 #include <tchar.h>
 
 #include <thread>
+#include <vector>
 
 #include "resource.h"
 
@@ -126,7 +128,12 @@ struct Win32Window
     WNDCLASSEXW wc;
     HWND hWnd;
     HICON hIcon;
+};
 
+struct EienLogContext
+{
+    USHORT port;
+    std::string name;
 };
 
 // 本应用程序
@@ -184,6 +191,8 @@ struct App
     bool opt_fullscreen = true;
     bool opt_padding = false;
     ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+
+    std::vector<EienLogContext> logCtxs;
 };
 
 App * App::app;
@@ -421,6 +430,14 @@ void App::renderUI()
         dx.forceReset = true;
     }
     ImGui::End();
+
+    for ( auto && logCtx : this->logCtxs )
+    {
+        ImGui::Begin( logCtx.name.c_str() );
+        ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
+        ImGui::Text( u8"监听端口%u", logCtx.port );
+        ImGui::End();
+    }
 }
 
 void App::renderDockSpace()
@@ -513,24 +530,30 @@ void App::renderDockSpaceMenuBar()
             if ( ImGui::BeginPopupModal( "New...", NULL, ImGuiWindowFlags_AlwaysAutoResize ) )
             {
                 ImGui::Text( u8"新建一个监听窗口，监听日志信息" );
-                //ImGui::Separator();
+                ImGui::Separator();
                 static int port = 23456;
                 // 对齐标签文本
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text(u8"监听端口"); // 这将是左侧的标签
-                ImGui::SameLine( 0.0f, 0.5f );
+                ImGui::SameLine( 0.0f, 1.0f );
                 // 设置输入框的宽度
                 //ImGui::PushItemWidth(-1);
                 ImGui::InputInt( u8"##listen_port", &port, 1, 65535 );
 
-                static bool dont_ask_me_next_time = false;
+                static std::string name = u8"日志";
+                ImGui::InputText( u8"区分名称", &name );
+                //static bool dont_ask_me_next_time = false;
                 ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
-                ImGui::Checkbox( "Don't ask me next time", &dont_ask_me_next_time );
+                //ImGui::Checkbox( "Don't ask me next time", &dont_ask_me_next_time );
                 ImGui::PopStyleVar();
+                //ImGui::Checkbox( "Don't ask me next time.", &dont_ask_me_next_time );
 
                 if ( ImGui::Button( "OK", ImVec2( 120, 0 ) ) ) {
                     ImGui::CloseCurrentPopup();
-                    //open_modal_window = false;
+                    
+                    this->logCtxs.push_back( { (USHORT)port, name } );
+                    name = u8"日志";
+                    port++;
                 }
                 ImGui::SetItemDefaultFocus();
                 ImGui::SameLine();
