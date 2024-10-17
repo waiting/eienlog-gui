@@ -11,6 +11,7 @@
 #include "imgui_impl_win32.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include <d3d9.h>
+#include <d3dx9tex.h>
 #include <tchar.h>
 
 #include <thread>
@@ -192,6 +193,9 @@ struct App
     bool opt_padding = false;
     ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
+    // MyData
+    LPDIRECT3DTEXTURE9 pTexture;
+    ImVec2 imgSize;
     std::vector<EienLogContext> logCtxs;
 };
 
@@ -246,6 +250,8 @@ bool App::initInstance()
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     //ImFont * font = this->ctx->IO.Fonts->AddFontDefault();
+    ImFontConfig config;
+    //config.MergeMode = true;
     //ImFont * font = this->ctx->IO.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
@@ -266,16 +272,47 @@ bool App::initInstance()
     //);
     //IM_ASSERT(font1 != nullptr);
 
+    static ImVector<ImWchar> ranges;
+    ImFontGlyphRangesBuilder builder;
+    builder.AddRanges( this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon() );
+    ImWchar c = u'钮';
+    builder.AddChar(c);
+    builder.BuildRanges(&ranges);
+    const ImWchar * CharsetData = ranges.Data;
+
+    setlocale( LC_CTYPE, "" );
+    auto i = 0, n = 0;
+    for ( ; CharsetData[i]; i+=2 )
+    {
+        n += CharsetData[i+1] - CharsetData[i] + 1;
+        for ( auto c = CharsetData[i]; c <= CharsetData[i + 1]; c++ )
+        {
+            wprintf( L"%c[%x] ", c, c );
+        }
+        wprintf(L"\n");
+        //wprintf( L"%c[%x] ~ %c[%x] : %d\n", CharsetData[i], CharsetData[i], CharsetData[i+1], CharsetData[i+1], CharsetData[i+1] - CharsetData[i] + 1 );
+    }
+    wprintf( L"%d, %d\n", i, n );
+
     //std::thread th( [this] {
-        ImFont* font2 = this->ctx->IO.Fonts->AddFontFromFileTTF(
-            "C:\\Windows\\Fonts\\simhei.ttf",
-            16,
-            nullptr,
-            this->ctx->IO.Fonts->GetGlyphRangesChineseFull()
-        );
-        IM_ASSERT(font2 != nullptr);
+    ImFont* font2 = this->ctx->IO.Fonts->AddFontFromFileTTF(
+        "C:\\Windows\\Fonts\\simhei.ttf",
+        16,
+        &config,
+        CharsetData
+        //this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon()
+    );
+    IM_ASSERT(font2 != nullptr);
     //} ); th.detach();
 
+    D3DXIMAGE_INFO imgInfo;
+    HRESULT hr;// = D3DXCreateTextureFromFile( this->dx.pd3dDevice, LR"(J:\Pictures\image0001.jpg)", &this->pTexture );
+    hr = D3DXCreateTextureFromFileEx( this->dx.pd3dDevice, LR"(J:\Pictures\image0001-1.png)", D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, &imgInfo, NULL, &pTexture);
+    if (SUCCEEDED(hr))
+    {
+        this->imgSize.x = imgInfo.Width;
+        this->imgSize.y = imgInfo.Height;
+    }
     return true;
 }
 
@@ -397,45 +434,44 @@ void App::renderUI()
     //window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoWindowMenuButton;
     ImGui::SetNextWindowClass(&window_class);
 
-    ImGui::Begin(u8"Hello, world!");// Create a window called "Hello, world!" and append into it.
-    ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-    ImGui::Text(u8"你好世界");
-    ImGui::End();
-
-    //ImGui::SetNextWindowFocus();
-    ImGui::Begin(u8"你好，EienLogGui！");// Create a window called "Hello, world!" and append into it.
-    ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-    ImGui::Text(u8"这是一些无用的文本，测试中文显示。" );               // Display some text (you can use a format strings too)
-    ImGui::SameLine();
-    if ( ImGui::Button("OK") ) MessageBoxW( w32wnd.hWnd, L"msgbox", L"", 0 );
-    ImGui::Separator();
-    ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-    ImGui::Checkbox("Another Window", &show_another_window);
-
-    static float f = 0.0f;
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-    ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-    static int counter = 0;
-    if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-        counter++;
-    ImGui::SameLine();
-    ImGui::Text("counter = %d", counter);
-
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / this->ctx->IO.Framerate, this->ctx->IO.Framerate);
-    static bool vsync = true;
-    if ( ImGui::Checkbox(u8"垂直同步", &vsync) )
+    static bool eiengui_win = true;
+    if ( eiengui_win )
     {
-        dx.d3dpp.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
-        dx.forceReset = true;
+        ImGui::Begin( u8"你好，EienLogGui！", &eiengui_win );// Create a window called "Hello, world!" and append into it.
+        ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
+        ImGui::Text( u8"这是一些无用的文本，测试中文显示。" );               // Display some text (you can use a format strings too)
+        ImGui::SameLine();
+        if ( ImGui::Button( "OK" ) ) MessageBoxW( w32wnd.hWnd, L"msgbox", L"", 0 );
+        ImGui::Separator();
+        ImGui::Checkbox( "Demo Window", &show_demo_window );      // Edit bools storing our window open/close state
+        ImGui::Checkbox( "Another Window", &show_another_window );
+
+        static float f = 0.0f;
+        ImGui::SliderFloat( "float", &f, 0.0f, 1.0f );            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3( "clear color", (float*)&clear_color ); // Edit 3 floats representing a color
+
+        static int counter = 0;
+        if ( ImGui::Button( "Button" ) )                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text( "counter = %d", counter );
+
+        ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / this->ctx->IO.Framerate, this->ctx->IO.Framerate );
+        static bool vsync = true;
+        if ( ImGui::Checkbox( u8"垂直同步", &vsync ) )
+        {
+            dx.d3dpp.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
+            dx.forceReset = true;
+        }
+        ImGui::End();
     }
-    ImGui::End();
 
     for ( auto && logCtx : this->logCtxs )
     {
         ImGui::Begin( logCtx.name.c_str() );
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
         ImGui::Text( u8"监听端口%u", logCtx.port );
+        ImGui::Image( (ImTextureID)this->pTexture, this->imgSize );
         ImGui::End();
     }
 }
@@ -540,7 +576,8 @@ void App::renderDockSpaceMenuBar()
                 //ImGui::PushItemWidth(-1);
                 ImGui::InputInt( u8"##listen_port", &port, 1, 65535 );
 
-                static std::string name = u8"日志";
+                static char ch[] = {'A', 0 };
+                static std::string name = std::string(u8"日志") + ch;
                 ImGui::InputText( u8"区分名称", &name );
                 //static bool dont_ask_me_next_time = false;
                 ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
@@ -548,11 +585,12 @@ void App::renderDockSpaceMenuBar()
                 ImGui::PopStyleVar();
                 //ImGui::Checkbox( "Don't ask me next time.", &dont_ask_me_next_time );
 
-                if ( ImGui::Button( "OK", ImVec2( 120, 0 ) ) ) {
+                if ( ImGui::Button( "OK", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) ) {
                     ImGui::CloseCurrentPopup();
                     
                     this->logCtxs.push_back( { (USHORT)port, name } );
-                    name = u8"日志";
+                    ch[0]++;
+                    name = std::string(u8"日志") + ch;
                     port++;
                 }
                 ImGui::SetItemDefaultFocus();
@@ -622,6 +660,17 @@ void App::renderDockSpaceMenuBar()
 int APIENTRY wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow )
 {
     App::app = new App( hInstance, nCmdShow );
+    if ( !App::app->initInstance() ) return 1;
+    int rc = App::app->run();
+    App::app->exitInstance();
+    delete App::app;
+    App::app = nullptr;
+    return rc;
+}
+
+int wmain()
+{
+    App::app = new App( GetModuleHandle(nullptr), SW_NORMAL );
     if ( !App::app->initInstance() ) return 1;
     int rc = App::app->run();
     App::app->exitInstance();

@@ -4,6 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.34112.143
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "eienlog-gui", "main\eienlog-gui.vcxproj", "{5C33B72D-351E-400B-A7C9-1774E8AE94BD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69} = {D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui", "imgui\imgui.vcxproj", "{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +26,14 @@ Global
 		{5C33B72D-351E-400B-A7C9-1774E8AE94BD}.Release|x64.Build.0 = Release|x64
 		{5C33B72D-351E-400B-A7C9-1774E8AE94BD}.Release|x86.ActiveCfg = Release|Win32
 		{5C33B72D-351E-400B-A7C9-1774E8AE94BD}.Release|x86.Build.0 = Release|Win32
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Debug|x64.ActiveCfg = Debug|x64
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Debug|x64.Build.0 = Debug|x64
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Debug|x86.ActiveCfg = Debug|Win32
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Debug|x86.Build.0 = Debug|Win32
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Release|x64.ActiveCfg = Release|x64
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Release|x64.Build.0 = Release|x64
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Release|x86.ActiveCfg = Release|Win32
+		{D4DD3DD3-CBB2-4F00-BD40-E947B0CEFD69}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
