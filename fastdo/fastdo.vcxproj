@@ -20,33 +20,33 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{5C33B72D-351E-400B-A7C9-1774E8AE94BD}</ProjectGuid>
+    <ProjectGuid>{1A85F3B3-1970-4181-8C73-5047F53DF5BB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>eienloggui</RootNamespace>
+    <RootNamespace>fastdo</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -84,100 +84,129 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fastdo.lib;imgui.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fastdo.lib;imgui.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fastdo.lib;imgui.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fastdo.lib;imgui.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="components\eienexpr\include\eienexpr.hpp" />
+    <ClInclude Include="components\eiennet\include\eiennet.hpp" />
+    <ClInclude Include="components\eiennet\include\eiennet_async.hpp" />
+    <ClInclude Include="components\eiennet\include\eiennet_base.hpp" />
+    <ClInclude Include="components\eiennet\include\eiennet_curl.hpp" />
+    <ClInclude Include="components\eiennet\include\eiennet_socket.hpp" />
+    <ClInclude Include="components\winux\include\archives.hpp" />
+    <ClInclude Include="components\winux\include\compress.hpp" />
+    <ClInclude Include="components\winux\include\console.hpp" />
+    <ClInclude Include="components\winux\include\encoding.hpp" />
+    <ClInclude Include="components\winux\include\filesys.hpp" />
+    <ClInclude Include="components\winux\include\json.hpp" />
+    <ClInclude Include="components\winux\include\md5.hpp" />
+    <ClInclude Include="components\winux\include\smartptr.hpp" />
+    <ClInclude Include="components\winux\include\strings.hpp" />
+    <ClInclude Include="components\winux\include\system.hpp" />
+    <ClInclude Include="components\winux\include\threads.hpp" />
+    <ClInclude Include="components\winux\include\threadtask.hpp" />
+    <ClInclude Include="components\winux\include\time.hpp" />
+    <ClInclude Include="components\winux\include\utilities.hpp" />
+    <ClInclude Include="components\winux\include\winux.hpp" />
+    <ClInclude Include="components\winux\src\mystdint.h" />
+    <ClInclude Include="components\winux\src\sha1.h" />
+    <ClInclude Include="components\winux\src\sha2.h" />
+    <ClInclude Include="components\winux\src\unzip.h" />
+    <ClInclude Include="components\winux\src\zip.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="eienlog-gui.rc" />
+    <None Include="components\eienexpr\include\eienexpr_errstrs.inl" />
+    <None Include="components\winux\include\func_invoker.inl" />
+    <None Include="components\winux\include\func_runable.inl" />
+    <None Include="components\winux\include\func_traits.inl" />
+    <None Include="components\winux\include\is_x_funcs.inl" />
+    <None Include="components\winux\include\literal_str.inl" />
+    <None Include="components\winux\include\mixed_ref_specified_type.inl" />
+    <None Include="components\winux\include\system_detection.inl" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="eienlog-gui.ico" />
-    <Image Include="small.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="components\eienexpr\src\eienexpr.cpp" />
+    <ClCompile Include="components\eiennet\src\eiennet_async.cpp" />
+    <ClCompile Include="components\eiennet\src\eiennet_base.cpp" />
+    <ClCompile Include="components\eiennet\src\eiennet_curl.cpp" />
+    <ClCompile Include="components\eiennet\src\eiennet_socket.cpp" />
+    <ClCompile Include="components\winux\src\archives.cpp" />
+    <ClCompile Include="components\winux\src\compress.cpp" />
+    <ClCompile Include="components\winux\src\console.cpp" />
+    <ClCompile Include="components\winux\src\encoding.cpp" />
+    <ClCompile Include="components\winux\src\filesys.cpp" />
+    <ClCompile Include="components\winux\src\json.cpp" />
+    <ClCompile Include="components\winux\src\md5.cpp" />
+    <ClCompile Include="components\winux\src\sha1.c" />
+    <ClCompile Include="components\winux\src\sha2.c" />
+    <ClCompile Include="components\winux\src\smartptr.cpp" />
+    <ClCompile Include="components\winux\src\strings.cpp" />
+    <ClCompile Include="components\winux\src\system.cpp" />
+    <ClCompile Include="components\winux\src\threads.cpp" />
+    <ClCompile Include="components\winux\src\time.cpp" />
+    <ClCompile Include="components\winux\src\unzip.cpp" />
+    <ClCompile Include="components\winux\src\utilities.cpp" />
+    <ClCompile Include="components\winux\src\zip.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

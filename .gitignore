@@ -23,6 +23,13 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+fastdo/components/eiendb/
+fastdo/components/eiengd/
+fastdo/components/eienml/
+fastdo/components/eientpl/
+fastdo/components/eienwebx/
+fastdo/components/fcgiplus/
+fastdo/components/httpwrapper/
 
 # Visual Studio 2015 cache/options directory
 .vs/

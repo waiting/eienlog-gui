@@ -194,7 +194,7 @@ struct App
     ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
     // MyData
-    LPDIRECT3DTEXTURE9 pTexture;
+    LPDIRECT3DTEXTURE9 pTexture = nullptr;
     ImVec2 imgSize;
     std::vector<EienLogContext> logCtxs;
 };
@@ -280,7 +280,7 @@ bool App::initInstance()
     builder.BuildRanges(&ranges);
     const ImWchar * CharsetData = ranges.Data;
 
-    setlocale( LC_CTYPE, "" );
+    /*setlocale( LC_CTYPE, "" );
     auto i = 0, n = 0;
     for ( ; CharsetData[i]; i+=2 )
     {
@@ -292,7 +292,7 @@ bool App::initInstance()
         wprintf(L"\n");
         //wprintf( L"%c[%x] ~ %c[%x] : %d\n", CharsetData[i], CharsetData[i], CharsetData[i+1], CharsetData[i+1], CharsetData[i+1] - CharsetData[i] + 1 );
     }
-    wprintf( L"%d, %d\n", i, n );
+    wprintf( L"%d, %d\n", i, n );*/
 
     //std::thread th( [this] {
     ImFont* font2 = this->ctx->IO.Fonts->AddFontFromFileTTF(
@@ -305,13 +305,13 @@ bool App::initInstance()
     IM_ASSERT(font2 != nullptr);
     //} ); th.detach();
 
-    D3DXIMAGE_INFO imgInfo;
-    HRESULT hr;// = D3DXCreateTextureFromFile( this->dx.pd3dDevice, LR"(J:\Pictures\image0001.jpg)", &this->pTexture );
-    hr = D3DXCreateTextureFromFileEx( this->dx.pd3dDevice, LR"(J:\Pictures\image0001-1.png)", D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, &imgInfo, NULL, &pTexture);
+    D3DXIMAGE_INFO imgInfo = { 0 };
+    HRESULT hr = S_OK;// = D3DXCreateTextureFromFile( this->dx.pd3dDevice, LR"(J:\Pictures\image0001.jpg)", &this->pTexture );
+    //hr = D3DXCreateTextureFromFileEx( this->dx.pd3dDevice, LR"(J:\Pictures\image0001-1.png)", D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, &imgInfo, NULL, &pTexture);
     if (SUCCEEDED(hr))
     {
-        this->imgSize.x = imgInfo.Width;
-        this->imgSize.y = imgInfo.Height;
+        this->imgSize.x = (float)imgInfo.Width;
+        this->imgSize.y = (float)imgInfo.Height;
     }
     return true;
 }
@@ -471,7 +471,7 @@ void App::renderUI()
         ImGui::Begin( logCtx.name.c_str() );
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
         ImGui::Text( u8"监听端口%u", logCtx.port );
-        ImGui::Image( (ImTextureID)this->pTexture, this->imgSize );
+        if ( this->pTexture ) ImGui::Image( (ImTextureID)this->pTexture, this->imgSize );
         ImGui::End();
     }
 }
