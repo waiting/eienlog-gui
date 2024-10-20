@@ -1,5 +1,5 @@
-#pragma once
-// ´°¿Úµ×²ã Win32´°¿Ú
+ï»¿#pragma once
+// çª—å£åº•å±‚ Win32çª—å£
 struct WindowInterface
 {
     static LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );

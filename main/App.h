@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -12,7 +12,7 @@
 #include "MainWindow.h"
 
 
-// ±¾Ó¦ÓÃ³ÌĞò
+// æœ¬åº”ç”¨ç¨‹åº
 struct App
 {
     App()
@@ -27,16 +27,18 @@ struct App
 
     void exitInstance();
 
-    // ÏûÏ¢Ñ­»·
+    // æ¶ˆæ¯å¾ªç¯
     int run();
 
-    // äÖÈ¾½çÃæ
+    // æ¸²æŸ“ç•Œé¢
     void renderUI();
 
     GraphicsInterface gi; // DirectX 3D
     WindowInterface wi; // Win32 Window
     ImGuiContext * ctx; // ImGui Context
 
+    LPDIRECT3DTEXTURE9 pBgTexture = nullptr;
+    D3DXIMAGE_INFO bgImgInfo;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     MainWindow * mainWindow = nullptr;
@@ -44,7 +46,7 @@ struct App
 
 extern App g_app;
 
-// äÖÈ¾Tooltip
+// æ¸²æŸ“Tooltip
 static void HelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");

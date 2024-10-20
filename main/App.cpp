@@ -1,10 +1,10 @@
-#include "App.h"
+﻿#include "App.h"
 
 bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
 {
     // Create application window
     if ( !wi.registerWndClass( L"EienLog Viewer Class", hInstance ) ) return false;
-    if ( !wi.createWindow(L"EienLog��־�鿴��") ) return false;
+    if ( !wi.createWindow(L"EienLog日志查看器") ) return false;
 
     // Initialize Direct3D
     if ( !gi.create(wi) ) return false;
@@ -74,7 +74,7 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     static ImVector<ImWchar> ranges;
     ImFontGlyphRangesBuilder builder;
     builder.AddRanges( this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon() );
-    ImWchar c = u'ť';
+    ImWchar c = u'钮';
     builder.AddChar(c);
     builder.BuildRanges(&ranges);
     const ImWchar * CharsetRanges = ranges.Data;
@@ -105,6 +105,25 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     //} ); th.detach();
 
     this->mainWindow = new MainWindow(*this);
+
+    //HRESULT hr = D3DXCreateTextureFromFileEx(
+    //    this->gi.pd3dDevice,
+    //    LR"(J:\Pictures\ComicImages\23_2.jpg)",
+    //    D3DX_DEFAULT,
+    //    D3DX_DEFAULT,
+    //    D3DX_DEFAULT,
+    //    0,
+    //    D3DFMT_UNKNOWN,
+    //    D3DPOOL_MANAGED,
+    //    D3DX_DEFAULT,
+    //    D3DX_DEFAULT,
+    //    0,
+    //    &this->bgImgInfo,
+    //    NULL,
+    //    &this->pBgTexture
+    //);
+
+
     return true;
 }
 
@@ -175,7 +194,7 @@ int App::run()
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        // ��ȾUI
+        // 渲染UI
         this->renderUI();
 
         // Rendering
@@ -185,6 +204,7 @@ int App::run()
         gi.pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
         D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(clear_color.x*clear_color.w*255.0f), (int)(clear_color.y*clear_color.w*255.0f), (int)(clear_color.z*clear_color.w*255.0f), (int)(clear_color.w*255.0f));
         gi.pd3dDevice->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
+
         if (gi.pd3dDevice->BeginScene() >= 0)
         {
             ImGui::Render();
@@ -211,6 +231,32 @@ void App::renderUI()
     if ( mainWindow )
     {
         mainWindow->render();
+    }
+
+    if ( this->pBgTexture )
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        // 设置窗口位置和大小
+        ImGui::SetNextWindowPos( ImVec2( 0, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+        ImGui::SetNextWindowSize( ImVec2( io.DisplaySize.x, io.DisplaySize.y ) );
+        // 设置窗口为透明
+        ImGui::SetNextWindowBgAlpha(0);
+        // 纹理ID
+        static ImTextureID bg_tex_id = nullptr;
+        if ( !bg_tex_id )
+        {
+            // 这里使用opencv加载图片，你也可以使用其他方式加载图片
+            bg_tex_id = (ImTextureID)pBgTexture;
+        }
+        // 设置窗口的padding为0，使图片控件充满窗口
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
+        // 设置窗口为无边框
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0 );
+        // 创建窗口使其固定在一个位置
+        ImGui::Begin( u8"背景", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar );
+        ImGui::Image( bg_tex_id, ImGui::GetContentRegionAvail() );
+        ImGui::End();
+        ImGui::PopStyleVar(2);
     }
 }
 

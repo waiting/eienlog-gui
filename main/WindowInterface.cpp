@@ -1,4 +1,4 @@
-#include "App.h"
+﻿#include "App.h"
 #include "resource.h"
 #include "WindowInterface.h"
 

@@ -1,16 +1,9 @@
-#include "App.h"
+ï»¿#include "App.h"
 #include "MainWindow.h"
 
 MainWindow::MainWindow( App & app ) : app(app)
 {
-    D3DXIMAGE_INFO imgInfo = { 0 };
-    HRESULT hr = S_OK;// = D3DXCreateTextureFromFile( this->gi.pd3dDevice, LR"(J:\Pictures\image0001.jpg)", &this->pTexture );
-    //hr = D3DXCreateTextureFromFileEx( this->gi.pd3dDevice, LR"(J:\Pictures\image0001-1.png)", D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, &imgInfo, NULL, &pTexture);
-    if (SUCCEEDED(hr))
-    {
-        this->imgSize.x = (float)imgInfo.Width;
-        this->imgSize.y = (float)imgInfo.Height;
-    }
+
 }
 
 void MainWindow::render()
@@ -24,9 +17,9 @@ void MainWindow::render()
     static bool eiengui_win = true;
     if ( eiengui_win )
     {
-        ImGui::Begin( u8"ÄãºÃ£¬EienLogGui£¡", &eiengui_win );// Create a window called "Hello, world!" and append into it.
+        ImGui::Begin( u8"ä½ å¥½ï¼ŒEienLogGuiï¼", &eiengui_win );// Create a window called "Hello, world!" and append into it.
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-        ImGui::Text( u8"ÕâÊÇÒ»Ğ©ÎŞÓÃµÄÎÄ±¾£¬²âÊÔÖĞÎÄÏÔÊ¾¡£" );               // Display some text (you can use a format strings too)
+        ImGui::Text( u8"è¿™æ˜¯ä¸€äº›æ— ç”¨çš„æ–‡æœ¬ï¼Œæµ‹è¯•ä¸­æ–‡æ˜¾ç¤ºã€‚" );               // Display some text (you can use a format strings too)
         ImGui::SameLine();
         if ( ImGui::Button( "OK" ) ) MessageBoxW( app.wi.hWnd, L"msgbox", L"", 0 );
         ImGui::Separator();
@@ -45,7 +38,7 @@ void MainWindow::render()
 
         ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / app.ctx->IO.Framerate, app.ctx->IO.Framerate );
         static bool vsync = true;
-        if ( ImGui::Checkbox( u8"´¹Ö±Í¬²½", &vsync ) )
+        if ( ImGui::Checkbox( u8"å‚ç›´åŒæ­¥", &vsync ) )
         {
             app.gi.d3dpp.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
             app.gi.forceReset = true;
@@ -59,8 +52,7 @@ void MainWindow::render()
         {
             ImGui::Begin( logCtx.name.c_str(), &logCtx.isShow );
             ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-            ImGui::Text( u8"¼àÌı¶Ë¿Ú%u", logCtx.port );
-            if ( this->pTexture ) ImGui::Image( (ImTextureID)this->pTexture, this->imgSize );
+            ImGui::Text( u8"ç›‘å¬ç«¯å£%u", logCtx.port );
             ImGui::End();
         }
     }
@@ -82,7 +74,7 @@ void MainWindow::renderDockSpace()
 {
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoBackground;
     if ( opt_fullscreen )
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -144,15 +136,15 @@ void MainWindow::renderDockSpaceMenuBar()
     {
         //static bool open_modal_window = false;
         static bool toggle_popup = false;
-        if ( ImGui::BeginMenu(u8"ÎÄ¼ş") )
+        if ( ImGui::BeginMenu(u8"æ–‡ä»¶") )
         {
-            if ( ImGui::MenuItem(u8"ĞÂ½¨...") )
+            if ( ImGui::MenuItem(u8"æ–°å»º...") )
             {
                 //open_modal_window = true;
                 toggle_popup = true;
             }
             ImGui::Separator();
-            if ( ImGui::MenuItem(u8"ÍË³ö") )
+            if ( ImGui::MenuItem(u8"é€€å‡º") )
             {
                 PostQuitMessage(0);
             }
@@ -167,20 +159,23 @@ void MainWindow::renderDockSpaceMenuBar()
 
             if ( ImGui::BeginPopupModal( "New...", NULL, ImGuiWindowFlags_AlwaysAutoResize ) )
             {
-                ImGui::Text( u8"ĞÂ½¨Ò»¸ö¼àÌı´°¿Ú£¬¼àÌıÈÕÖ¾ĞÅÏ¢" );
+                ImGui::Text( u8"æ–°å»ºä¸€ä¸ªç›‘å¬çª—å£ï¼Œç›‘å¬æ—¥å¿—ä¿¡æ¯" );
                 ImGui::Separator();
                 static int port = 23456;
-                // ¶ÔÆë±êÇ©ÎÄ±¾
+                // å¯¹é½æ ‡ç­¾æ–‡æœ¬
                 ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"¼àÌı¶Ë¿Ú"); // Õâ½«ÊÇ×ó²àµÄ±êÇ©
+                ImGui::Text(u8"ç›‘å¬ç«¯å£"); // è¿™å°†æ˜¯å·¦ä¾§çš„æ ‡ç­¾
                 ImGui::SameLine( 0.0f, 1.0f );
-                // ÉèÖÃÊäÈë¿òµÄ¿í¶È
+                // è®¾ç½®è¾“å…¥æ¡†çš„å®½åº¦
                 //ImGui::PushItemWidth(-1);
                 ImGui::InputInt( u8"##listen_port", &port, 1, 65535 );
 
                 static char ch[] = {'A', 0 };
-                static std::string name = std::string(u8"ÈÕÖ¾") + ch;
-                ImGui::InputText( u8"Çø·ÖÃû³Æ", &name );
+                static std::string name = std::string(u8"æ—¥å¿—") + ch;
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text(u8"åŒºåˆ†åç§°");
+                ImGui::SameLine( 0.0f, 1.0f );
+                ImGui::InputText( u8"##name", &name );
                 //static bool dont_ask_me_next_time = false;
                 ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
                 //ImGui::Checkbox( "Don't ask me next time", &dont_ask_me_next_time );
@@ -192,7 +187,7 @@ void MainWindow::renderDockSpaceMenuBar()
 
                     this->logCtxs.push_back( { (USHORT)port, name } );
                     ch[0]++;
-                    name = std::string(u8"ÈÕÖ¾") + ch;
+                    name = std::string(u8"æ—¥å¿—") + ch;
                     port++;
                 }
                 ImGui::SetItemDefaultFocus();
@@ -204,31 +199,31 @@ void MainWindow::renderDockSpaceMenuBar()
                 ImGui::EndPopup();
             }
         }
-        if ( ImGui::BeginMenu(u8"Ö÷Ìâ") )
+        if ( ImGui::BeginMenu(u8"ä¸»é¢˜") )
         {
             static int colorsTheme = 2;
-            if ( ImGui::MenuItem( u8"°µºÚ£¨Dark£©", nullptr, colorsTheme == 0 ) )
+            if ( ImGui::MenuItem( u8"æš—é»‘ï¼ˆDarkï¼‰", nullptr, colorsTheme == 0 ) )
             {
                 colorsTheme = 0;
                 ImGui::StyleColorsDark();
             }
-            if ( ImGui::MenuItem( u8"Ã÷ÁÁ£¨Light£©", nullptr, colorsTheme == 1 ) )
+            if ( ImGui::MenuItem( u8"æ˜äº®ï¼ˆLightï¼‰", nullptr, colorsTheme == 1 ) )
             {
                 colorsTheme = 1;
                 ImGui::StyleColorsLight();
             }
-            if ( ImGui::MenuItem( u8"¾­µä£¨Classic£©", nullptr, colorsTheme == 2 ) )
+            if ( ImGui::MenuItem( u8"ç»å…¸ï¼ˆClassicï¼‰", nullptr, colorsTheme == 2 ) )
             {
                 colorsTheme = 2;
                 ImGui::StyleColorsClassic();
             }
             ImGui::EndMenu();
         }
-        if ( ImGui::BeginMenu(u8"¹¤×÷Çø") )
+        if ( ImGui::BeginMenu(u8"å·¥ä½œåŒº") )
         {
             // Disabling fullscreen would allow the window to be moved to the front of other windows,
             // which we can't undo at the moment without finer window depth/z control.
-            ImGui::MenuItem( u8"È«´°ÏÔÊ¾", nullptr, &opt_fullscreen );
+            ImGui::MenuItem( u8"å…¨çª—æ˜¾ç¤º", nullptr, &opt_fullscreen );
             ImGui::MenuItem( u8"Padding", nullptr, &opt_padding );
             ImGui::Separator();
 
@@ -246,11 +241,11 @@ void MainWindow::renderDockSpaceMenuBar()
         }
 
         HelpMarker(
-            u8"ÆôÓÃÍ£¿¿¹¦ÄÜºó£¬ÄúÊ¼ÖÕ¿ÉÒÔ½«´ó¶àÊı´°¿ÚÍ£¿¿µ½ÁíÒ»¸ö´°¿ÚÖĞ£¡" "\n"
-            u8"- ´Ó´°¿Ú±êÌâÀ¸»òÆä±êÇ©ÍÏ¶¯µ½Í£¿¿/½âÍ£¿¿¡£" "\n"
-            u8"- ´Ó´°¿Ú²Ëµ¥°´Å¥£¨×óÉÏ½Ç°´Å¥£©ÍÏ¶¯¿É½â³ıÕû¸ö½Úµã£¨ËùÓĞ´°¿Ú£©µÄÍ£¿¿¡£" "\n"
-            u8"- °´×¡ SHIFT ¼ü¿É½ûÓÃÍ£¿¿£¨Èç¹û io.ConfigDockingWithShift == false£¬Ä¬ÈÏÖµ£©" "\n"
-            u8"- °´×¡ SHIFT ¼üÆôÓÃÍ£¿¿£¨Èç¹û io.ConfigDockingWithShift == true£©"
+            u8"å¯ç”¨åœé åŠŸèƒ½åï¼Œæ‚¨å§‹ç»ˆå¯ä»¥å°†å¤§å¤šæ•°çª—å£åœé åˆ°å¦ä¸€ä¸ªçª—å£ä¸­ï¼" "\n"
+            u8"- ä»çª—å£æ ‡é¢˜æ æˆ–å…¶æ ‡ç­¾æ‹–åŠ¨åˆ°åœé /è§£åœé ã€‚" "\n"
+            u8"- ä»çª—å£èœå•æŒ‰é’®ï¼ˆå·¦ä¸Šè§’æŒ‰é’®ï¼‰æ‹–åŠ¨å¯è§£é™¤æ•´ä¸ªèŠ‚ç‚¹ï¼ˆæ‰€æœ‰çª—å£ï¼‰çš„åœé ã€‚" "\n"
+            u8"- æŒ‰ä½ SHIFT é”®å¯ç¦ç”¨åœé ï¼ˆå¦‚æœ io.ConfigDockingWithShift == falseï¼Œé»˜è®¤å€¼ï¼‰" "\n"
+            u8"- æŒ‰ä½ SHIFT é”®å¯ç”¨åœé ï¼ˆå¦‚æœ io.ConfigDockingWithShift == trueï¼‰"
         );
 
         ImGui::EndMenuBar();

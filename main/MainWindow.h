@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 
 struct EienLogContext
@@ -29,8 +29,6 @@ struct MainWindow
     ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
     // MyData
-    LPDIRECT3DTEXTURE9 pTexture = nullptr;
-    ImVec2 imgSize;
     std::vector<EienLogContext> logCtxs;
 };
 

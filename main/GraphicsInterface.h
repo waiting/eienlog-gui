@@ -1,7 +1,7 @@
-#pragma once
+﻿#pragma once
 
 struct WindowInterface;
-// ͼ�εײ� DirectX
+// 图形底层 DirectX
 struct GraphicsInterface
 {
     // Helper functions
