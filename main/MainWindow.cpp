@@ -3,7 +3,7 @@
 
 MainWindow::MainWindow( App & app ) : app(app)
 {
-
+    this->logWindows.attachNew( new EienLogWindows(this) );
 }
 
 void MainWindow::render()
@@ -46,16 +46,7 @@ void MainWindow::render()
         ImGui::End();
     }
 
-    for ( auto && logCtx : this->logCtxs )
-    {
-        if ( logCtx.isShow )
-        {
-            ImGui::Begin( logCtx.name.c_str(), &logCtx.isShow );
-            ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-            ImGui::Text( u8"监听端口%u", logCtx.port );
-            ImGui::End();
-        }
-    }
+    this->logWindows->render();
 
     if (show_demo_window)
         ImGui::ShowDemoWindow(&show_demo_window);
@@ -185,7 +176,7 @@ void MainWindow::renderDockSpaceMenuBar()
                 if ( ImGui::Button( "OK", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) ) {
                     ImGui::CloseCurrentPopup();
 
-                    this->logCtxs.push_back( { (USHORT)port, name } );
+                    this->logWindows->addWindow( name, (USHORT)port );
                     ch[0]++;
                     name = std::string(u8"日志") + ch;
                     port++;

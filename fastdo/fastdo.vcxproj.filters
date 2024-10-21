@@ -93,6 +93,9 @@
     <ClInclude Include="components\eiennet\include\eiennet_socket.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="components\eienlog\include\eienlog.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="components\winux\include\func_invoker.inl">
@@ -185,6 +188,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="components\eiennet\src\eiennet_socket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="components\eienlog\src\eienlog.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

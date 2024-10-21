@@ -89,7 +89,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -103,7 +104,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,7 +121,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,7 +140,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>components\winux\include;components\eienexpr\include;components\eiennet\include;components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="components\eienexpr\include\eienexpr.hpp" />
+    <ClInclude Include="components\eienlog\include\eienlog.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet_async.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet_base.hpp" />
@@ -186,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="components\eienexpr\src\eienexpr.cpp" />
+    <ClCompile Include="components\eienlog\src\eienlog.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_async.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_base.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_curl.cpp" />

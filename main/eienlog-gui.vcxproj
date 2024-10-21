@@ -91,7 +91,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -131,7 +131,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -154,7 +154,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -168,6 +168,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="EienLogWindows.h" />
     <ClInclude Include="GraphicsInterface.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="resource.h" />
@@ -182,6 +183,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="EienLogWindows.cpp" />
     <ClCompile Include="GraphicsInterface.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />

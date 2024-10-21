@@ -7,6 +7,7 @@
 #include "misc/cpp/imgui_stdlib.h"
 #include <d3d9.h>
 #include <d3dx9tex.h>
+#include "winux.hpp"
 #include "GraphicsInterface.h"
 #include "WindowInterface.h"
 #include "MainWindow.h"

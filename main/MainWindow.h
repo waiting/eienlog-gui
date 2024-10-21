@@ -1,12 +1,5 @@
 ﻿#pragma once
-#include <vector>
-
-struct EienLogContext
-{
-    USHORT port;
-    std::string name;
-    bool isShow = true;
-};
+#include "EienLogWindows.h"
 
 struct App;
 struct MainWindow
@@ -29,6 +22,6 @@ struct MainWindow
     ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
     // MyData
-    std::vector<EienLogContext> logCtxs;
+    winux::SimplePointer<EienLogWindows> logWindows;
 };
 
