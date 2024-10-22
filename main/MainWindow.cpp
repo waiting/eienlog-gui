@@ -17,11 +17,11 @@ void MainWindow::render()
     static bool eiengui_win = true;
     if ( eiengui_win )
     {
-        ImGui::Begin( u8"你好，EienLogGui！", &eiengui_win );// Create a window called "Hello, world!" and append into it.
+        ImGui::Begin( u8"EienLogGui设置", &eiengui_win );// Create a window called "Hello, world!" and append into it.
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-        ImGui::Text( u8"这是一些无用的文本，测试中文显示。" );               // Display some text (you can use a format strings too)
-        ImGui::SameLine();
-        if ( ImGui::Button( "OK" ) ) MessageBoxW( app.wi.hWnd, L"msgbox", L"", 0 );
+        ImGui::Text( u8"您好，欢迎使用本日志查看程序！" );               // Display some text (you can use a format strings too)
+        //ImGui::SameLine();
+        //if ( ImGui::Button( "OK" ) ) MessageBoxW( app.wi.hWnd, L"msgbox", L"", 0 );
         ImGui::Separator();
         ImGui::Checkbox( "Demo Window", &show_demo_window );      // Edit bools storing our window open/close state
         ImGui::Checkbox( "Another Window", &show_another_window );

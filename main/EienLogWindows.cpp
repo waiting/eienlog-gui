@@ -18,7 +18,7 @@ void EienLogWindow::render()
     static ImGuiTableFlags flags = // ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY;
         ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
 
-    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImVec2(6.0f, 3.0f) );
+    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImVec2(6.0f, 2.0f) );
     if (ImGui::BeginTable("table_logs", 3, flags))
     {
         ImGui::TableSetupScrollFreeze(0, 1);

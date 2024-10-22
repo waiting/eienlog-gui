@@ -71,13 +71,15 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     //);
     //IM_ASSERT(font1 != nullptr);
 
-    static ImVector<ImWchar> ranges;
+    /*static ImVector<ImWchar> ranges;
     ImFontGlyphRangesBuilder builder;
     builder.AddRanges( this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon() );
     ImWchar c = u'钮';
     builder.AddChar(c);
     builder.BuildRanges(&ranges);
-    const ImWchar * CharsetRanges = ranges.Data;
+    const ImWchar * CharsetRanges = ranges.Data;*/
+    #include "..\char-ranges\char-ranges.inl"
+    const ImWchar * CharsetRanges = app_full_ranges;
 
     /*setlocale( LC_CTYPE, "" );
     auto i = 0, n = 0;
