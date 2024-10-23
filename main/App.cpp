@@ -71,40 +71,30 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     //);
     //IM_ASSERT(font1 != nullptr);
 
-    /*static ImVector<ImWchar> ranges;
-    ImFontGlyphRangesBuilder builder;
-    builder.AddRanges( this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon() );
-    ImWchar c = u'钮';
-    builder.AddChar(c);
-    builder.BuildRanges(&ranges);
-    const ImWchar * CharsetRanges = ranges.Data;*/
     #include "..\char-ranges\char-ranges.inl"
     const ImWchar * CharsetRanges = app_full_ranges;
 
-    /*setlocale( LC_CTYPE, "" );
-    auto i = 0, n = 0;
-    for ( ; CharsetRanges[i]; i+=2 )
-    {
-        n += CharsetRanges[i+1] - CharsetRanges[i] + 1;
-        for ( auto c = CharsetRanges[i]; c <= CharsetRanges[i + 1]; c++ )
-        {
-            wprintf( L"%c[%x] ", c, c );
-        }
-        wprintf(L"\n");
-        //wprintf( L"%c[%x] ~ %c[%x] : %d\n", CharsetRanges[i], CharsetRanges[i], CharsetRanges[i+1], CharsetRanges[i+1], CharsetRanges[i+1] - CharsetRanges[i] + 1 );
-    }
-    wprintf( L"%d, %d\n", i, n );*/
-
-    //std::thread th( [this] {
-    ImFont* font2 = this->ctx->IO.Fonts->AddFontFromFileTTF(
+    this->normalFont = this->ctx->IO.Fonts->AddFontFromFileTTF(
         "C:\\Windows\\Fonts\\simhei.ttf",
-        16,
+        18,
         &config,
         CharsetRanges
-        //this->ctx->IO.Fonts->GetGlyphRangesChineseSimplifiedCommon()
     );
-    IM_ASSERT(font2 != nullptr);
-    //} ); th.detach();
+    IM_ASSERT(this->normalFont != nullptr);
+
+    this->welcomeText = u8"您好，欢迎使用EienLog日志查看器！";
+    static ImVector<ImWchar> ranges;
+    ImFontGlyphRangesBuilder builder;
+    builder.AddText(this->welcomeText.c_str());
+    builder.BuildRanges(&ranges);
+
+    this->bigFont = this->ctx->IO.Fonts->AddFontFromFileTTF(
+        "C:\\Windows\\Fonts\\simhei.ttf",
+        32,
+        &config,
+        ranges.Data
+    );
+    IM_ASSERT(this->bigFont != nullptr);
 
     this->mainWindow = new MainWindow(*this);
 

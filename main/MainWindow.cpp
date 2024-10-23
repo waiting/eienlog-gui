@@ -14,35 +14,31 @@ void MainWindow::render()
     //window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoWindowMenuButton;
     ImGui::SetNextWindowClass(&window_class);
 
-    static bool eiengui_win = true;
-    if ( eiengui_win )
+    if ( show_settings_window )
     {
-        ImGui::Begin( u8"EienLogGui设置", &eiengui_win );// Create a window called "Hello, world!" and append into it.
+        ImGui::Begin( u8"EienLogViewer设置", &show_settings_window );
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
-        ImGui::Text( u8"您好，欢迎使用本日志查看程序！" );               // Display some text (you can use a format strings too)
+        ImGui::PushFont(app.bigFont);
+        ImGui::Text(app.welcomeText.c_str());
+        ImGui::PopFont();
+        ImGui::Text(u8"这里是一些相关设置，您可以修改它们。");
         //ImGui::SameLine();
         //if ( ImGui::Button( "OK" ) ) MessageBoxW( app.wi.hWnd, L"msgbox", L"", 0 );
         ImGui::Separator();
-        ImGui::Checkbox( "Demo Window", &show_demo_window );      // Edit bools storing our window open/close state
-        ImGui::Checkbox( "Another Window", &show_another_window );
+        ImGui::Checkbox( u8"演示窗口", &show_demo_window );      // Edit bools storing our window open/close state
+        ImGui::Checkbox( u8"关于窗口", &show_about_window );
 
-        static float f = 0.0f;
-        ImGui::SliderFloat( "float", &f, 0.0f, 1.0f );            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3( "clear color", (float*)&app.clear_color ); // Edit 3 floats representing a color
+        //static float f = 0.0f;
+        //ImGui::SliderFloat( "float", &f, 0.0f, 1.0f );            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3( u8"背景擦除色", (float*)&app.clear_color ); // Edit 3 floats representing a color
 
-        static int counter = 0;
-        if ( ImGui::Button( "Button" ) )                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text( "counter = %d", counter );
-
-        ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / app.ctx->IO.Framerate, app.ctx->IO.Framerate );
         static bool vsync = true;
         if ( ImGui::Checkbox( u8"垂直同步", &vsync ) )
         {
             app.gi.d3dpp.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
             app.gi.forceReset = true;
         }
+        ImGui::Text( u8"应用程序平均 %.3f ms/frame (%.1f FPS)", 1000.0f / app.ctx->IO.Framerate, app.ctx->IO.Framerate );
         ImGui::End();
     }
 
@@ -51,12 +47,17 @@ void MainWindow::render()
     if (show_demo_window)
         ImGui::ShowDemoWindow(&show_demo_window);
 
-    if (show_another_window)
+    if (show_about_window)
     {
-        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-        ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me"))
-            show_another_window = false;
+        ImGui::Begin(u8"关于", &show_about_window, 0/*ImGuiWindowFlags_AlwaysAutoResize*/);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        ImGui::Text(u8"EienLog Viewer 1.0.0");
+        ImGui::TextLinkOpenURL("FastDo", "https://fastdo.net");
+        ImGui::SameLine();
+        HelpMarker(u8"官方网站");
+        ImGui::Separator();
+        ImGui::Text(app.welcomeText.c_str());
+        if (ImGui::Button(u8"关闭", ImVec2(100, 0)))
+            show_about_window = false;
         ImGui::End();
     }
 }
@@ -143,49 +144,54 @@ void MainWindow::renderDockSpaceMenuBar()
         }
         //if ( open_modal_window )
         {
-            if ( toggle_popup ) { ImGui::OpenPopup("New..."); toggle_popup = false; }
+            std::string popupWinName = u8"新建...";
+            if ( toggle_popup ) { ImGui::OpenPopup(popupWinName.c_str()); toggle_popup = false; }
             // Always center this window when appearing
             //ImVec2 center = ImGui::GetMainViewport()->GetCenter();
             //ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
 
-            if ( ImGui::BeginPopupModal( "New...", NULL, ImGuiWindowFlags_AlwaysAutoResize ) )
+            if ( ImGui::BeginPopupModal( popupWinName.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings ) )
             {
-                ImGui::Text( u8"新建一个监听窗口，监听日志信息" );
+                ImGui::Text( u8"新建一个日志窗口，监听日志信息" );
                 ImGui::Separator();
+                static std::string addr = u8"localhost";
                 static int port = 23456;
                 // 对齐标签文本
                 ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"监听端口"); // 这将是左侧的标签
+                ImGui::Text(u8"主机"); // 这将是左侧的标签
                 ImGui::SameLine( 0.0f, 1.0f );
                 // 设置输入框的宽度
                 //ImGui::PushItemWidth(-1);
-                ImGui::InputInt( u8"##listen_port", &port, 1, 65535 );
+                ImGui::InputText( u8"##addr", &addr );
+                ImGui::SameLine( 0.f );
+                ImGui::InputInt( u8"##port", &port, 1, 65535 );
 
-                static char ch[] = {'A', 0 };
+                static char ch[] = { 'A', '\0' };
                 static std::string name = std::string(u8"日志") + ch;
                 ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"区分名称");
+                ImGui::Text(u8"名称");
                 ImGui::SameLine( 0.0f, 1.0f );
                 ImGui::InputText( u8"##name", &name );
-                //static bool dont_ask_me_next_time = false;
+                static bool scroll_to_bottom = false;
                 ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
-                //ImGui::Checkbox( "Don't ask me next time", &dont_ask_me_next_time );
+                ImGui::Checkbox( u8"自动滚动到底部", &scroll_to_bottom );
                 ImGui::PopStyleVar();
-                //ImGui::Checkbox( "Don't ask me next time.", &dont_ask_me_next_time );
 
-                if ( ImGui::Button( "OK", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) ) {
+                if ( ImGui::Button( u8"确定", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) )
+                {
                     ImGui::CloseCurrentPopup();
 
-                    this->logWindows->addWindow( name, (USHORT)port );
+                    this->logWindows->addWindow( name, addr, (USHORT)port );
+
                     ch[0]++;
                     name = std::string(u8"日志") + ch;
                     port++;
                 }
                 ImGui::SetItemDefaultFocus();
                 ImGui::SameLine();
-                if ( ImGui::Button( "Cancel", ImVec2( 120, 0 ) ) ) {
+                if ( ImGui::Button( u8"取消", ImVec2( 120, 0 ) ) )
+                {
                     ImGui::CloseCurrentPopup();
-                    //open_modal_window = false;
                 }
                 ImGui::EndPopup();
             }
@@ -228,6 +234,14 @@ void MainWindow::renderDockSpaceMenuBar()
 
             /*if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
             *p_open = false;*/
+            ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu(u8"窗口") )
+        {
+            ImGui::MenuItem( u8"设置窗口", nullptr, &show_settings_window );
+            ImGui::MenuItem( u8"演示窗口", nullptr, &show_demo_window );
+            ImGui::MenuItem( u8"关于窗口", nullptr, &show_about_window );
+
             ImGui::EndMenu();
         }
 

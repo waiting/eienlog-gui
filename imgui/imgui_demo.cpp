@@ -4144,7 +4144,7 @@ static void ShowDemoWindowLayout()
 
         // Adjust spacing
         ImGui::Text("More spacing: Hello"); ImGui::SameLine(0, 20);
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "Sailor");
+        ImGui::TextColored(ImVec4(1, 0, 1, 1), "Sailor");
 
         // Button
         ImGui::AlignTextToFramePadding();

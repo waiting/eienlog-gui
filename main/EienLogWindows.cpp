@@ -1,10 +1,21 @@
 ﻿#include "App.h"
 #include "EienLogWindows.h"
+//#include <lock>
 
 // struct EienLogWindow -----------------------------------------------------------------------
-EienLogWindow::EienLogWindow( MainWindow * mainWindow ) : mainWindow(mainWindow)
+EienLogWindow::EienLogWindow( MainWindow * mainWindow, std::string const & name, std::string const & addr, USHORT port ) : mainWindow(mainWindow), name(name), addr(addr), port(port)
 {
+    // 创建线程读取LOGs
+    this->th.attachNew( new std::thread( [this] () {
+        std::lock_guard<std::mutex> lk(this->mtx);
 
+    } ) );
+
+}
+
+EienLogWindow::~EienLogWindow()
+{
+    this->th->join();
 }
 
 void EienLogWindow::render()
@@ -39,7 +50,7 @@ void EienLogWindow::render()
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 char sz[32] = { 0 };
-                sprintf( sz, "No. %d", row );
+                sprintf( sz, "No.%d", row );
                 if ( ImGui::Selectable( sz, selected == row, ImGuiSelectableFlags_SpanAllColumns ) )
                     selected = row;
                 //ImGui::Text("No. %d", row);
@@ -62,11 +73,9 @@ EienLogWindows::EienLogWindows( MainWindow * mainWindow ) : mainWindow(mainWindo
 
 }
 
-void EienLogWindows::addWindow( std::string const & name, USHORT port )
+void EienLogWindows::addWindow( std::string const & name, std::string const & addr, USHORT port )
 {
-    auto p = winux::MakeSimple( new EienLogWindow(mainWindow) );
-    p->name = name;
-    p->port = port;
+    auto p = winux::MakeSimple( new EienLogWindow(mainWindow, name, addr, port) );
     this->wins.emplace_back(p);
 }
 

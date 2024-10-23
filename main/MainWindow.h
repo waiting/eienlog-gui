@@ -12,8 +12,9 @@ struct MainWindow
 
     App & app;
     // Our state
+    bool show_settings_window = true;
     bool show_demo_window = true;
-    bool show_another_window = false;
+    bool show_about_window = false;
 
     // Dock space state
     ImGuiID dockspace_id;
