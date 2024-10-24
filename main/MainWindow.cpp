@@ -161,10 +161,16 @@ void MainWindow::renderDockSpaceMenuBar()
                 ImGui::Text(u8"主机"); // 这将是左侧的标签
                 ImGui::SameLine( 0.0f, 1.0f );
                 // 设置输入框的宽度
-                //ImGui::PushItemWidth(-1);
+                ImGui::PushItemWidth(160);
                 ImGui::InputText( u8"##addr", &addr );
-                ImGui::SameLine( 0.f );
-                ImGui::InputInt( u8"##port", &port, 1, 65535 );
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text(u8"端口"); // 这将是左侧的标签
+                ImGui::SameLine( 0.0f, 1.0f );
+                ImGui::PushItemWidth(120);
+                ImGui::InputInt( u8"##port", &port, 1 );
+                ImGui::PopItemWidth();
 
                 static char ch[] = { 'A', '\0' };
                 static std::string name = std::string(u8"日志") + ch;
@@ -172,16 +178,16 @@ void MainWindow::renderDockSpaceMenuBar()
                 ImGui::Text(u8"名称");
                 ImGui::SameLine( 0.0f, 1.0f );
                 ImGui::InputText( u8"##name", &name );
-                static bool scroll_to_bottom = false;
+                static bool vScrollToBottom = true;
                 ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
-                ImGui::Checkbox( u8"自动滚动到底部", &scroll_to_bottom );
+                ImGui::Checkbox( u8"自动滚动到底部", &vScrollToBottom );
                 ImGui::PopStyleVar();
 
                 if ( ImGui::Button( u8"确定", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) )
                 {
                     ImGui::CloseCurrentPopup();
 
-                    this->logWindows->addWindow( name, addr, (USHORT)port );
+                    this->logWindows->addWindow( name, addr, (USHORT)port, vScrollToBottom );
 
                     ch[0]++;
                     name = std::string(u8"日志") + ch;
