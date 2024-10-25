@@ -12,17 +12,17 @@ struct MainWindow
 
     App & app;
     // Our state
-    bool show_settings_window = true;
-    bool show_demo_window = true;
-    bool show_about_window = false;
+    bool showSettingsWindow = true;
+    bool showDemoWindow = false;
+    bool showAboutWindow = false;
 
     // Dock space state
-    ImGuiID dockspace_id;
-    bool opt_fullscreen = true;
-    bool opt_padding = false;
-    ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+    ImGuiID dockSpaceId;
+    bool optFullScreen = true;
+    bool optPadding = false;
+    ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_None;
 
     // MyData
-    winux::SimplePointer<EienLogWindows> logWindows;
+    winux::SimplePointer<EienLogWindows> logWinManager;
 };
 

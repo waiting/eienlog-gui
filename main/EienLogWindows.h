@@ -4,6 +4,7 @@
 #include <mutex>
 
 struct MainWindow;
+struct EienLogWindows;
 
 struct LogTextRecord
 {
@@ -14,11 +15,11 @@ struct LogTextRecord
 
 struct EienLogWindow
 {
-    EienLogWindow( MainWindow * mainWindow, std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom );
+    EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom );
     ~EienLogWindow();
     void render();
 
-    MainWindow * mainWindow = nullptr;
+    EienLogWindows * manager = nullptr;
     std::string name;
     std::string addr;
     USHORT port = 0;

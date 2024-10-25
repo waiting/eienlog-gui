@@ -3,7 +3,7 @@
 
 MainWindow::MainWindow( App & app ) : app(app)
 {
-    this->logWindows.attachNew( new EienLogWindows(this) );
+    this->logWinManager.attachNew( new EienLogWindows(this) );
 }
 
 void MainWindow::render()
@@ -14,10 +14,10 @@ void MainWindow::render()
     //window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoWindowMenuButton;
     ImGui::SetNextWindowClass(&window_class);
 
-    if ( show_settings_window )
+    if ( showSettingsWindow )
     {
-        ImGui::Begin( u8"EienLogViewer设置", &show_settings_window );
-        ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockspace_id, ImGuiCond_Once );
+        ImGui::Begin( u8"EienLogViewer设置", &showSettingsWindow );
+        ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockSpaceId, ImGuiCond_Once );
         ImGui::PushFont(app.bigFont);
         ImGui::Text(app.welcomeText.c_str());
         ImGui::PopFont();
@@ -25,12 +25,12 @@ void MainWindow::render()
         //ImGui::SameLine();
         //if ( ImGui::Button( "OK" ) ) MessageBoxW( app.wi.hWnd, L"msgbox", L"", 0 );
         ImGui::Separator();
-        ImGui::Checkbox( u8"演示窗口", &show_demo_window );      // Edit bools storing our window open/close state
-        ImGui::Checkbox( u8"关于窗口", &show_about_window );
+        ImGui::Checkbox( u8"演示窗口", &showDemoWindow );      // Edit bools storing our window open/close state
+        ImGui::Checkbox( u8"关于窗口", &showAboutWindow );
 
         //static float f = 0.0f;
         //ImGui::SliderFloat( "float", &f, 0.0f, 1.0f );            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3( u8"背景擦除色", (float*)&app.clear_color ); // Edit 3 floats representing a color
+        ImGui::ColorEdit3( u8"背景擦除色", (float*)&app.bgClearColor ); // Edit 3 floats representing a color
 
         static bool vsync = true;
         if ( ImGui::Checkbox( u8"垂直同步", &vsync ) )
@@ -42,14 +42,14 @@ void MainWindow::render()
         ImGui::End();
     }
 
-    this->logWindows->render();
+    this->logWinManager->render();
 
-    if (show_demo_window)
-        ImGui::ShowDemoWindow(&show_demo_window);
+    if (showDemoWindow)
+        ImGui::ShowDemoWindow(&showDemoWindow);
 
-    if (show_about_window)
+    if (showAboutWindow)
     {
-        ImGui::Begin(u8"关于", &show_about_window, 0/*ImGuiWindowFlags_AlwaysAutoResize*/);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        ImGui::Begin(u8"关于", &showAboutWindow, 0/*ImGuiWindowFlags_AlwaysAutoResize*/);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
         ImGui::Text(u8"EienLog Viewer 1.0.0");
         ImGui::TextLinkOpenURL("FastDo", "https://fastdo.net");
         ImGui::SameLine();
@@ -57,7 +57,7 @@ void MainWindow::render()
         ImGui::Separator();
         ImGui::Text(app.welcomeText.c_str());
         if (ImGui::Button(u8"关闭", ImVec2(100, 0)))
-            show_about_window = false;
+            showAboutWindow = false;
         ImGui::End();
     }
 }
@@ -67,7 +67,7 @@ void MainWindow::renderDockSpace()
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoBackground;
-    if ( opt_fullscreen )
+    if ( optFullScreen )
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -80,33 +80,33 @@ void MainWindow::renderDockSpace()
     }
     else
     {
-        dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
+        dockSpaceFlags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
     }
 
     // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
     // and handle the pass-thru hole, so we ask Begin() to not render a background.
-    if ( dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode ) window_flags |= ImGuiWindowFlags_NoBackground;
+    if ( dockSpaceFlags & ImGuiDockNodeFlags_PassthruCentralNode ) window_flags |= ImGuiWindowFlags_NoBackground;
 
     // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
     // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
     // all active windows docked into it will lose their parent and become undocked.
     // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-    if ( !opt_padding ) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    if ( !optPadding ) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
     ImGui::Begin("EienLog DockSpace", nullptr, window_flags);
 
-    if (!opt_padding) ImGui::PopStyleVar();
+    if (!optPadding) ImGui::PopStyleVar();
 
-    if (opt_fullscreen) ImGui::PopStyleVar(2);
+    if (optFullScreen) ImGui::PopStyleVar(2);
 
     // Submit the DockSpace
     ImGuiIO& io = this->app.ctx->IO;
 
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
     {
-        dockspace_id = ImGui::GetID("EienLogGuiDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+        dockSpaceId = ImGui::GetID("EienLogGuiDockSpace");
+        ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), dockSpaceFlags);
     }
     else
     {
@@ -154,11 +154,11 @@ void MainWindow::renderDockSpaceMenuBar()
             {
                 ImGui::Text( u8"新建一个日志窗口，监听日志信息" );
                 ImGui::Separator();
-                static std::string addr = u8"localhost";
-                static int port = 23456;
+                static std::string addr = u8"127.0.0.1";
+                static int port = 22345;
                 // 对齐标签文本
                 ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"主机"); // 这将是左侧的标签
+                ImGui::Text(u8"地址"); // 这将是左侧的标签
                 ImGui::SameLine( 0.0f, 1.0f );
                 // 设置输入框的宽度
                 ImGui::PushItemWidth(160);
@@ -187,7 +187,7 @@ void MainWindow::renderDockSpaceMenuBar()
                 {
                     ImGui::CloseCurrentPopup();
 
-                    this->logWindows->addWindow( name, addr, (USHORT)port, vScrollToBottom );
+                    this->logWinManager->addWindow( name, addr, (USHORT)port, vScrollToBottom );
 
                     ch[0]++;
                     name = std::string(u8"日志") + ch;
@@ -226,16 +226,16 @@ void MainWindow::renderDockSpaceMenuBar()
         {
             // Disabling fullscreen would allow the window to be moved to the front of other windows,
             // which we can't undo at the moment without finer window depth/z control.
-            ImGui::MenuItem( u8"全窗显示", nullptr, &opt_fullscreen );
-            ImGui::MenuItem( u8"Padding", nullptr, &opt_padding );
+            ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
+            ImGui::MenuItem( u8"Padding", nullptr, &optPadding );
             ImGui::Separator();
 
-            if (ImGui::MenuItem("Flag: NoDockingOverCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingOverCentralNode) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingOverCentralNode; }
-            if (ImGui::MenuItem("Flag: NoDockingSplit",         "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingSplit) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingSplit; }
-            if (ImGui::MenuItem("Flag: NoUndocking",            "", (dockspace_flags & ImGuiDockNodeFlags_NoUndocking) != 0))                { dockspace_flags ^= ImGuiDockNodeFlags_NoUndocking; }
-            if (ImGui::MenuItem("Flag: NoResize",               "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                   { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
-            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
-            if (ImGui::MenuItem("Flag: PassthruCentralNode",    "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
+            if (ImGui::MenuItem("Flag: NoDockingOverCentralNode", "", (dockSpaceFlags & ImGuiDockNodeFlags_NoDockingOverCentralNode) != 0)) { dockSpaceFlags ^= ImGuiDockNodeFlags_NoDockingOverCentralNode; }
+            if (ImGui::MenuItem("Flag: NoDockingSplit",         "", (dockSpaceFlags & ImGuiDockNodeFlags_NoDockingSplit) != 0))             { dockSpaceFlags ^= ImGuiDockNodeFlags_NoDockingSplit; }
+            if (ImGui::MenuItem("Flag: NoUndocking",            "", (dockSpaceFlags & ImGuiDockNodeFlags_NoUndocking) != 0))                { dockSpaceFlags ^= ImGuiDockNodeFlags_NoUndocking; }
+            if (ImGui::MenuItem("Flag: NoResize",               "", (dockSpaceFlags & ImGuiDockNodeFlags_NoResize) != 0))                   { dockSpaceFlags ^= ImGuiDockNodeFlags_NoResize; }
+            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockSpaceFlags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))             { dockSpaceFlags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
+            if (ImGui::MenuItem("Flag: PassthruCentralNode",    "", (dockSpaceFlags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, optFullScreen)) { dockSpaceFlags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
             //ImGui::Separator();
 
             /*if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
@@ -244,9 +244,9 @@ void MainWindow::renderDockSpaceMenuBar()
         }
         if ( ImGui::BeginMenu(u8"窗口") )
         {
-            ImGui::MenuItem( u8"设置窗口", nullptr, &show_settings_window );
-            ImGui::MenuItem( u8"演示窗口", nullptr, &show_demo_window );
-            ImGui::MenuItem( u8"关于窗口", nullptr, &show_about_window );
+            ImGui::MenuItem( u8"设置...", nullptr, &showSettingsWindow );
+            ImGui::MenuItem( u8"演示...", nullptr, &showDemoWindow );
+            ImGui::MenuItem( u8"关于", nullptr, &showAboutWindow );
 
             ImGui::EndMenu();
         }

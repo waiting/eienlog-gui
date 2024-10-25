@@ -43,7 +43,7 @@ struct App
     // 背景相关
     LPDIRECT3DTEXTURE9 pBgTexture = nullptr;
     D3DXIMAGE_INFO bgImgInfo;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 bgClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // 字体加载
     ImFont * bigFont;

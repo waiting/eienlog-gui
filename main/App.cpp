@@ -194,7 +194,7 @@ int App::run()
         gi.pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
         gi.pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
         gi.pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-        D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(clear_color.x*clear_color.w*255.0f), (int)(clear_color.y*clear_color.w*255.0f), (int)(clear_color.z*clear_color.w*255.0f), (int)(clear_color.w*255.0f));
+        D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(bgClearColor.x*bgClearColor.w*255.0f), (int)(bgClearColor.y*bgClearColor.w*255.0f), (int)(bgClearColor.z*bgClearColor.w*255.0f), (int)(bgClearColor.w*255.0f));
         gi.pd3dDevice->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
 
         if (gi.pd3dDevice->BeginScene() >= 0)

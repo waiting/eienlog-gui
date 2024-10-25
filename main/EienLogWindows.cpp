@@ -1,32 +1,30 @@
 ﻿#include "App.h"
 #include "EienLogWindows.h"
-//#include <lock>
+
+using namespace winux;
+using namespace eienlog;
 
 // struct EienLogWindow -----------------------------------------------------------------------
-EienLogWindow::EienLogWindow( MainWindow * mainWindow, std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom ) :
-    mainWindow(mainWindow), name(name), addr(addr), port(port), vScrollToBottom(vScrollToBottom)
+EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom ) :
+    manager(manager), name(name), addr(addr), port(port), vScrollToBottom(vScrollToBottom)
 {
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
+        LogReader reader( UnicodeConverter(this->addr).toUnicode(), this->port );
         while ( this->show )
         {
+            LogRecord record;
+            if ( reader.readRecord( &record, 500 ) )
             {
                 std::lock_guard<std::mutex> lk(this->mtx);
+                LogTextRecord tr;
+                tr.text = record.data.toString<char>();
+                tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
+                tr.flag.value = record.flag;
+                this->logs.push_back(tr);
             }
-            //Beep( 355, 666 );
-            Sleep(1000);
         }
     } ) );
-
-    LogTextRecord tr;
-    tr.text = u8"第一条日志";
-    tr.utcTime = winux::DateTimeL().fromCurrent().toString<char>();
-    tr.flag.value = 0;
-    this->logs.push_back(tr);
-    tr.text = u8"第二条日志...";
-    tr.utcTime = winux::DateTimeL().fromCurrent().toString<char>();
-    tr.flag.value = 0;
-    this->logs.push_back(tr);
 }
 
 EienLogWindow::~EienLogWindow()
@@ -38,7 +36,7 @@ EienLogWindow::~EienLogWindow()
 void EienLogWindow::render()
 {
     ImGui::Begin( this->name.c_str(), &this->show );
-    ImGui::SetWindowDock( ImGui::GetCurrentWindow(), mainWindow->dockspace_id, ImGuiCond_Once );
+    ImGui::SetWindowDock( ImGui::GetCurrentWindow(), manager->mainWindow->dockSpaceId, ImGuiCond_Once );
 
     ImGui::Text( u8"正在读取<%s:%u>的日志...", this->addr.c_str(), this->port );
     ImGui::SameLine();
@@ -99,7 +97,7 @@ EienLogWindows::EienLogWindows( MainWindow * mainWindow ) : mainWindow(mainWindo
 
 void EienLogWindows::addWindow( std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom )
 {
-    auto p = winux::MakeSimple( new EienLogWindow( mainWindow, name, addr, port, vScrollToBottom ) );
+    auto p = winux::MakeSimple( new EienLogWindow( this, name, addr, port, vScrollToBottom ) );
     this->wins.emplace_back(p);
 }
 
