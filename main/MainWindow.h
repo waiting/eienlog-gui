@@ -15,6 +15,7 @@ struct MainWindow
     bool showSettingsWindow = true;
     bool showDemoWindow = false;
     bool showAboutWindow = false;
+    bool toggleNewPopup = false;
 
     // Dock space state
     ImGuiID dockSpaceId;

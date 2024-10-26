@@ -808,7 +808,7 @@ public:
 
     /** \brief 构造函数3 从字符指针创建Buffer，可以指定是否为窥视模式 */
     template < typename _ChTy, typename = CharTypeConstrain<_ChTy> >
-    Buffer( _ChTy * str, size_t len = npos, bool isPeek = false )
+    Buffer( _ChTy const * str, size_t len = npos, bool isPeek = false )
     {
         this->_copyConstruct( str, ( len == npos ? StrLen<_ChTy>(str) * sizeof(_ChTy) : len * sizeof(_ChTy) ), isPeek );
     }

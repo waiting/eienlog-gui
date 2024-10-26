@@ -16,7 +16,7 @@ void MainWindow::render()
 
     if ( showSettingsWindow )
     {
-        ImGui::Begin( u8"EienLogViewer设置", &showSettingsWindow );
+        ImGui::Begin( u8"EienLogViewer", &showSettingsWindow );
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockSpaceId, ImGuiCond_Once );
         ImGui::PushFont(app.bigFont);
         ImGui::Text(app.welcomeText.c_str());
@@ -39,6 +39,14 @@ void MainWindow::render()
             app.gi.forceReset = true;
         }
         ImGui::Text( u8"应用程序平均 %.3f ms/frame (%.1f FPS)", 1000.0f / app.ctx->IO.Framerate, app.ctx->IO.Framerate );
+
+        //ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 10, 5 ) );
+        if ( ImGui::Button(u8"创建新日志窗口") )
+        {
+            toggleNewPopup = true;
+        }
+        //ImGui::PopStyleVar();
+
         ImGui::End();
     }
 
@@ -126,14 +134,11 @@ void MainWindow::renderDockSpaceMenuBar()
 {
     if (ImGui::BeginMenuBar())
     {
-        //static bool open_modal_window = false;
-        static bool toggle_popup = false;
         if ( ImGui::BeginMenu(u8"文件") )
         {
             if ( ImGui::MenuItem(u8"新建...") )
             {
-                //open_modal_window = true;
-                toggle_popup = true;
+                toggleNewPopup = true;
             }
             ImGui::Separator();
             if ( ImGui::MenuItem(u8"退出") )
@@ -142,10 +147,10 @@ void MainWindow::renderDockSpaceMenuBar()
             }
             ImGui::EndMenu();
         }
-        //if ( open_modal_window )
+
         {
             std::string popupWinName = u8"新建...";
-            if ( toggle_popup ) { ImGui::OpenPopup(popupWinName.c_str()); toggle_popup = false; }
+            if ( toggleNewPopup ) { ImGui::OpenPopup(popupWinName.c_str()); toggleNewPopup = false; }
             // Always center this window when appearing
             //ImVec2 center = ImGui::GetMainViewport()->GetCenter();
             //ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
@@ -202,6 +207,7 @@ void MainWindow::renderDockSpaceMenuBar()
                 ImGui::EndPopup();
             }
         }
+
         if ( ImGui::BeginMenu(u8"主题") )
         {
             static int colorsTheme = 2;

@@ -32,19 +32,32 @@ namespace eienlog
 
 #define LOG_CHUNK_SIZE 80
 
+/** \brief 日志编码。`Local`表示本地多字节编码，不同国家可能不同 */
+enum LogEncoding
+{
+    leLocal,
+    leUtf8,
+    leUtf16Le,
+    leUtf16Be,
+};
+
 /** \brief 日志样式旗标 */
 union LogFlag
 {
     struct
     {
-        winux::uint16 color:16;     //!< 颜色
-        winux::uint16 font:12;      //!< 字体编号
-        winux::uint16 bold:1;       //!< 是否粗体
-        winux::uint16 italic:1;     //!< 是否斜体
-        winux::uint16 underline:1;  //!< 是否下划线
-        winux::uint16 binary:1;     //!< 是否二进制数据
+        winux::uint16 fgColor:15;       //!< 颜色R5G5B5
+        winux::uint16 fgColorUse:1;     //!< 颜色是否使用
+        winux::uint16 bgColor:12;       //!< 背景色R4G4B4
+        winux::uint16 bgColorUse:1;     //!< 背景色是否使用
+        winux::uint16 logEncoding:2;    //!< 日志编码
+        winux::uint16 binary:1;         //!< 是否二进制数据
     };
     winux::uint32 value;
+
+    LogFlag( winux::uint32 value = 0 ) : value(value)
+    {
+    }
 };
 
 /** \brief 日志分块头部 */
@@ -55,7 +68,7 @@ struct LogChunkHeader
     winux::uint32 flag;         //!< 控制日志字体样式或颜色等信息，目前暂且保留为0
     winux::uint32 index;        //!< 分块编号
     winux::uint32 chunks;       //!< 总块数
-    time_t utcTime;             //!< UTC时间戳(ms)
+    winux::uint64 utcTime;      //!< UTC时间戳(ms)
 };
 
 /** \brief 日志分块 */
@@ -81,28 +94,52 @@ public:
      *  \param host 地址
      *  \param port 端口号
      *  \param chunkSize 分块封包大小 */
-    LogWriter( winux::String const & host, winux::ushort port, size_t chunkSize = LOG_CHUNK_SIZE ) : _ep( host, port ), _chunkSize(chunkSize)
+    LogWriter( winux::String const & host, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE ) : _ep( host, port ), _chunkSize(chunkSize)
     {
     }
+
+    /** \brief 发送日志 */
+    size_t logEx( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding, bool isBinary );
+
+    size_t log( winux::String const & str, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding );
 
     /** \brief 发送字符串日志
      *
      *  \param str 字符串内容
-     *  \param flag 日志样式
+     *  \param logEncoding 指定转换成什么编码发送
      *  \return size_t 发送的封包数量 */
-    size_t log( winux::String const & str, winux::uint32 flag = 0 );
+    size_t log( winux::String const & str, winux::uint8 logEncoding = leLocal )
+    {
+        return this->log( str, false, 0, false, 0, logEncoding );
+    }
+
+    size_t logBin( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor );
 
     /** \brief 发送二进制日志
      *
      *  \param data 二进制数据
-     *  \param flag 日志样式
      *  \return size_t 发送的封包数量 */
-    size_t logBin( winux::Buffer const & data, winux::uint32 flag = 0 );
+    size_t logBin( winux::Buffer const & data )
+    {
+        return this->logBin( data, false, 0, false, 0 );
+    }
+
+    /** \brief 发送字符串日志，可指定颜色 */
+    size_t logColor( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leLocal )
+    {
+        return this->log( str, !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor, logEncoding );
+    }
+
+    /** \brief 发送二进制日志，可指定颜色 */
+    size_t logBinColor( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull )
+    {
+        return this->logBin( data, !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor );
+    }
 
 private:
     eiennet::ip::udp::Socket _sock;
     eiennet::ip::EndPoint _ep;
-    size_t const _chunkSize;
+    winux::uint16 const _chunkSize;
 };
 
 /** \brief 日志读取器 */
@@ -120,7 +157,7 @@ public:
      *  \param host 地址
      *  \param port 端口号
      *  \param chunkSize 分块封包大小 */
-    LogReader( winux::String const & host, winux::ushort port, size_t chunkSize = LOG_CHUNK_SIZE );
+    LogReader( winux::String const & host, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
 
     /** \brief 阻塞读取一个分块封包
      *
@@ -142,7 +179,7 @@ private:
     eiennet::ip::udp::Socket _sock;
     eiennet::ip::EndPoint _ep;
     std::map< time_t, LogChunksData > _packsMap;
-    size_t const _chunkSize;
+    winux::uint16 const _chunkSize;
     int _errno;
 };
 

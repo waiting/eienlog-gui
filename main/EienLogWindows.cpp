@@ -18,9 +18,42 @@ EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name
             {
                 std::lock_guard<std::mutex> lk(this->mtx);
                 LogTextRecord tr;
-                tr.text = record.data.toString<char>();
-                tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
                 tr.flag.value = record.flag;
+                switch ( tr.flag.logEncoding )
+                {
+                case eienlog::leUtf8:
+                    {
+                        tr.text = record.data.toString<char>();
+                    }
+                    break;
+                case eienlog::leUtf16Le:
+                    {
+                        winux::Utf16String ustr = record.data.toString<winux::char16>();
+                        if ( winux::IsBigEndian() )
+                        {
+                            if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
+                        }
+                        tr.text = winux::UnicodeConverter(ustr).toUtf8();
+                    }
+                    break;
+                case eienlog::leUtf16Be:
+                    {
+                        winux::Utf16String ustr = record.data.toString<winux::char16>();
+                        if ( winux::IsLittleEndian() )
+                        {
+                            if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
+                        }
+                        tr.text = winux::UnicodeConverter(ustr).toUtf8();
+                    }
+                    break;
+                default:
+                    {
+                        tr.text = winux::LocalToUtf8( record.data.toString<char>() );
+                    }
+                    break;
+                }
+
+                tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
                 this->logs.push_back(tr);
             }
         }
@@ -39,9 +72,20 @@ void EienLogWindow::render()
     ImGui::SetWindowDock( ImGui::GetCurrentWindow(), manager->mainWindow->dockSpaceId, ImGuiCond_Once );
 
     ImGui::Text( u8"正在读取<%s:%u>的日志...", this->addr.c_str(), this->port );
-    ImGui::SameLine();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
-    ImGui::Checkbox( u8"自动滚动到底部", &this->vScrollToBottom );
+    ImGui::SameLine();
+    if ( ImGui::Checkbox( u8"自动滚动到底部", &this->vScrollToBottom ) )
+    {
+        bToggleVScrollToBottom = true;
+    }
+    ImGui::SameLine();
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 6.0f, 0 ) );
+    if ( ImGui::Button( u8"清空列表" ) )
+    {
+        std::lock_guard<std::mutex> lk(this->mtx);
+        this->logs.clear();
+    }
+    ImGui::PopStyleVar();
     ImGui::PopStyleVar();
 
     // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
@@ -50,11 +94,12 @@ void EienLogWindow::render()
         ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
 
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImVec2(6.0f, 2.0f) );
-    if (ImGui::BeginTable("table_logs", 3, flags))
+    if (ImGui::BeginTable("table_logs", 4, flags))
     {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn(u8"编号", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn(u8"时间", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(u8"长度", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn(u8"日志内容", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
@@ -71,17 +116,51 @@ void EienLogWindow::render()
                 {
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    char sz[32] = { 0 };
-                    sprintf( sz, "No.%d", row );
+                    char sz[20] = { 0 };
+                    sprintf( sz, "%u", row + 1 );
                     if ( ImGui::Selectable( sz, this->selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) this->selected = row;
                     ImGui::TableSetColumnIndex(1);
                     ImGui::Text( this->logs[row].utcTime.c_str() );
                     ImGui::TableSetColumnIndex(2);
+                    ImGui::Text( "%u", this->logs[row].text.length() );
+                    ImGui::TableSetColumnIndex(3);
                     ImGui::Text( this->logs[row].text.c_str() );
                     //ImGui::Text( "%d, %d, %d", clipper.DisplayStart, clipper.DisplayEnd, selected );
                 }
             }
         }
+
+        float a = ImGui::GetScrollY();
+        float b = ImGui::GetScrollMaxY();
+        //printf("%f/%f\n", a, b);
+        if ( bToggleVScrollToBottom )
+        {
+            if ( vScrollToBottom )
+            {
+                a = b;
+            }
+            else
+            {
+                a = ( a > 1.0f ? a - 1.0f : 0.0f );
+                ImGui::SetScrollY(a);
+            }
+            bToggleVScrollToBottom = false;
+        }
+
+        if ( b > 0.0f )
+        {
+            float f = a / b;
+            if ( 1.0f - f < 1.0e-6f ) // f == 1.0f
+            {
+                vScrollToBottom = true;
+            }
+            else
+            {
+                vScrollToBottom = false;
+            }
+        }
+
+        if ( vScrollToBottom ) ImGui::SetScrollHereY(1.0f);
 
         ImGui::EndTable();
     }
