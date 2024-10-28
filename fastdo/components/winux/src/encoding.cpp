@@ -519,13 +519,13 @@ WINUX_FUNC_IMPL(String) UriComponentDecodeString( String const & encodedStr, boo
 
 WINUX_FUNC_IMPL(String) HtmlEncode( String const & str )
 {
-    thread_local MultiMatch mm( { TS("&amp;"), TS("&lt;"), TS("&gt;"), TS("&nbsp;") }, { TS("&"), TS("<"), TS(">"), TS(" ") } );
+    thread_local MultiMatch mm( { TEXT("&amp;"), TEXT("&lt;"), TEXT("&gt;"), TEXT("&nbsp;") }, { TEXT("&"), TEXT("<"), TEXT(">"), TEXT(" ") } );
     return mm.replace(str);
 }
 
 WINUX_FUNC_IMPL(String) HtmlDecode( String const & str )
 {
-    thread_local MultiMatch mm( { TS("&amp;"), TS("&lt;"), TS("&gt;"), TS("&nbsp;") }, { TS("&"), TS("<"), TS(">"), TS(" ") } );
+    thread_local MultiMatch mm( { TEXT("&amp;"), TEXT("&lt;"), TEXT("&gt;"), TEXT("&nbsp;") }, { TEXT("&"), TEXT("<"), TEXT(">"), TEXT(" ") } );
     return mm.replace(str);
 }
 

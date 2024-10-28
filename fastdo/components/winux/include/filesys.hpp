@@ -14,28 +14,28 @@
 namespace winux
 {
 // 特殊平台变量 -------------------------------------------------------------
-String const DirSep_WIN = TS("\\"); //!< Windows目录分割符
-String const LineSep_WIN = TS("\r\n"); //!< Windows行分割符
-String const PathEnvSep_WIN = TS(";"); //!< Windows PATH环境变量路径分割符
-String const DirSep_UNIX = TS("/"); //!< Unix目录分割符
-String const LineSep_UNIX = TS("\n"); //!< Unix行分割符
-String const PathEnvSep_UNIX = TS(":"); //!< Unix PATH环境变量路径分割符
-String const DirSep_DARWIN = TS("/"); //!< Apple系统目录分割符
-String const LineSep_DARWIN = TS("\r"); //!< Apple系统行分割符
-String const PathEnvSep_DARWIN = TS(":"); //!< Apple系统PATH环境变量路径分割符
+String const DirSep_WIN = TEXT("\\"); //!< Windows目录分割符
+String const LineSep_WIN = TEXT("\r\n"); //!< Windows行分割符
+String const PathEnvSep_WIN = TEXT(";"); //!< Windows PATH环境变量路径分割符
+String const DirSep_UNIX = TEXT("/"); //!< Unix目录分割符
+String const LineSep_UNIX = TEXT("\n"); //!< Unix行分割符
+String const PathEnvSep_UNIX = TEXT(":"); //!< Unix PATH环境变量路径分割符
+String const DirSep_DARWIN = TEXT("/"); //!< Apple系统目录分割符
+String const LineSep_DARWIN = TEXT("\r"); //!< Apple系统行分割符
+String const PathEnvSep_DARWIN = TEXT(":"); //!< Apple系统PATH环境变量路径分割符
 
 #if defined(OS_WIN)
-String const DirSep = TS("\\"); //!< 目录分割符
-String const LineSep = TS("\r\n"); //!< 行分割符
-String const PathEnvSep = TS(";"); //!< PATH环境变量路径分割符
+String const DirSep = TEXT("\\"); //!< 目录分割符
+String const LineSep = TEXT("\r\n"); //!< 行分割符
+String const PathEnvSep = TEXT(";"); //!< PATH环境变量路径分割符
 #elif defined(OS_DARWIN)
-String const DirSep = TS("/"); //!< 目录分割符
-String const LineSep = TS("\r"); //!< 行分割符
-String const PathEnvSep = TS(":"); //!< PATH环境变量路径分割符
+String const DirSep = TEXT("/"); //!< 目录分割符
+String const LineSep = TEXT("\r"); //!< 行分割符
+String const PathEnvSep = TEXT(":"); //!< PATH环境变量路径分割符
 #else
-String const DirSep = TS("/"); //!< 目录分割符
-String const LineSep = TS("\n"); //!< 行分割符
-String const PathEnvSep = TS(":"); //!< PATH环境变量路径分割符
+String const DirSep = TEXT("/"); //!< 目录分割符
+String const LineSep = TEXT("\n"); //!< 行分割符
+String const PathEnvSep = TEXT(":"); //!< PATH环境变量路径分割符
 #endif
 
 /** \brief 获取可执行文件的全路径 */
@@ -241,26 +241,8 @@ WINUX_FUNC_DECL(bool) FilePutContentsEx( String const & filename, Buffer const &
  *  \param bakDir 备份文件存放的目录（相对于`filePath`）
  *  \param fmt %f是文件标题，%v是版本编号，%e是扩展名（不包含'.'），%E是扩展名（包含'.'）
  *  \return String 备份成功返回文件路径，备份失败返回空串 */
-WINUX_FUNC_DECL(String) BackupFile( String const & filePath, String const & bakDir = TS(""), String const & fmt = TS("%f_v%v%E") );
+WINUX_FUNC_DECL(String) BackupFile( String const & filePath, String const & bakDir = TEXT(""), String const & fmt = TEXT("%f_v%v%E") );
 
-/** \brief 日志 */
-WINUX_FUNC_DECL(void) WriteLog( String const & s );
-
-/** \brief 二进制日志 */
-WINUX_FUNC_DECL(void) WriteBinLog( void const * data, size_t size );
-
-//#define __LOG__
-#ifdef __LOG__
-#define LOG(s) winux::WriteLog(s)
-#define BIN_LOG(d,s) winux::WriteBinLog((d),(s))
-#else
-#define LOG(s)
-#define BIN_LOG(d,s)
-#endif
-
-#ifndef interface
-#define interface struct
-#endif
 
 /** \brief 文件系统错误类 */
 class FileSysError : public Error
@@ -284,7 +266,7 @@ public:
     /** \brief 构造函数
      *
      *  \param[in] path 路径 */
-    DirIterator( String const & path, String const & pattern = TS("*") );
+    DirIterator( String const & path, String const & pattern = TEXT("*") );
     /** \brief 析构函数 */
     ~DirIterator();
     /** \brief 取得路径 */

@@ -8,7 +8,8 @@ struct EienLogWindows;
 
 struct LogTextRecord
 {
-    winux::AnsiString text; //!< 日志数据
+    winux::Buffer content; //!< 日志内容
+    winux::AnsiString strContent;
     winux::AnsiString utcTime;  //!< UTC时间戳
     eienlog::LogFlag flag;  //!< 日志样式FLAG
 };

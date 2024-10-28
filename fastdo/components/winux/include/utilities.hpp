@@ -68,12 +68,16 @@ namespace winux
     #define countof(arr) ( sizeof(arr) / sizeof(arr[0]) )
 #endif
 
-#ifndef TEXT
-    #ifdef UNICODE
+#if !defined(TEXT)
+    #if defined(UNICODE) || defined(_UNICODE)
         #define TEXT(__x) L##__x
     #else
         #define TEXT(__x) __x
     #endif
+#endif
+
+#ifndef interface
+#define interface struct
 #endif
 
 // 禁止类的对象赋值/拷贝构造
@@ -236,10 +240,8 @@ typedef long long longlong;
 #endif
 
 #if defined(UNICODE) || defined(_UNICODE)
-#define TS(s) L##s
 typedef wchar tchar;
 #else
-#define TS(s) s
 typedef char tchar;
 #endif
 
@@ -1898,7 +1900,7 @@ public:
     void assign( Collection const & coll, bool caseInsensitive = false );
 
     // JSON相关操作 ----------------------------------------------------------------------------
-    String myJson( bool autoKeyQuotes = true, String const & spacer = TS(""), String const & newline = TS("") ) const;
+    String myJson( bool autoKeyQuotes = true, String const & spacer = TEXT(""), String const & newline = TEXT("") ) const;
     String json() const;
     Mixed & json( String const & jsonStr );
 

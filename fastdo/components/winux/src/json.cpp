@@ -119,7 +119,7 @@ WINUX_FUNC_IMPL(bool) JsonSetByteOrderForUtf16( bool isLittleEndian )
     return old;
 }
 
-thread_local String __convertToCharsetForUtf16 = TS("");
+thread_local String __convertToCharsetForUtf16 = TEXT("");
 WINUX_FUNC_IMPL(String) JsonSetConvertToCharsetForUtf16( String const & charset )
 {
     auto old = __convertToCharsetForUtf16;
@@ -257,7 +257,7 @@ bool JsonParseString( std::vector<JsonParseContext> & jpc, String const & json, 
 {
     String::value_type quote = json[i]; // 记下是什么引号
 
-    strVal->assign( TS("") ); // 初始化字符串
+    strVal->assign( TEXT("") ); // 初始化字符串
 
     String * str = &strVal->ref<String>();
     ++i; // skip quote
@@ -398,7 +398,7 @@ bool JsonParseObject( std::vector<JsonParseContext> & jpc, String const & json, 
                 }
                 else
                 {
-                    key.assign( TS("") );
+                    key.assign( TEXT("") );
                     for ( ; i < (int)json.length(); ++i )
                     {
                         ch = json[i];
@@ -462,11 +462,11 @@ bool JsonParseIdentifier( std::vector<JsonParseContext> & jpc, String const & js
     }
 
     // 常量辨别
-    if ( identifier == TS("false") )
+    if ( identifier == TEXT("false") )
     {
         *val = false;
     }
-    else if ( identifier == TS("true") )
+    else if ( identifier == TEXT("true") )
     {
         *val = true;
     }

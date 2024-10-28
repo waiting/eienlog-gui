@@ -41,6 +41,12 @@ enum LogEncoding
     leUtf16Be,
 };
 
+//! 前景色: R5G5B5
+#define LOG_FG_COLOR( r, g, b ) (winux::uint16)( (r) | ( (g) << 5 ) | ( (b) << 10 ) )
+
+//! 背景色: R4G4B4
+#define LOG_BG_COLOR( r, g, b ) (winux::uint16)( (r) | ( (g) << 4 ) | ( (b) << 8 ) )
+
 /** \brief 日志样式旗标 */
 union LogFlag
 {
@@ -91,29 +97,29 @@ class EIENLOG_DLL LogWriter
 public:
     /** \brief 构造函数
      *
-     *  \param host 地址
+     *  \param addr 地址
      *  \param port 端口号
      *  \param chunkSize 分块封包大小 */
-    LogWriter( winux::String const & host, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE ) : _ep( host, port ), _chunkSize(chunkSize)
-    {
-    }
+    LogWriter( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
 
     /** \brief 发送日志 */
     size_t logEx( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding, bool isBinary );
 
+    /** \brief 发送字符串日志 */
     size_t log( winux::String const & str, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding );
+
+    /** \brief 发送二进制日志 */
+    size_t logBin( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor );
 
     /** \brief 发送字符串日志
      *
      *  \param str 字符串内容
-     *  \param logEncoding 指定转换成什么编码发送
+     *  \param logEncoding 指定转换成目标编码发送
      *  \return size_t 发送的封包数量 */
-    size_t log( winux::String const & str, winux::uint8 logEncoding = leLocal )
+    size_t log( winux::String const & str, winux::uint8 logEncoding = leUtf8 )
     {
         return this->log( str, false, 0, false, 0, logEncoding );
     }
-
-    size_t logBin( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor );
 
     /** \brief 发送二进制日志
      *
@@ -125,7 +131,7 @@ public:
     }
 
     /** \brief 发送字符串日志，可指定颜色 */
-    size_t logColor( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leLocal )
+    size_t logColor( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8 )
     {
         return this->log( str, !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor, logEncoding );
     }
@@ -136,10 +142,13 @@ public:
         return this->logBin( data, !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor );
     }
 
+    int errNo() const { return _errno; }
+
 private:
     eiennet::ip::udp::Socket _sock;
     eiennet::ip::EndPoint _ep;
     winux::uint16 const _chunkSize;
+    int _errno;
 };
 
 /** \brief 日志读取器 */
@@ -154,10 +163,10 @@ public:
 
     /** \brief 构造函数
      *
-     *  \param host 地址
+     *  \param addr 地址
      *  \param port 端口号
      *  \param chunkSize 分块封包大小 */
-    LogReader( winux::String const & host, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
+    LogReader( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
 
     /** \brief 阻塞读取一个分块封包
      *
@@ -175,6 +184,7 @@ public:
     bool readRecord( LogRecord * record, time_t waitTimeout = 3000, time_t updateTimeout = 3000 );
 
     int errNo() const { return _errno; }
+
 private:
     eiennet::ip::udp::Socket _sock;
     eiennet::ip::EndPoint _ep;
@@ -182,6 +192,49 @@ private:
     winux::uint16 const _chunkSize;
     int _errno;
 };
+
+
+/** \brief 启用日志 */
+EIENLOG_FUNC_DECL(bool) EnableLog( winux::String const & addr = TEXT("127.0.0.1"), winux::ushort port = 22345, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
+
+/** \brief 禁用日志 */
+EIENLOG_FUNC_DECL(void) DisableLog();
+
+/** \brief 写字符串日志（带进程ID） */
+EIENLOG_FUNC_DECL(void) WriteLog( winux::String const & str );
+
+/** \brief 写二进制日志 */
+EIENLOG_FUNC_DECL(void) WriteLogBin( void const * data, size_t size );
+
+/** \brief 写字符串日志
+ *
+ *  \return 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) Log( winux::String const & str, winux::uint8 logEncoding = leUtf8 );
+
+/** \brief 写二进制日志
+ *
+ *  \return 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogBin( winux::Buffer const & data );
+
+/** \brief 写字符串日志。可设置颜色参数
+ *
+ *  \return 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogColor( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8 );
+
+/** \brief 写二进制日志。可设置颜色参数
+ *
+ *  \return 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogBinColor( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull );
+
+
+//#define __LOG__
+#ifdef __LOG__
+#define LOG(s) eienlog::WriteLog(s)
+#define LOG_BIN(d,s) eienlog::WriteLogBin((d),(s))
+#else
+#define LOG(s)
+#define LOG_BIN(d,s)
+#endif
 
 
 } // namespace eienlog

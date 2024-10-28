@@ -159,7 +159,7 @@ void MainWindow::renderDockSpaceMenuBar()
             {
                 ImGui::Text( u8"新建一个日志窗口，监听日志信息" );
                 ImGui::Separator();
-                static std::string addr = u8"127.0.0.1";
+                static std::string addr = u8"";
                 static int port = 22345;
                 // 对齐标签文本
                 ImGui::AlignTextToFramePadding();

@@ -76,7 +76,7 @@ public:
      *
      *  如果需要设置配置文件的外部变量，必须先调用set()，然后才load()配置文件。
      *  \param settingsFile 配置文件路径 */
-    ConfigureSettings( String const & settingsFile = TS("") );
+    ConfigureSettings( String const & settingsFile = TEXT("") );
     ~ConfigureSettings();
     ConfigureSettings( ConfigureSettings const & other );
     ConfigureSettings( ConfigureSettings && other );
@@ -90,7 +90,7 @@ public:
      *
      *  \param multiname 此参数不是表达式，而是一系列键名。可以用任何表达式可以识别的符号隔开（例如 > , . ），如果键名含空格应该用引号包起来。
      *  \param updateExprStr 更新的表达式，为空表示不更改表达式，只重新计算更新值 */
-    Mixed & update( String const & multiname, String const & updateExprStr = TS("") );
+    Mixed & update( String const & multiname, String const & updateExprStr = TEXT("") );
 
     /** \brief 以根变量场景执行表达式并返回引用，如果不能执行则返回内部一个引用 */
     Mixed & execRef( String const & exprStr ) const;
@@ -380,7 +380,7 @@ public:
      *  \param fileEncoding 文件编码 */
     void saveEx( winux::Buffer const & content, winux::AnsiString const & encoding, winux::String const & filePath, FileEncoding fileEncoding )
     {
-        winux::File file( filePath, TS("wb") );
+        winux::File file( filePath, TEXT("wb") );
         this->saveEx( content, encoding, &file, fileEncoding );
     }
 

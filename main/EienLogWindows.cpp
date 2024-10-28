@@ -11,49 +11,57 @@ EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
         LogReader reader( UnicodeConverter(this->addr).toUnicode(), this->port );
+        if ( reader.errNo() ) this->show = false;
         while ( this->show )
         {
             LogRecord record;
             if ( reader.readRecord( &record, 500 ) )
             {
                 std::lock_guard<std::mutex> lk(this->mtx);
+
                 LogTextRecord tr;
                 tr.flag.value = record.flag;
+                tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
+                tr.content = std::move(record.data);
+
+                // 根据编码进行转换
                 switch ( tr.flag.logEncoding )
                 {
                 case eienlog::leUtf8:
                     {
-                        tr.text = record.data.toString<char>();
+                        tr.strContent.assign( tr.content.toString<char>() );
                     }
                     break;
                 case eienlog::leUtf16Le:
                     {
-                        winux::Utf16String ustr = record.data.toString<winux::char16>();
+                        winux::Utf16String ustr = tr.content.toString<winux::char16>();
                         if ( winux::IsBigEndian() )
                         {
                             if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
                         }
-                        tr.text = winux::UnicodeConverter(ustr).toUtf8();
+                        tr.strContent.assign( winux::UnicodeConverter(ustr).toUtf8() );
                     }
                     break;
                 case eienlog::leUtf16Be:
                     {
-                        winux::Utf16String ustr = record.data.toString<winux::char16>();
+                        winux::Utf16String ustr = tr.content.toString<winux::char16>();
                         if ( winux::IsLittleEndian() )
                         {
                             if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
                         }
-                        tr.text = winux::UnicodeConverter(ustr).toUtf8();
+                        tr.strContent.assign( winux::UnicodeConverter(ustr).toUtf8() );
                     }
                     break;
                 default:
                     {
-                        tr.text = winux::LocalToUtf8( record.data.toString<char>() );
+                        if ( tr.flag.binary )
+                            tr.strContent.assign( "<" + winux::BufferToHex<char>(tr.content) + ">" );
+                        else
+                            tr.strContent.assign( winux::LocalToUtf8( tr.content.toString<char>() ) );
                     }
                     break;
                 }
 
-                tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
                 this->logs.push_back(tr);
             }
         }
@@ -66,12 +74,32 @@ EienLogWindow::~EienLogWindow()
     this->th->join();
 }
 
+// Foreground color: R5G5B5
+inline static void _GetImVec4ColorFromLogFgColor( winux::uint16 fgColor, ImVec4 * color )
+{
+    float r = ( fgColor & 31 ) / 31.0f, g = ( ( fgColor >> 5 ) & 31 ) / 31.0f, b = ( ( fgColor >> 10 ) & 31 ) / 31.0f;
+    color->x = r;
+    color->y = g;
+    color->z = b;
+    color->w = 1.0f;
+}
+
+// Background color: R4G4B4
+inline static void _GetImVec4ColorFromLogBgColor( winux::uint16 bgColor, ImVec4 * color )
+{
+    float r = ( bgColor & 15 ) / 15.0f, g = ( ( bgColor >> 4 ) & 15 ) / 15.0f, b = ( ( bgColor >> 8 ) & 15 ) / 15.0f;
+    color->x = r;
+    color->y = g;
+    color->z = b;
+    color->w = 1.0f;
+}
+
 void EienLogWindow::render()
 {
     ImGui::Begin( this->name.c_str(), &this->show );
     ImGui::SetWindowDock( ImGui::GetCurrentWindow(), manager->mainWindow->dockSpaceId, ImGuiCond_Once );
 
-    ImGui::Text( u8"正在读取<%s:%u>的日志...", this->addr.c_str(), this->port );
+    ImGui::Text( u8"正在读取<%s#%u>的日志...", this->addr.c_str(), this->port );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
     ImGui::SameLine();
     if ( ImGui::Checkbox( u8"自动滚动到底部", &this->vScrollToBottom ) )
@@ -109,7 +137,7 @@ void EienLogWindow::render()
             std::lock_guard<std::mutex> lk(this->mtx);
 
             ImGuiListClipper clipper;
-            clipper.Begin( this->logs.size() );
+            clipper.Begin( (int)this->logs.size() );
             while ( clipper.Step() )
             {
                 for ( int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++ )
@@ -119,17 +147,37 @@ void EienLogWindow::render()
                     char sz[20] = { 0 };
                     sprintf( sz, "%u", row + 1 );
                     if ( ImGui::Selectable( sz, this->selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) this->selected = row;
+
+                    auto & log = this->logs[row];
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::Text( this->logs[row].utcTime.c_str() );
+                    ImGui::Text( log.utcTime.c_str() );
+
                     ImGui::TableSetColumnIndex(2);
-                    ImGui::Text( "%u", this->logs[row].text.length() );
+                    ImGui::Text( "%u", (winux::uint)log.content.getSize() );
+
                     ImGui::TableSetColumnIndex(3);
-                    ImGui::Text( this->logs[row].text.c_str() );
-                    //ImGui::Text( "%d, %d, %d", clipper.DisplayStart, clipper.DisplayEnd, selected );
+                    if ( log.flag.bgColorUse )
+                    {
+                        ImVec4 color;
+                        _GetImVec4ColorFromLogBgColor( log.flag.bgColor, &color );
+                        ImGui::TableSetBgColor( ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(color) );
+                    }
+
+                    if ( log.flag.fgColorUse )
+                    {
+                        ImVec4 color;
+                        _GetImVec4ColorFromLogFgColor( log.flag.fgColor, &color );
+                        ImGui::TextColored( color, log.strContent.c_str() );
+                    }
+                    else
+                    {
+                        ImGui::Text( log.strContent.c_str() );
+                    }
                 }
             }
         }
 
+        // 自动滚动到底部的操作代码
         float a = ImGui::GetScrollY();
         float b = ImGui::GetScrollMaxY();
         //printf("%f/%f\n", a, b);

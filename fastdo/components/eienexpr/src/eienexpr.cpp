@@ -291,7 +291,7 @@ winux::String ExprLiteral::toString() const
 {
     if ( this->_val.isString() )
     {
-        return TS("\"") + winux::AddCSlashes(this->_val) + TS("\"");
+        return TEXT("\"") + winux::AddCSlashes(this->_val) + TEXT("\"");
     }
     else
     {
@@ -535,16 +535,16 @@ ExprAtom * ExprFunc::clone() const
 winux::String ExprFunc::toString() const
 {
     winux::String str;
-    str += this->_funcName + TS("( ");
+    str += this->_funcName + TEXT("( ");
     std::vector<Expression *>::const_iterator it = this->_params.begin();
     std::vector<Expression *>::const_iterator it0 = it;
     for ( ; it != this->_params.end(); ++it )
     {
         if ( it != it0 ) // when is not first
-            str += TS(", ");
+            str += TEXT(", ");
         str += (*it)->toString();
     }
-    str += TS(" )");
+    str += TEXT(" )");
     return str;
 }
 
@@ -645,7 +645,7 @@ struct EvalNode
     winux::String sub; // 子表达式串
     ExprOperator * opr; // 子表达式的算符
 
-    explicit EvalNode( winux::String const & sub = TS(""), ExprOperator * opr = nullptr ) :
+    explicit EvalNode( winux::String const & sub = TEXT(""), ExprOperator * opr = nullptr ) :
         sub(sub),
         opr(opr)
     {
@@ -666,21 +666,21 @@ struct EvalNode
                     if ( !opr->isRight() )
                         r = sub;
                     else
-                        r = TS("(") + sub + TS(")");
+                        r = TEXT("(") + sub + TEXT(")");
                 }
                 else
                 {
                     if ( opr->isRight() )
                         r = sub;
                     else
-                        r = TS("(") + sub + TS(")");
+                        r = TEXT("(") + sub + TEXT(")");
                 }
             }
             else
             {
                 if ( opr->nexus(*curOpr) < 0 )
                 {
-                    r = TS("(") + sub + TS(")");
+                    r = TEXT("(") + sub + TEXT(")");
                 }
                 else
                 {
@@ -756,7 +756,7 @@ inline static winux::String __ExpressionToString( Expression const & e )
                 rStack.pop();
 
 
-                EvalNode eNode( opd1.toString( true, curOpr ) + TS(" ") + curOpr->toString() + TS(" ") + opd2.toString( false, curOpr ), curOpr );
+                EvalNode eNode( opd1.toString( true, curOpr ) + TEXT(" ") + curOpr->toString() + TEXT(" ") + opd2.toString( false, curOpr ), curOpr );
                 rStack.push(eNode);
             }
         }
@@ -784,7 +784,7 @@ winux::String Expression::toSuffixString() const
     for ( ; it != this->_suffixAtoms.end(); ++it )
     {
         if ( it != itBegin )
-            str += TS(" ");
+            str += TEXT(" ");
 
         ExprAtom * atom = *it;
         if (
@@ -1200,7 +1200,7 @@ static bool __Period( Expression const * e, ExprOperand * arOperands[], short n,
             }
 
             winux::Mixed & tmp = (winux::Mixed &)target->operator [] (key);
-            outRetValue->attachNew( new ExprReference( tmp, v0->getName() + TS(".") + key.json() ) );
+            outRetValue->attachNew( new ExprReference( tmp, v0->getName() + TEXT(".") + key.json() ) );
             return true;
 
         }
@@ -1239,7 +1239,7 @@ static bool __Period( Expression const * e, ExprOperand * arOperands[], short n,
             }
 
             winux::Mixed & tmp = (winux::Mixed &)target->operator [] (key);
-            outRetValue->attachNew( new ExprReference( tmp, v0->toString() + TS(".") + key.json() ) );
+            outRetValue->attachNew( new ExprReference( tmp, v0->toString() + TEXT(".") + key.json() ) );
             return true;
         }
     }
@@ -1875,44 +1875,44 @@ static bool __Decrease2( Expression const * e, ExprOperand * arOperands[], short
  */
 
 static ExprOperator __Operators[] = {
-    ExprOperator( TS("."), false, false, 2000, __Period ),  // 句点
-    ExprOperator( TS("+"), true, true, 1000, __Plus ),  // 正号
-    ExprOperator( TS("-"), true, true, 1000, __Minus ), // 负号
+    ExprOperator( TEXT("."), false, false, 2000, __Period ),  // 句点
+    ExprOperator( TEXT("+"), true, true, 1000, __Plus ),  // 正号
+    ExprOperator( TEXT("-"), true, true, 1000, __Minus ), // 负号
 
-    ExprOperator( TS("!"), true, true, 1000, __Not ), // 逻辑取反
-    //ExprOperator( TS("!"/*"#"*/), true, false, 1000, NULL ), // 阶乘，左结合
+    ExprOperator( TEXT("!"), true, true, 1000, __Not ), // 逻辑取反
+    //ExprOperator( TEXT("!"/*"#"*/), true, false, 1000, NULL ), // 阶乘，左结合
 
-    ExprOperator( TS("++"), true, true, 1000, __Increase ),  // 左自增 右结合
-    ExprOperator( TS("++"), true, false, 1000, __Increase2 ),  // 右自增 左结合
-    ExprOperator( TS("--"), true, true, 1000, __Decrease ),  // 左自减 右结合
-    ExprOperator( TS("--"), true, false, 1000, __Decrease2 ),  // 右自减 左结合
+    ExprOperator( TEXT("++"), true, true, 1000, __Increase ),  // 左自增 右结合
+    ExprOperator( TEXT("++"), true, false, 1000, __Increase2 ),  // 右自增 左结合
+    ExprOperator( TEXT("--"), true, true, 1000, __Decrease ),  // 左自减 右结合
+    ExprOperator( TEXT("--"), true, false, 1000, __Decrease2 ),  // 右自减 左结合
 
-    ExprOperator( TS("**"), false, false, 400, __Power ), // 乘方
+    ExprOperator( TEXT("**"), false, false, 400, __Power ), // 乘方
 
-    ExprOperator( TS("*"), false, false, 300, __Multiply ), // 乘
-    ExprOperator( TS("/"), false, false, 300, __Divide ), // 除
+    ExprOperator( TEXT("*"), false, false, 300, __Multiply ), // 乘
+    ExprOperator( TEXT("/"), false, false, 300, __Divide ), // 除
 
-    ExprOperator( TS("%"), false, false, 300, __Mod ), // 取余
-    ExprOperator( TS("\\"), false, false, 300, __IntDivide ), // 整除
+    ExprOperator( TEXT("%"), false, false, 300, __Mod ), // 取余
+    ExprOperator( TEXT("\\"), false, false, 300, __IntDivide ), // 整除
 
-    ExprOperator( TS("+"), false, false, 200, __Add ), // 加
-    ExprOperator( TS("-"), false, false, 200, __Subtract ), // 减
+    ExprOperator( TEXT("+"), false, false, 200, __Add ), // 加
+    ExprOperator( TEXT("-"), false, false, 200, __Subtract ), // 减
 
-    ExprOperator( TS("&"), false, false, 200, __Concat ), // 连结
+    ExprOperator( TEXT("&"), false, false, 200, __Concat ), // 连结
 
-    ExprOperator( TS(">"), false, false, 180, __Greater ), // 大于
-    ExprOperator( TS("<"), false, false, 180, __Less ), // 小于
-    ExprOperator( TS(">="), false, false, 180, __GreaterEqual ), // 大于等于
-    ExprOperator( TS("<="), false, false, 180, __LessEqual ), // 小于等于
-    ExprOperator( TS("!="), false, false, 180, __NotEqual ), // 不等于
-    ExprOperator( TS("=="), false, false, 180, __Equal ), // 等于
+    ExprOperator( TEXT(">"), false, false, 180, __Greater ), // 大于
+    ExprOperator( TEXT("<"), false, false, 180, __Less ), // 小于
+    ExprOperator( TEXT(">="), false, false, 180, __GreaterEqual ), // 大于等于
+    ExprOperator( TEXT("<="), false, false, 180, __LessEqual ), // 小于等于
+    ExprOperator( TEXT("!="), false, false, 180, __NotEqual ), // 不等于
+    ExprOperator( TEXT("=="), false, false, 180, __Equal ), // 等于
 
-    ExprOperator( TS("&&"), false, false, 175, __And ), // 逻辑且
-    ExprOperator( TS("||"), false, false, 170, __Or ), // 逻辑或
+    ExprOperator( TEXT("&&"), false, false, 175, __And ), // 逻辑且
+    ExprOperator( TEXT("||"), false, false, 170, __Or ), // 逻辑或
 
-    ExprOperator( TS("="), false, true, 100, __Assign ), // 赋值号，右结合
+    ExprOperator( TEXT("="), false, true, 100, __Assign ), // 赋值号，右结合
 
-    ExprOperator( TS(","), false, false, 1, __Comma ), // 逗号
+    ExprOperator( TEXT(","), false, false, 1, __Comma ), // 逗号
 };
 
 // built-in functions ---------------------------------------------------------------------
@@ -2174,7 +2174,7 @@ static bool __FuncAddSlashes( Expression * e, std::vector<Expression *> const & 
     }
     else if ( params.size() > 0 )
     {
-        outRetValue->attachNew( new ExprLiteral( winux::AddSlashes( params[0]->val(), TS("\n\r\t\v\a\\\'\"") ) ) );
+        outRetValue->attachNew( new ExprLiteral( winux::AddSlashes( params[0]->val(), TEXT("\n\r\t\v\a\\\'\"") ) ) );
         return true;
     }
     else
@@ -2195,7 +2195,7 @@ static bool __FuncStripSlashes( Expression * e, std::vector<Expression *> const 
     }
     else if ( params.size() > 0 )
     {
-        outRetValue->attachNew( new ExprLiteral( winux::StripSlashes( params[0]->val(), TS("\n\r\t\v\a\\\'\"") ) ) );
+        outRetValue->attachNew( new ExprLiteral( winux::StripSlashes( params[0]->val(), TEXT("\n\r\t\v\a\\\'\"") ) ) );
         return true;
     }
     else
@@ -2212,13 +2212,13 @@ static bool __FuncSubStr( Expression * e, std::vector<Expression *> const & para
     if ( params.size() > 2 )
     {
         winux::String::size_type start = params[1]->val();
-        outRetValue->attachNew( new ExprLiteral( ( start != winux::String::npos ? params[0]->val().to<winux::String>().substr( start,  params[2]->val() ) : TS("") ) ) );
+        outRetValue->attachNew( new ExprLiteral( ( start != winux::String::npos ? params[0]->val().to<winux::String>().substr( start,  params[2]->val() ) : TEXT("") ) ) );
         return true;
     }
     else if ( params.size() > 1 )
     {
         winux::String::size_type start = params[1]->val();
-        outRetValue->attachNew( new ExprLiteral( ( start != winux::String::npos ? params[0]->val().to<winux::String>().substr(start) : TS("") ) ) );
+        outRetValue->attachNew( new ExprLiteral( ( start != winux::String::npos ? params[0]->val().to<winux::String>().substr(start) : TEXT("") ) ) );
         return true;
     }
     else if ( params.size() > 0 )
@@ -2319,7 +2319,7 @@ static bool __FuncJoin( Expression * e, std::vector<Expression *> const & params
     {
         winux::StringArray arr;
         params[0]->val().getArray(&arr);
-        outRetValue->attachNew( new ExprLiteral( winux::StrJoin( TS(""), arr ) ) );
+        outRetValue->attachNew( new ExprLiteral( winux::StrJoin( TEXT(""), arr ) ) );
         return true;
     }
     else
@@ -2374,14 +2374,14 @@ static bool __FuncVar( Expression * e, std::vector<Expression *> const & params,
             winux::Mixed * v = nullptr;
             if ( e->getVar( varName, &v ) )
             {
-                outRetValue->attachNew( new ExprReference( *v, TS("var(") + varName + TS(")") ) );
+                outRetValue->attachNew( new ExprReference( *v, TEXT("var(") + varName + TEXT(")") ) );
             }
             else
             {
                 VarContext * varCtx = e->getVarContext();
                 if ( varCtx )
                 {
-                    outRetValue->attachNew( new ExprReference( varCtx->set(varName), TS("var(") + varName + TS(")") ) );
+                    outRetValue->attachNew( new ExprReference( varCtx->set(varName), TEXT("var(") + varName + TEXT(")") ) );
                 }
                 else
                 {
@@ -2485,24 +2485,24 @@ static bool __FuncDef( Expression * e, std::vector<Expression *> const & params,
 }
 
 ExprFunc::StringFuncMap::value_type __Funcs[] = {
-    ExprFunc::StringFuncMap::value_type( TS("if"), __FuncIf ),
-    ExprFunc::StringFuncMap::value_type( TS("while"), __FuncWhile ),
-    ExprFunc::StringFuncMap::value_type( TS("echo"), __FuncEcho ),
-    ExprFunc::StringFuncMap::value_type( TS("json"), __FuncJson ),
-    ExprFunc::StringFuncMap::value_type( TS("tojson"), __FuncToJson ),
-    ExprFunc::StringFuncMap::value_type( TS("arr"), __FuncArr ),
-    ExprFunc::StringFuncMap::value_type( TS("coll"), __FuncColl ),
-    ExprFunc::StringFuncMap::value_type( TS("upper"), __FuncStrUpper ),
-    ExprFunc::StringFuncMap::value_type( TS("lower"), __FuncStrLower ),
-    ExprFunc::StringFuncMap::value_type( TS("addslashes"), __FuncAddSlashes ),
-    ExprFunc::StringFuncMap::value_type( TS("stripslashes"), __FuncStripSlashes ),
-    ExprFunc::StringFuncMap::value_type( TS("substr"), __FuncSubStr ),
-    ExprFunc::StringFuncMap::value_type( TS("find"), __FuncFind ),
-    ExprFunc::StringFuncMap::value_type( TS("split"), __FuncSplit ),
-    ExprFunc::StringFuncMap::value_type( TS("split2"), __FuncSplit2 ),
-    ExprFunc::StringFuncMap::value_type( TS("join"), __FuncJoin ),
-    ExprFunc::StringFuncMap::value_type( TS("var"), __FuncVar ),
-    ExprFunc::StringFuncMap::value_type( TS("def"), __FuncDef ),
+    ExprFunc::StringFuncMap::value_type( TEXT("if"), __FuncIf ),
+    ExprFunc::StringFuncMap::value_type( TEXT("while"), __FuncWhile ),
+    ExprFunc::StringFuncMap::value_type( TEXT("echo"), __FuncEcho ),
+    ExprFunc::StringFuncMap::value_type( TEXT("json"), __FuncJson ),
+    ExprFunc::StringFuncMap::value_type( TEXT("tojson"), __FuncToJson ),
+    ExprFunc::StringFuncMap::value_type( TEXT("arr"), __FuncArr ),
+    ExprFunc::StringFuncMap::value_type( TEXT("coll"), __FuncColl ),
+    ExprFunc::StringFuncMap::value_type( TEXT("upper"), __FuncStrUpper ),
+    ExprFunc::StringFuncMap::value_type( TEXT("lower"), __FuncStrLower ),
+    ExprFunc::StringFuncMap::value_type( TEXT("addslashes"), __FuncAddSlashes ),
+    ExprFunc::StringFuncMap::value_type( TEXT("stripslashes"), __FuncStripSlashes ),
+    ExprFunc::StringFuncMap::value_type( TEXT("substr"), __FuncSubStr ),
+    ExprFunc::StringFuncMap::value_type( TEXT("find"), __FuncFind ),
+    ExprFunc::StringFuncMap::value_type( TEXT("split"), __FuncSplit ),
+    ExprFunc::StringFuncMap::value_type( TEXT("split2"), __FuncSplit2 ),
+    ExprFunc::StringFuncMap::value_type( TEXT("join"), __FuncJoin ),
+    ExprFunc::StringFuncMap::value_type( TEXT("var"), __FuncVar ),
+    ExprFunc::StringFuncMap::value_type( TEXT("def"), __FuncDef ),
 };
 
 // class ExprPackage ----------------------------------------------------------------------
@@ -2937,7 +2937,7 @@ void ExprParser::_parseExpr( Expression * e, winux::String const & str, int & i,
             }
             else // 前一个原子不是标识符，视作一个子表达式操作数处理
             {
-                __IsOkAsOperand( &jctx, TS("(...)"), i ); // 判断当前atom是否能作为操作数
+                __IsOkAsOperand( &jctx, TEXT("(...)"), i ); // 判断当前atom是否能作为操作数
 
                 Expression * subExpr = new Expression( e->_package, NULL, e, NULL );
                 epc.push_back(epcExpr); // 新一个子表达式
@@ -3075,7 +3075,7 @@ void ExprParser::_parseFuncParams( Expression * exprOwner, ExprFunc * funcAtom, 
             }
             else // 前一个原子不是标识符，视作一个子表达式操作数处理
             {
-                __IsOkAsOperand( &jctx, TS("(...)"), i ); // 判断当前atom是否能作为操作数
+                __IsOkAsOperand( &jctx, TEXT("(...)"), i ); // 判断当前atom是否能作为操作数
 
                 Expression * subExpr = new Expression( exprOwner->_package, NULL, eParam, NULL );
                 epc.push_back(epcExpr); // 新一个子表达式

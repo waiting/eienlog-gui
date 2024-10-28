@@ -157,11 +157,11 @@ WINUX_FUNC_IMPL(bool) IsAbsPath( String const & path )
 WINUX_FUNC_IMPL(String) NormalizePath( String const & path )
 {
     StringArray pathSubs;
-    size_t n = StrSplit( path, TS("/\\"), &pathSubs );
+    size_t n = StrSplit( path, TEXT("/\\"), &pathSubs );
     size_t i, c = n;
     for ( i = 0; i < c; )
     {
-        if ( i > 0 && pathSubs[i - 1] != TS("..") && !IsAbsPath( pathSubs[i - 1] + DirSep ) && pathSubs[i] == TS("..") )
+        if ( i > 0 && pathSubs[i - 1] != TEXT("..") && !IsAbsPath( pathSubs[i - 1] + DirSep ) && pathSubs[i] == TEXT("..") )
         {
             size_t k;
             for ( k = i + 1; k < c; k++ )
@@ -171,7 +171,7 @@ WINUX_FUNC_IMPL(String) NormalizePath( String const & path )
             c -= 2;
             --i;
         }
-        else if ( pathSubs[i] == TS(".") )
+        else if ( pathSubs[i] == TEXT(".") )
         {
             size_t k;
             for ( k = i + 1; k < c; k++ )
@@ -476,7 +476,7 @@ WINUX_FUNC_IMPL(void) FolderData( String const & path, StringArray * fileArr, St
     while ( iter.next() )
     {
         String const & name = iter.getName();
-        if ( name == TS(".") || name == TS("..") ) continue;
+        if ( name == TEXT(".") || name == TEXT("..") ) continue;
 
         if ( iter.isDir() )
         {
@@ -606,7 +606,7 @@ WINUX_FUNC_IMPL(size_t) CommonDelete( String const & path )
 WINUX_FUNC_IMPL(bool) MakeDirExists( String const & path, int mode )
 {
     StringArray subPaths;
-    size_t const n = StrSplit( path, TS("/\\"), &subPaths );
+    size_t const n = StrSplit( path, TEXT("/\\"), &subPaths );
     size_t i;
     String existsPath;
     for ( i = 0; i < n; ++i )
@@ -1405,11 +1405,11 @@ WINUX_FUNC_IMPL(String) BackupFile( String const & filePath, String const & bakD
                         i++;
                         break;
                     case 'E':
-                        bakFileName += extName.empty() ? TS("") : TS(".") + extName;
+                        bakFileName += extName.empty() ? TEXT("") : TEXT(".") + extName;
                         i++;
                         break;
                     case 'v':
-                        bakFileName += Format( TS("%u"), v );
+                        bakFileName += Format( TEXT("%u"), v );
                         i++;
                         break;
                     case '%':
@@ -1450,28 +1450,6 @@ WINUX_FUNC_IMPL(String) BackupFile( String const & filePath, String const & bakD
     }
 
     return r;
-}
-
-WINUX_FUNC_IMPL(void) WriteLog( String const & s )
-{
-    String exeFile;
-    String exePath = FilePath( GetExecutablePath(), &exeFile );
-    File out( exePath + DirSep + FileTitle(exeFile) + TS(".log"), TS("at") );
-    time_t tt = GetUtcTime();
-    struct tm * t = gmtime(&tt);
-    tchar sz[32] = { 0 };
-    _tcsftime( sz, 32, TS("%a, %d %b %Y %H:%M:%S GMT"), t );
-    String log;
-    StringWriter(&log) << Format( TS("[pid:%d]"), getpid() ) << sz << TS(" - \"") << AddCSlashes(s) << TS("\"") << std::endl;
-    out.puts(log);
-}
-
-WINUX_FUNC_IMPL(void) WriteBinLog( void const * data, size_t size )
-{
-    String exeFile;
-    String exePath = FilePath( GetExecutablePath(), &exeFile );
-    File out( exePath + DirSep + FileTitle(exeFile) + TS(".binlog"), TS("ab") );
-    out.write( data, size );
 }
 
 
@@ -1960,8 +1938,8 @@ bool BlockOutFile::nextBlock()
 {
     this->close(); // 关闭先前的那块
     bool r = this->open(
-        CombinePath( _dirname, _filetitle + TS("_") + (String)Mixed(_fileno) + TS(".") + _extname ),
-        ( _isTextMode ? TS("w") : TS("wb") )
+        CombinePath( _dirname, _filetitle + TEXT("_") + (String)Mixed(_fileno) + TEXT(".") + _extname ),
+        ( _isTextMode ? TEXT("w") : TEXT("wb") )
     );
     if ( r )
     {
@@ -2025,7 +2003,7 @@ BlockInFile::BlockInFile( String const & filename, bool isTextMode ) : _index(0)
         int i;
         for ( i = 1; i <= maxFileNo; ++i )
         {
-            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + TS(".") + _extname );
+            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + TEXT(".") + _extname );
             if ( DetectPath(curFileName) )
             {
                 _blockFiles.push_back(curFileName);
@@ -2034,7 +2012,7 @@ BlockInFile::BlockInFile( String const & filename, bool isTextMode ) : _index(0)
         bool flag = true;
         for ( ; flag; ++i )
         {
-            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + TS(".") + _extname );
+            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + TEXT(".") + _extname );
             if ( ( flag = DetectPath(curFileName) ) )
             {
                 _blockFiles.push_back(curFileName);
@@ -2048,7 +2026,7 @@ BlockInFile::BlockInFile( String const & filename, bool isTextMode ) : _index(0)
         _filetitle = fileTitle;
         for ( ; flag; ++i )
         {
-            String curFileName = CombinePath( _dirname, _filetitle + TS("_") + (String)Mixed(i) + TS(".") + _extname );
+            String curFileName = CombinePath( _dirname, _filetitle + TEXT("_") + (String)Mixed(i) + TEXT(".") + _extname );
             if ( ( flag = DetectPath(curFileName) ) )
             {
                 _blockFiles.push_back(curFileName);
@@ -2065,7 +2043,7 @@ bool BlockInFile::nextBlock()
     {
         return false;
     }
-    bool r = this->open( _blockFiles[_index], ( _isTextMode ? TS("r") : TS("rb") ) );
+    bool r = this->open( _blockFiles[_index], ( _isTextMode ? TEXT("r") : TEXT("rb") ) );
     if ( r )
     {
         _index++;

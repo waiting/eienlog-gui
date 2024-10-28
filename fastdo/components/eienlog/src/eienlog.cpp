@@ -2,6 +2,20 @@
 #include <thread>
 #include <chrono>
 
+#if defined(OS_WIN)
+    #include <sys/utime.h>
+    #include <direct.h>
+    #include <io.h>
+    #include <process.h>
+    #include <tchar.h>
+#else
+    #include <utime.h>
+    #include <unistd.h>
+    #include <errno.h>
+    #include <wchar.h>
+#endif
+
+
 namespace eienlog
 {
 // 根据数据创建一系列分块
@@ -22,7 +36,7 @@ static std::vector< winux::Packet<LogChunk> > _BuildChunks( winux::Buffer const 
         pack->chunks = chunks;
         pack->realLen = logSpaceSize;
         pack->utcTime = utcTime;
-        memcpy( pack->logSpace, data.get<byte>() + ( data.size() - remainingSize ), logSpaceSize );
+        memcpy( pack->logSpace, data.get<winux::byte>() + ( data.size() - remainingSize ), logSpaceSize );
         packs.push_back( std::move(pack) );
 
         remainingSize -= logSpaceSize;
@@ -36,7 +50,7 @@ static std::vector< winux::Packet<LogChunk> > _BuildChunks( winux::Buffer const 
         pack->chunks = chunks;
         pack->realLen = (winux::uint16)remainingSize;
         pack->utcTime = utcTime;
-        memcpy( pack->logSpace, data.get<byte>() + ( data.size() - remainingSize ), remainingSize );
+        memcpy( pack->logSpace, data.get<winux::byte>() + ( data.size() - remainingSize ), remainingSize );
         packs.push_back( std::move(pack) );
     }
     return packs;
@@ -58,7 +72,7 @@ static bool _ResumeRecord( std::vector< winux::Packet<LogChunk> > const & packs,
     for ( auto && pack : packs )
     {
         LogChunk * chunk = pack.get();
-        memcpy( record->data.get<byte>() + chunk->index * logSpaceSize, chunk->logSpace, chunk->realLen );
+        memcpy( record->data.get<winux::byte>() + chunk->index * logSpaceSize, chunk->logSpace, chunk->realLen );
         n += chunk->realLen;
     }
     record->data._setSize(n);
@@ -66,14 +80,11 @@ static bool _ResumeRecord( std::vector< winux::Packet<LogChunk> > const & packs,
 }
 
 // class LogWriter ----------------------------------------------------------------------------
-inline static size_t _SendChunks( eiennet::ip::udp::Socket & sock, eiennet::ip::EndPoint const & ep, winux::Buffer const & data, winux::uint32 flag, winux::uint16 chunkSize )
+LogWriter::LogWriter( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize ) : _ep( addr, port ), _chunkSize(chunkSize), _errno(0)
 {
-    auto packs = _BuildChunks( data, winux::GetUtcTimeMs(), flag, chunkSize );
-    for ( auto && pack : packs )
-    {
-        sock.sendTo( ep, pack );
-    }
-    return packs.size();
+    _sock.setAddrFamily( _ep.getAddrFamily() );
+    if ( !_sock.create() )
+        _errno = eiennet::Socket::ErrNo();
 }
 
 size_t LogWriter::logEx( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding, bool isBinary )
@@ -85,7 +96,13 @@ size_t LogWriter::logEx( winux::Buffer const & data, bool useFgColor, winux::uin
     flag.bgColor = bgColor;
     flag.logEncoding = logEncoding;
     flag.binary = isBinary;
-    return _SendChunks( _sock, _ep, data, flag.value, _chunkSize );
+
+    auto packs = _BuildChunks( data, winux::GetUtcTimeMs(), flag.value, _chunkSize );
+    for ( auto && pack : packs )
+    {
+        _sock.sendTo( _ep, pack );
+    }
+    return packs.size();
 }
 
 size_t LogWriter::log( winux::String const & str, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding )
@@ -149,10 +166,10 @@ size_t LogWriter::logBin( winux::Buffer const & data, bool useFgColor, winux::ui
 }
 
 // class LogReader ----------------------------------------------------------------------------
-LogReader::LogReader( winux::String const & host, winux::ushort port, winux::uint16 chunkSize ) : _ep( host, port ), _chunkSize(chunkSize), _errno(0)
+LogReader::LogReader( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize ) : _ep( addr, port ), _chunkSize(chunkSize), _errno(0)
 {
-    _sock.bind(_ep);
-    _errno = eiennet::Socket::ErrNo();
+    if ( !_sock.bind(_ep) )
+        _errno = eiennet::Socket::ErrNo();
 }
 
 bool LogReader::readPack( winux::Packet<LogChunk> * pack, eiennet::ip::EndPoint * ep )
@@ -161,7 +178,7 @@ bool LogReader::readPack( winux::Packet<LogChunk> * pack, eiennet::ip::EndPoint 
     size_t hadBytes = 0;
     do
     {
-        int rc = _sock.recvFrom( ep, pack->Buffer::get<byte>() + hadBytes, pack->capacity() - hadBytes );
+        int rc = _sock.recvFrom( ep, pack->Buffer::get<winux::byte>() + hadBytes, pack->capacity() - hadBytes );
         if ( rc < 0 ) return false;
         hadBytes += rc;
     } while ( hadBytes < _chunkSize );
@@ -224,6 +241,122 @@ bool LogReader::readRecord( LogRecord * record, time_t waitTimeout, time_t updat
         }
     }
     return false;
+}
+
+eiennet::SocketLib * __sockLib = nullptr; // Socket库初始化
+LogWriter * __logWriter = nullptr; // 日志写入器对象
+winux::MutexNative __mtxLogWriter; // 日志写入器共享互斥锁
+
+EIENLOG_FUNC_IMPL(bool) EnableLog( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize )
+{
+    winux::ScopeGuard guard(__mtxLogWriter);
+    if ( __sockLib == nullptr ) __sockLib = new eiennet::SocketLib();
+
+    if ( __logWriter == nullptr )
+    {
+        auto logWriter = new LogWriter( addr, port, chunkSize );
+        if ( logWriter->errNo() == 0 )
+        {
+            __logWriter = logWriter;
+            return true;
+        }
+        else
+        {
+            delete logWriter;
+            return false;
+        }
+    }
+    return true;
+}
+
+EIENLOG_FUNC_IMPL(void) DisableLog()
+{
+    winux::ScopeGuard guard(__mtxLogWriter);
+    if ( __logWriter != nullptr )
+    {
+        delete __logWriter;
+        __logWriter = nullptr;
+    }
+
+    if ( __sockLib != nullptr )
+    {
+        delete __sockLib;
+        __sockLib = nullptr;
+    }
+}
+
+EIENLOG_FUNC_IMPL(void) WriteLog( winux::String const & str )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        __logWriter->log( winux::Format( TEXT("[pid:%d] - "), getpid() ) + winux::AddCSlashes(str), eienlog::leUtf8 );
+    }
+
+    //winux::String exeFile;
+    //winux::String exePath = winux::FilePath( winux::GetExecutablePath(), &exeFile );
+    //winux::File out( exePath + winux::DirSep + winux::FileTitle(exeFile) + TEXT(".log"), TEXT("at") );
+    //time_t tt = winux::GetUtcTime();
+    //struct tm * t = gmtime(&tt);
+    //winux::tchar sz[32] = { 0 };
+    //_tcsftime( sz, 32, TEXT("%a, %d %b %Y %H:%M:%S GMT"), t );
+    //winux::String log;
+    //winux::StringWriter(&log) << winux::Format( TEXT("[pid:%d]"), getpid() ) << sz << TEXT(" - \"") << winux::AddCSlashes(s) << TEXT("\"") << std::endl;
+    //out.puts(log);
+}
+
+EIENLOG_FUNC_IMPL(void) WriteLogBin( void const * data, size_t size )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        __logWriter->logBin( winux::Buffer( data, size, true ) );
+    }
+
+    /*winux::String exeFile;
+    winux::String exePath = winux::FilePath( winux::GetExecutablePath(), &exeFile );
+    winux::File out( exePath + winux::DirSep + winux::FileTitle(exeFile) + TEXT(".binlog"), TEXT("ab") );
+    out.write( data, size );*/
+}
+
+EIENLOG_FUNC_IMPL(size_t) Log( winux::String const & str, winux::uint8 logEncoding )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        return __logWriter->log( str, logEncoding );
+    }
+    return 0;
+}
+
+EIENLOG_FUNC_IMPL(size_t) LogBin( winux::Buffer const & data )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        return __logWriter->logBin(data);
+    }
+    return 0;
+}
+
+EIENLOG_FUNC_IMPL(size_t) LogColor( winux::String const & str, winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        return __logWriter->logColor( str, fgColor, bgColor, logEncoding );
+    }
+    return 0;
+}
+
+EIENLOG_FUNC_IMPL(size_t) LogBinColor( winux::Buffer const & data, winux::Mixed const & fgColor, winux::Mixed const & bgColor )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        return __logWriter->logBinColor( data, fgColor, bgColor );
+    }
+    return 0;
 }
 
 

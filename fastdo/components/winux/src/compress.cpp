@@ -111,7 +111,7 @@ static void __ZipAll( Zip * z, String const & dirPath, String const & dstPath )
     DirIterator di(dirPath);
     while ( di.next() )
     {
-        if ( di.getName() == TS(".") || di.getName() == TS("..") )
+        if ( di.getName() == TEXT(".") || di.getName() == TEXT("..") )
         {
             continue;
         }

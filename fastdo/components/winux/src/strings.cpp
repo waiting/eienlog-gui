@@ -1991,7 +1991,7 @@ MultiMatch::MatchResult MultiMatch::commonSearch( String const & str, ssize_t of
 String MultiMatch::replace( String const & str, ssize_t offset, SearchFuncType fnSearch ) const
 {
     ssize_t start = 0;
-    String s = TS("");
+    String s = TEXT("");
     MatchResult r = (this->*fnSearch)( str, start + offset );
     while ( r.pos != -1 )
     {

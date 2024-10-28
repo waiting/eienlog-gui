@@ -1476,7 +1476,7 @@ inline static void __ParseIpv4( winux::String const & ipStr, winux::String const
 
     // 解析IP部分
     winux::StringArray arrIpParts;
-    winux::StrSplit( ipStr, TS("."), &arrIpParts, false );
+    winux::StrSplit( ipStr, TEXT("."), &arrIpParts, false );
     int i = 0;
     for ( auto & ipPart : arrIpParts )
     {
@@ -1496,14 +1496,14 @@ inline static void __ParseIpv6( winux::String const & ipStr, winux::String const
     // 解析IP部分
     // 搜索“::”
     size_t pos = winux::String::npos;
-    winux::String doubleColon = TS("::");
+    winux::String doubleColon = TEXT("::");
     if ( ( pos = ipStr.find(doubleColon) ) != winux::String::npos ) // has "::"
     {
         winux::String beginPart = ipStr.substr( 0, pos );
         winux::String endPart = ipStr.substr( pos + doubleColon.length() );
         winux::StringArray arrBeginParts, arrEndParts;
-        winux::StrSplit( beginPart, TS(":"), &arrBeginParts, false );
-        winux::StrSplit( endPart, TS(":"), &arrEndParts, false );
+        winux::StrSplit( beginPart, TEXT(":"), &arrBeginParts, false );
+        winux::StrSplit( endPart, TEXT(":"), &arrEndParts, false );
         for ( size_t i = 0; i < arrBeginParts.size(); i++ )
         {
             addr->sin6_addr.s6_addr16[i] = htont<winux::ushort>( (winux::ushort)winux::StrToUInt64( arrBeginParts[i], 16 ) );
@@ -1516,7 +1516,7 @@ inline static void __ParseIpv6( winux::String const & ipStr, winux::String const
     else
     {
         winux::StringArray arrIpParts;
-        winux::StrSplit( ipStr, TS(":"), &arrIpParts );
+        winux::StrSplit( ipStr, TEXT(":"), &arrIpParts );
         int i = 0;
         for ( auto & ipPart : arrIpParts )
         {
@@ -1539,7 +1539,7 @@ inline static void __ParseEndPoint( winux::String const & ep, winux::ushort port
     {
         pEpData->len = sizeof(pEpData->addr.addrInet);
 
-        __ParseIpv4( epStr, TS(""), &pEpData->addr.addrInet );
+        __ParseIpv4( epStr, TEXT(""), &pEpData->addr.addrInet );
         pEpData->addr.addrInet.sin_port = htont(port);
     }
     else if ( epStr.find('.') != winux::String::npos ) // is IPv4
@@ -1567,7 +1567,7 @@ inline static void __ParseEndPoint( winux::String const & ep, winux::ushort port
     {
         pEpData->len = sizeof(pEpData->addr.addrInet);
 
-        __ParseIpv4( TS(""), epStr.substr(1), &pEpData->addr.addrInet );
+        __ParseIpv4( TEXT(""), epStr.substr(1), &pEpData->addr.addrInet );
     }
     else // is IPv6
     {
@@ -1613,7 +1613,7 @@ inline static void __ParseEndPoint( winux::String const & ep, winux::ushort port
 inline static winux::String __Ipv4ToString( in_addr addr )
 {
     return winux::Format(
-        TS("%u.%u.%u.%u"),
+        TEXT("%u.%u.%u.%u"),
         ((winux::byte *)&addr.s_addr)[0],
         ((winux::byte *)&addr.s_addr)[1],
         ((winux::byte *)&addr.s_addr)[2],
@@ -1678,7 +1678,7 @@ inline static winux::String __Ipv6ToString( in6_addr const & addr )
             {
                 if ( !f )
                 {
-                    ip += TS("::");
+                    ip += TEXT("::");
                 }
                 f = true;
             }
@@ -1830,7 +1830,7 @@ winux::String EndPoint::toString() const
             winux::String ip = __Ipv4ToString(_self->addr.addrInet.sin_addr);
             if ( _self->addr.addrInet.sin_port )
             {
-                r = winux::Format( TS("%s:%u"), ip.c_str(), ntoht(_self->addr.addrInet.sin_port) );
+                r = winux::Format( TEXT("%s:%u"), ip.c_str(), ntoht(_self->addr.addrInet.sin_port) );
             }
             else
             {
@@ -1843,7 +1843,7 @@ winux::String EndPoint::toString() const
             winux::String ip = __Ipv6ToString(_self->addr.addrInet6.sin6_addr);
             if ( _self->addr.addrInet6.sin6_port )
             {
-                r = winux::Format( TS("[%s]:%u"), ip.c_str(), ntoht(_self->addr.addrInet6.sin6_port) );
+                r = winux::Format( TEXT("[%s]:%u"), ip.c_str(), ntoht(_self->addr.addrInet6.sin6_port) );
             }
             else
             {
@@ -1982,7 +1982,7 @@ Resolver::Resolver( winux::String const & hostName, winux::ushort port )
 
 winux::String Resolver::toString() const
 {
-    return winux::Format( TS("%s:%u"), _hostName.c_str(), _port );
+    return winux::Format( TEXT("%s:%u"), _hostName.c_str(), _port );
 }
 
 Resolver::operator winux::Mixed() const

@@ -289,7 +289,7 @@ WINUX_FUNC_IMPL(HProcess) ExecCommandEx(
         }
     }
 
-    bCreateRet = CreateProcess( NULL, ( cmdBuf.empty() ? (LPTSTR)TS(""): &cmdBuf[0] ), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi );
+    bCreateRet = CreateProcess( NULL, ( cmdBuf.empty() ? (LPTSTR)TEXT(""): &cmdBuf[0] ), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi );
     if ( !bCreateRet )
     {
         goto StdPipeError;
@@ -599,7 +599,7 @@ inline static void __MixedAppendToStringArray( Mixed const & mx, StringArray * a
         if ( !s.empty() )
         {
             StringArray tmpArr;
-            size_t n = StrSplit( s, TS(","), &tmpArr );
+            size_t n = StrSplit( s, TEXT(","), &tmpArr );
             for ( size_t i = 0; i < n; i++ )
             {
                 if ( !tmpArr[i].empty() )
@@ -715,7 +715,7 @@ CommandLineVars::CommandLineVars( int argc, winux::tchar const ** argv, Mixed co
                     }
                     else // 已经是最后一个，参数值只好认为是空
                     {
-                        _params[_desiredParams[iDesiredParam]] = TS("");
+                        _params[_desiredParams[iDesiredParam]] = TEXT("");
                     }
                 }
             }
@@ -739,7 +739,7 @@ CommandLineVars::CommandLineVars( int argc, winux::tchar const ** argv, Mixed co
                 else
                 {
                     optionName = arg;
-                    optionVal = TS("");
+                    optionVal = TEXT("");
                 }
 
                 if ( optionName == _desiredOptions[iDesiredOption] )

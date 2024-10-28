@@ -81,7 +81,7 @@ WINUX_FUNC_DECL(int) ExecCommand(
  *  \return String 标准输出的内容 */
 WINUX_FUNC_DECL(String) GetExec(
     String const & cmd,
-    String const & stdinStr = TS(""),
+    String const & stdinStr = TEXT(""),
     String * stderrStr = NULL,
     bool closeStdinIfStdinStrEmpty = true
 );
@@ -113,7 +113,7 @@ public:
         Mixed const & desiredParams,
         Mixed const & desiredOptions,
         Mixed const & desiredFlags,
-        Mixed const & optionSymbols = TS("=,:")
+        Mixed const & optionSymbols = TEXT("=,:")
     );
 
     /** \brief 获取参数个数 */
@@ -135,9 +135,9 @@ public:
     bool hasValue( String const & value ) const { return _values.has(value); }
 
     /** \brief 获取指定名字的参数 */
-    Mixed const & getParam( String const & name, Mixed const & defValue = TS("") ) const { return this->hasParam(name) ? _params[name] : defValue; }
+    Mixed const & getParam( String const & name, Mixed const & defValue = TEXT("") ) const { return this->hasParam(name) ? _params[name] : defValue; }
     /** \brief 获取指定名字的选项 */
-    Mixed const & getOption( String const & name, Mixed const & defValue = TS("") ) const { return this->hasOption(name) ? _options[name] : defValue; }
+    Mixed const & getOption( String const & name, Mixed const & defValue = TEXT("") ) const { return this->hasOption(name) ? _options[name] : defValue; }
     /** \brief 获取指定索引的旗标 */
     Mixed const & getFlag( size_t i ) const { return _flags[i]; }
     /** \brief 获取指定索引的值 */
@@ -166,10 +166,10 @@ public:
     {
         CommandLineVars * p = const_cast<CommandLineVars *>(this);
         return $c{
-            { TS("params"), p->getParams() },
-            { TS("options"), p->getOptions() },
-            { TS("flags"), p->getFlags() },
-            { TS("values"), p->getValues() },
+            { TEXT("params"), p->getParams() },
+            { TEXT("options"), p->getOptions() },
+            { TEXT("flags"), p->getFlags() },
+            { TEXT("values"), p->getValues() },
         };
     }
 
