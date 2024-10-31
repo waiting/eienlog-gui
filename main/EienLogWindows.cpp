@@ -5,8 +5,8 @@ using namespace winux;
 using namespace eienlog;
 
 // struct EienLogWindow -----------------------------------------------------------------------
-EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom ) :
-    manager(manager), name(name), addr(addr), port(port), vScrollToBottom(vScrollToBottom)
+EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom ) :
+    manager(manager), name(name), addr(addr), port(port), waitTimeout(waitTimeout), updateTimeout(updateTimeout), vScrollToBottom(vScrollToBottom)
 {
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
@@ -15,7 +15,7 @@ EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name
         while ( this->show )
         {
             LogRecord record;
-            if ( reader.readRecord( &record, 500 ) )
+            if ( reader.readRecord( &record, this->waitTimeout, this->updateTimeout ) )
             {
                 std::lock_guard<std::mutex> lk(this->mtx);
 
@@ -222,9 +222,9 @@ EienLogWindows::EienLogWindows( MainWindow * mainWindow ) : mainWindow(mainWindo
 
 }
 
-void EienLogWindows::addWindow( std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom )
+void EienLogWindows::addWindow( std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom )
 {
-    auto p = winux::MakeSimple( new EienLogWindow( this, name, addr, port, vScrollToBottom ) );
+    auto p = winux::MakeSimple( new EienLogWindow( this, name, addr, port, waitTimeout, updateTimeout, vScrollToBottom ) );
     this->wins.emplace_back(p);
 }
 

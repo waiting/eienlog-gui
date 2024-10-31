@@ -64,7 +64,7 @@ void NewEienLogWindowModal::renderComponents()
 
 void NewEienLogWindowModal::onOk()
 {
-    this->_manager->addWindow( __name, __addr, (USHORT)__port, __vScrollToBottom );
+    this->_manager->addWindow( __name, __addr, (USHORT)__port, winux::Mixed(__strWaitTimeout), winux::Mixed(__strUpdateTimeout), __vScrollToBottom );
 
     __ch[0]++;
     __name = std::string(u8"»’÷æ") + __ch;

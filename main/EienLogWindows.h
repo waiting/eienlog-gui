@@ -16,7 +16,7 @@ struct LogTextRecord
 
 struct EienLogWindow
 {
-    EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom );
+    EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
     ~EienLogWindow();
     void render();
 
@@ -24,6 +24,8 @@ struct EienLogWindow
     std::string name;
     std::string addr;
     USHORT port = 0;
+    time_t waitTimeout;
+    time_t updateTimeout;
     std::vector<LogTextRecord> logs;
     int selected = -1;
     bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
@@ -37,7 +39,7 @@ struct EienLogWindows
 {
     EienLogWindows( MainWindow * mainWindow );
 
-    void addWindow( std::string const & name, std::string const & addr, USHORT port, bool vScrollToBottom );
+    void addWindow( std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
     void render();
 
     std::vector< winux::SimplePointer<EienLogWindow> > wins;
