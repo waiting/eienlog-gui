@@ -33,6 +33,12 @@
     <ClInclude Include="EienLogWindows.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="WindowModal.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NewEienLogWindowModal.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="eienlog-gui.rc">
@@ -64,6 +70,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="EienLogWindows.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowModal.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NewEienLogWindowModal.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

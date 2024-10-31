@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "NewEienLogWindowModal.h"
 #include "EienLogWindows.h"
 
 struct App;
@@ -15,7 +16,6 @@ struct MainWindow
     bool showSettingsWindow = true;
     bool showDemoWindow = false;
     bool showAboutWindow = false;
-    bool toggleNewPopup = false;
 
     // Dock space state
     ImGuiID dockSpaceId;
@@ -25,5 +25,6 @@ struct MainWindow
 
     // MyData
     winux::SimplePointer<EienLogWindows> logWinManager;
+    winux::SimplePointer<NewEienLogWindowModal> newEienLogWindowModal;
 };
 

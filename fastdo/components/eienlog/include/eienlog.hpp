@@ -47,6 +47,54 @@ enum LogEncoding
 //! 背景色: R4G4B4
 #define LOG_BG_COLOR( r, g, b ) (winux::uint16)( (r) | ( (g) << 4 ) | ( (b) << 8 ) )
 
+/** \brief 日志颜色 */
+enum LogFgColor : winux::uint16
+{
+    lfcBlack = LOG_FG_COLOR( 0, 0, 0 ),
+
+    lfcMaroon = LOG_FG_COLOR( 16, 0, 0 ),
+    lfcAtrovirens = LOG_FG_COLOR( 0, 16, 0 ),
+    lfcOlive = lfcMaroon | lfcAtrovirens,
+    lfcNavy = LOG_FG_COLOR( 0, 0, 16 ),
+    lfcPurple = lfcMaroon | lfcNavy,
+    lfcTeal = lfcAtrovirens | lfcNavy, 
+    lfcGray = lfcMaroon | lfcAtrovirens | lfcNavy,
+
+    lfcSilver = LOG_FG_COLOR( 24, 24, 24 ),
+
+    lfcRed = LOG_FG_COLOR( 31, 0, 0 ),
+    lfcGreen = LOG_FG_COLOR( 0, 31, 0 ),
+    lfcYellow = lfcRed | lfcGreen,
+    lfcBlue = LOG_FG_COLOR( 0, 0, 31 ),
+    lfcFuchsia = lfcRed | lfcBlue,
+    lfcAqua = lfcGreen | lfcBlue,
+    lfcWhite = lfcRed | lfcGreen | lfcBlue
+};
+
+/** \brief 日志背景颜色 */
+enum LogBgColor : winux::uint16
+{
+    lbcBlack = LOG_BG_COLOR( 0, 0, 0 ),
+
+    lbcMaroon = LOG_BG_COLOR( 8, 0, 0 ),
+    lbcAtrovirens = LOG_BG_COLOR( 0, 8, 0 ),
+    lbcOlive = lbcMaroon | lbcAtrovirens,
+    lbcNavy = LOG_BG_COLOR( 0, 0, 8 ),
+    lbcPurple = lbcMaroon | lbcNavy,
+    lbcTeal = lbcAtrovirens | lbcNavy, 
+    lbcGray = lbcMaroon | lbcAtrovirens | lbcNavy,
+
+    lbcSilver = LOG_BG_COLOR( 12, 12, 12 ),
+
+    lbcRed = LOG_BG_COLOR( 15, 0, 0 ),
+    lbcGreen = LOG_BG_COLOR( 0, 15, 0 ),
+    lbcYellow = lbcRed | lbcGreen,
+    lbcBlue = LOG_BG_COLOR( 0, 0, 15 ),
+    lbcFuchsia = lbcRed | lbcBlue,
+    lbcAqua = lbcGreen | lbcBlue,
+    lbcWhite = lbcRed | lbcGreen | lbcBlue
+};
+
 /** \brief 日志样式旗标 */
 union LogFlag
 {

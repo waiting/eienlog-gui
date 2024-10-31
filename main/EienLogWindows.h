@@ -9,7 +9,7 @@ struct EienLogWindows;
 struct LogTextRecord
 {
     winux::Buffer content; //!< 日志内容
-    winux::AnsiString strContent;
+    winux::AnsiString strContent; //!< 字符串内容
     winux::AnsiString utcTime;  //!< UTC时间戳
     eienlog::LogFlag flag;  //!< 日志样式FLAG
 };
@@ -26,7 +26,7 @@ struct EienLogWindow
     USHORT port = 0;
     std::vector<LogTextRecord> logs;
     int selected = -1;
-    bool bToggleVScrollToBottom = false;
+    bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
     bool vScrollToBottom = true;
     std::mutex mtx;
     winux::SimplePointer<std::thread> th;

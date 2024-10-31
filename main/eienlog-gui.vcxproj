@@ -171,8 +171,10 @@
     <ClInclude Include="EienLogWindows.h" />
     <ClInclude Include="GraphicsInterface.h" />
     <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="NewEienLogWindowModal.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="WindowInterface.h" />
+    <ClInclude Include="WindowModal.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="eienlog-gui.rc" />
@@ -187,7 +189,9 @@
     <ClCompile Include="GraphicsInterface.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="NewEienLogWindowModal.cpp" />
     <ClCompile Include="WindowInterface.cpp" />
+    <ClCompile Include="WindowModal.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

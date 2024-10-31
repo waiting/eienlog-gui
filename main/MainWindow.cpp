@@ -4,6 +4,7 @@
 MainWindow::MainWindow( App & app ) : app(app)
 {
     this->logWinManager.attachNew( new EienLogWindows(this) );
+    this->newEienLogWindowModal.attachNew( new NewEienLogWindowModal( this->logWinManager.get(), u8"新建..." ) );
 }
 
 void MainWindow::render()
@@ -43,7 +44,7 @@ void MainWindow::render()
         //ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 10, 5 ) );
         if ( ImGui::Button(u8"创建新日志窗口") )
         {
-            toggleNewPopup = true;
+            this->newEienLogWindowModal->toggle();
         }
         //ImGui::PopStyleVar();
 
@@ -51,11 +52,12 @@ void MainWindow::render()
     }
 
     this->logWinManager->render();
+    this->newEienLogWindowModal->render();
 
-    if (showDemoWindow)
+    if ( showDemoWindow )
         ImGui::ShowDemoWindow(&showDemoWindow);
 
-    if (showAboutWindow)
+    if ( showAboutWindow )
     {
         ImGui::Begin(u8"关于", &showAboutWindow, 0/*ImGuiWindowFlags_AlwaysAutoResize*/);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
         ImGui::Text(u8"EienLog Viewer 1.0.0");
@@ -138,7 +140,7 @@ void MainWindow::renderDockSpaceMenuBar()
         {
             if ( ImGui::MenuItem(u8"新建...") )
             {
-                toggleNewPopup = true;
+                this->newEienLogWindowModal->toggle();
             }
             ImGui::Separator();
             if ( ImGui::MenuItem(u8"退出") )
@@ -147,67 +149,6 @@ void MainWindow::renderDockSpaceMenuBar()
             }
             ImGui::EndMenu();
         }
-
-        {
-            std::string popupWinName = u8"新建...";
-            if ( toggleNewPopup ) { ImGui::OpenPopup(popupWinName.c_str()); toggleNewPopup = false; }
-            // Always center this window when appearing
-            //ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-            //ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
-
-            if ( ImGui::BeginPopupModal( popupWinName.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings ) )
-            {
-                ImGui::Text( u8"新建一个日志窗口，监听日志信息" );
-                ImGui::Separator();
-                static std::string addr = u8"";
-                static int port = 22345;
-                // 对齐标签文本
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"地址"); // 这将是左侧的标签
-                ImGui::SameLine( 0.0f, 1.0f );
-                // 设置输入框的宽度
-                ImGui::PushItemWidth(160);
-                ImGui::InputText( u8"##addr", &addr );
-                ImGui::PopItemWidth();
-                ImGui::SameLine();
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"端口"); // 这将是左侧的标签
-                ImGui::SameLine( 0.0f, 1.0f );
-                ImGui::PushItemWidth(120);
-                ImGui::InputInt( u8"##port", &port, 1 );
-                ImGui::PopItemWidth();
-
-                static char ch[] = { 'A', '\0' };
-                static std::string name = std::string(u8"日志") + ch;
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text(u8"名称");
-                ImGui::SameLine( 0.0f, 1.0f );
-                ImGui::InputText( u8"##name", &name );
-                static bool vScrollToBottom = true;
-                ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
-                ImGui::Checkbox( u8"自动滚动到底部", &vScrollToBottom );
-                ImGui::PopStyleVar();
-
-                if ( ImGui::Button( u8"确定", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) )
-                {
-                    ImGui::CloseCurrentPopup();
-
-                    this->logWinManager->addWindow( name, addr, (USHORT)port, vScrollToBottom );
-
-                    ch[0]++;
-                    name = std::string(u8"日志") + ch;
-                    port++;
-                }
-                ImGui::SetItemDefaultFocus();
-                ImGui::SameLine();
-                if ( ImGui::Button( u8"取消", ImVec2( 120, 0 ) ) )
-                {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
-            }
-        }
-
         if ( ImGui::BeginMenu(u8"主题") )
         {
             static int colorsTheme = 2;
