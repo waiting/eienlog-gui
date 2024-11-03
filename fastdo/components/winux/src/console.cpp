@@ -7,12 +7,12 @@
 namespace winux
 {
 
-char const * __TerminalFgColorAttrs[] = {
+static char const * __TerminalFgColorAttrs[] = {
     "30", "34", "32", "36", "31", "35", "33", "37",
     "1;30", "1;34", "1;32", "1;36", "1;31", "1;35", "1;33", "1;37",
 };
 
-char const * __TerminalBgColorAttrs[] = {
+static char const * __TerminalBgColorAttrs[] = {
     "", "44", "42", "46", "41", "45", "43", "47", "40", "48",
 };
 
@@ -61,7 +61,8 @@ void ConsoleAttr::resume() const
 #endif
 }
 
-winux::MutexNative __mtxConsoleOutput;
+// class ConsoleOuputMutexScopeGuard ----------------------------------------------------------
+static winux::MutexNative __mtxConsoleOutput;
 ConsoleOuputMutexScopeGuard::ConsoleOuputMutexScopeGuard()
 {
     __mtxConsoleOutput.lock();
@@ -72,7 +73,7 @@ ConsoleOuputMutexScopeGuard::~ConsoleOuputMutexScopeGuard()
     __mtxConsoleOutput.unlock();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
 
 WINUX_FUNC_IMPL(String) ConsoleTextLayout( String const & text, size_t maxLength, ConsoleTextLayoutAlignment align, String::value_type blankCh, bool isTrunc, size_t ellipsis )
 {

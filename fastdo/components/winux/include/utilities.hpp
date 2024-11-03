@@ -805,7 +805,7 @@ public:
     template < typename _ChTy >
     Buffer( XString<_ChTy> const & data, bool isPeek = false )
     {
-        this->_copyConstruct( data.c_str(), data.length() * sizeof(_ChTy), isPeek );
+        this->_copyConstruct( data.c_str(), data.size() * sizeof(_ChTy), isPeek );
     }
 
     /** \brief 构造函数3 从字符指针创建Buffer，可以指定是否为窥视模式 */
@@ -990,19 +990,27 @@ public:
      *  \param[in] size 数据大小 */
     void append( void const * data, size_t size );
 
-    /** \brief 添加数据：`AnsiString`对象 */
-    void append( AnsiString const & data ) { this->append( data.c_str(), data.size() ); }
-
     /** \brief 添加数据：`Buffer`对象 */
-    void append( Buffer const & data ) { this->append( data.getBuf(), data.getSize() ); }
+    void append( Buffer const & data ) { this->append( (void const *)data.getBuf(), data.getSize() ); }
+
+    /** \brief 添加数据：`XString`对象 */
+    template < typename _ChTy >
+    void appendString( XString<_ChTy> const & data ) { this->append( (void const *)data.c_str(), data.size() * sizeof(_ChTy) ); }
+
+    /** \brief 添加数据：`C串` */
+    template < typename _ChTy, typename = CharTypeConstrain<_ChTy> >
+    void appendString( _ChTy const * str, size_t len = npos )
+    {
+        this->append( (void const *)str, ( len == npos ? StrLen<_ChTy>(str) : len ) * sizeof(_ChTy) );
+    }
 
     /** \brief 添加数据：POD类型变量 */
     template < typename _PodType >
-    void appendType( _PodType const & data, size_t size = sizeof(_PodType) ) { this->append( &data, size ); }
+    void appendType( _PodType const & data, size_t size = sizeof(_PodType) ) { this->append( (void const *)&data, size ); }
 
     /** \brief 添加数据：POD类型数组 */
     template < typename _PodType, size_t _Count >
-    void appendType( _PodType const (&data)[_Count] ) { this->append( &data, _Count * sizeof(data[0]) ); }
+    void appendType( _PodType const (&data)[_Count] ) { this->append( (void const *)&data, _Count * sizeof(data[0]) ); }
 
     /** \brief 添加数据：POD类型`std::initializer_list` */
     template < typename _PodType >
@@ -1295,43 +1303,60 @@ WINUX_FUNC_DECL(UnicodeString const &) TypeStringW( Mixed const & v );
 class WINUX_DLL Mixed
 {
 public:
+#ifdef MIXED_REF_NO_EXCEPTION
+#define MIXED_REF_TYPE_METHOD( mt, ty, memb, funcname )\
+    ty& ref##funcname() { return memb; }\
+    ty const& ref##funcname() const { return memb; }
+#define MIXED_REF_TYPE_METHOD_OUTER( mt, ty, memb, funcname )\
+    template<> inline ty& Mixed::ref<ty>() { return memb; }\
+    template<> inline ty const& Mixed::ref<ty>() const { return memb; }
+#else
+#define MIXED_REF_TYPE_METHOD( mt, ty, memb, funcname )\
+    ty& ref##funcname() { if ( this->_type != mt ) throw MixedError( MixedError::meUnexpectedType, "ref"#funcname"(): " + TypeStringA(*this) + " can not be referenced as a "#mt ); return memb; }\
+    ty const& ref##funcname() const { if ( this->_type != mt ) throw MixedError( MixedError::meUnexpectedType, "ref"#funcname"(): " + TypeStringA(*this) + " can not be referenced as a "#mt ); return memb; }
+#define MIXED_REF_TYPE_METHOD_OUTER( mt, ty, memb, funcname )\
+    template<> inline ty& Mixed::ref<ty>() { if ( this->_type != mt ) throw MixedError( MixedError::meUnexpectedType, "ref<"#ty">(): " + TypeStringA(*this) + " can not be referenced as a "#mt ); return memb; }\
+    template<> inline ty const& Mixed::ref<ty>() const { if ( this->_type != mt ) throw MixedError( MixedError::meUnexpectedType, "ref<"#ty">(): " + TypeStringA(*this) + " can not be referenced as a "#mt ); return memb; }
+#endif
+
+#define MIXED_TYPE_ENUM_ITEM( item, nouse1, nouse2, nouse3 ) item,
+#define MIXED_TYPE_ENUM_ITEMSTRINGA( item, nouse1, nouse2, nouse3 ) #item,
+#define MIXED_TYPE_ENUM_ITEMSTRINGW( item, nouse1, nouse2, nouse3 ) L ## #item,
+
+#define MIXED_TYPE_LIST(funcmacro) \
+    funcmacro( MT_BOOLEAN/**< 布尔型，true 或 false */, bool, _boolVal, Bool ) \
+    funcmacro( MT_CHAR/**< 字符型，8位有符号整数 */, char, _chVal, Char ) \
+    funcmacro( MT_BYTE/**< 字节型，8位无符号整数 */, byte, _btVal, Byte ) \
+    funcmacro( MT_SHORT/**< 短整型，16位有符号整数 */, short, _shVal, Short ) \
+    funcmacro( MT_USHORT/**< 短整型，16位无符号整数 */, ushort, _ushVal, UShort ) \
+    funcmacro( MT_INT/**< 整型，平台位长有符号整数 */, int, _iVal, Int ) \
+    funcmacro( MT_UINT/**< 整型，平台位长无符号整数 */, uint, _uiVal, UInt ) \
+    funcmacro( MT_LONG/**< 长整型，32位有符号整数 */, long, _lVal, Long ) \
+    funcmacro( MT_ULONG/**< 长整型，32位无符号整数 */, ulong, _ulVal, ULong ) \
+    funcmacro( MT_INT64/**< 整型，64位有符号整数 */, int64, _i64Val, Int64 ) \
+    funcmacro( MT_UINT64/**< 整型，64位无符号整数 */, uint64, _ui64Val, UInt64 ) \
+    funcmacro( MT_FLOAT/**< 单精度浮点型，32位 */, float, _fltVal, Float ) \
+    funcmacro( MT_DOUBLE/**< 双精度浮点型，64位 */, double, _dblVal, Double ) \
+    funcmacro( MT_ANSI/**< 多字节字符串类型，`char`序列 */, AnsiString, *_pStr, Ansi ) \
+    funcmacro( MT_UNICODE/**< 宽字符串类型，`wchar_t`序列 */, UnicodeString, *_pWStr, Unicode ) \
+    funcmacro( MT_BINARY/**< 二进制数据类型，字节序列 */, Buffer, *_pBuf, Buffer ) \
+    funcmacro( MT_ARRAY/**< 数组类型，容器 */, MixedArray, *_pArr, Array ) \
+    funcmacro( MT_COLLECTION/**< Collection类型，容器 */, Collection, *_pColl, Collection )
+
     /** \brief 混合体类型识别常量 */
     enum MixedType : uint
     {
-    #define MixedType_ENUM_ITEM(item) item,
-    #define MixedType_ENUM_ITEMSTRINGA(item) #item,
-    #define MixedType_ENUM_ITEMSTRINGW(item) L ## #item,
-    #define MixedType_ENUM_ITEMLIST(_)\
-        _(MT_NULL)/**< null，缺省默认类型 */ \
-        _(MT_BOOLEAN)/**< 布尔型，true 或 false */ \
-        _(MT_CHAR)/**< 字符型，8位有符号整数 */ \
-        _(MT_BYTE)/**< 字节型，8位无符号整数 */ \
-        _(MT_SHORT)/**< 短整型，16位有符号整数 */ \
-        _(MT_USHORT)/**< 短整型，16位无符号整数 */ \
-        _(MT_INT)/**< 整型，平台位长有符号整数 */ \
-        _(MT_UINT)/**< 整型，平台位长无符号整数 */ \
-        _(MT_LONG)/**< 长整型，32位有符号整数 */ \
-        _(MT_ULONG)/**< 长整型，32位无符号整数 */ \
-        _(MT_INT64)/**< 整型，64位有符号整数 */ \
-        _(MT_UINT64)/**< 整型，64位无符号整数 */ \
-        _(MT_FLOAT)/**< 单精度浮点型，32位 */ \
-        _(MT_DOUBLE)/**< 双精度浮点型，64位 */ \
-        _(MT_ANSI)/**< 多字节字符串类型，`char`序列 */ \
-        _(MT_UNICODE)/**< Unicode宽字符串类型，`wchar_t`序列 */ \
-        _(MT_BINARY)/**< 二进制数据类型，字节序列。利用`Buffer`对象存储的二进制数据 */ \
-        _(MT_ARRAY)/**< 数组类型，容器。利用`std::vector&lt;Mixed&gt;`存储的`Mixed`数组*/ \
-        _(MT_COLLECTION)/**< Collection类型，容器。利用数组存储key体现次序，然后用Map存储k/v对 */
-
-    MixedType_ENUM_ITEMLIST(MixedType_ENUM_ITEM)
+        MT_NULL/**< null，缺省默认类型 */,
+        MIXED_TYPE_LIST(MIXED_TYPE_ENUM_ITEM)
     };
 
     union
     {
         AnsiString * _pStr;     //!< 多字节字符串，`char`序列
         UnicodeString * _pWStr; //!< 宽字符串，`wchar_t`序列
-        Buffer * _pBuf;         //!< 缓冲区，字节序列
-        MixedArray * _pArr;     //!< 数组容器
-        Collection * _pColl;    //!< 集合容器
+        Buffer * _pBuf;         //!< 缓冲区，字节序列。利用`Buffer`对象存储的二进制数据
+        MixedArray * _pArr;     //!< 数组容器。利用`std::vector&lt;Mixed&gt;`存储的`Mixed`数组
+        Collection * _pColl;    //!< 集合容器。利用数组存储key体现次序，然后用Map存储k/v对
 
         double _dblVal;     //!< 双精度浮点类型
         uint64 _ui64Val;    //!< 无符号64位整数
@@ -1462,7 +1487,9 @@ public:
     _Ty & ref();
     template < typename _Ty >
     _Ty const & ref() const;
-    #include "mixed_ref_specified_type.inl"
+
+    // 生成 Mixed 引用类型方法
+    MIXED_TYPE_LIST(MIXED_REF_TYPE_METHOD)
 
     // 类型转换 ----------------------------------------------------------------------------
     operator bool() const;
@@ -1939,7 +1966,7 @@ inline XString<wchar> const & Mixed::refString<wchar>() const
 }
 
 // 生成 Mixed 引用类型模板特化方法
-MIXED_REF_TYPE_LIST(MIXED_REF_TYPE_METHOD_OUTER)
+MIXED_TYPE_LIST(MIXED_REF_TYPE_METHOD_OUTER)
 
 /** \brief Mixed to AnsiString */
 template <>

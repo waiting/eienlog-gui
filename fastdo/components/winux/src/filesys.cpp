@@ -1162,9 +1162,9 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         {
         #if defined(_UNICODE) || defined(UNICODE)
             AnsiString str = UnicodeToLocal(content);
-            output->append( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #else
-            output->append( convertNewline ? NewlineToFile( content.c_str(), content.length(), false ) : content );
+            output->appendString( convertNewline ? NewlineToFile( content.c_str(), content.length(), false ) : content );
         #endif
         }
         break;
@@ -1172,10 +1172,10 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         {
         #if defined(_UNICODE) || defined(UNICODE)
             AnsiString str = UnicodeConverter(content).toUtf8();
-            output->append( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #else
             AnsiString str = LocalToUtf8(content);
-            output->append( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #endif
         }
         break;
@@ -1183,12 +1183,12 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         {
         #if defined(_UNICODE) || defined(UNICODE)
             AnsiString str = UnicodeConverter(content).toUtf8();
-            output->append( { '\xef', '\xbb', '\xbf' } );
-            output->append( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
+            output->appendType( { '\xef', '\xbb', '\xbf' } );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #else
             AnsiString str = LocalToUtf8(content);
-            output->append( { '\xef', '\xbb', '\xbf' } );
-            output->append( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
+            output->appendType( { '\xef', '\xbb', '\xbf' } );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #endif
         }
         break;
@@ -1197,16 +1197,14 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         #if defined(_UNICODE) || defined(UNICODE)
             Utf16String str = UnicodeConverter(content).toUtf16();
         #else
-            UnicodeString wstr = LocalToUnicode(content);
-            Utf16String str = UnicodeConverter(wstr).toUtf16();
+            Utf16String str = UnicodeConverter( LocalToUnicode(content) ).toUtf16();
         #endif
             if ( IsBigEndian() )
             {
                 if ( str.length() > 0 ) InvertByteOrderArray( &str[0], str.length() );
             }
-            output->append( { '\xff', '\xfe' } );
-            Utf16String res = convertNewline ? NewlineToFile( str.c_str(), str.length(), IsBigEndian() ) : str;
-            output->append( res.c_str(), res.length() * sizeof(Utf16String::value_type) );
+            output->appendType( { '\xff', '\xfe' } );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), IsBigEndian() ) : str );
         }
         break;
     case winux::feUtf16Be:
@@ -1214,16 +1212,14 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         #if defined(_UNICODE) || defined(UNICODE)
             Utf16String str = UnicodeConverter(content).toUtf16();
         #else
-            UnicodeString wstr = LocalToUnicode(content);
-            Utf16String str = UnicodeConverter(wstr).toUtf16();
+            Utf16String str = UnicodeConverter( LocalToUnicode(content) ).toUtf16();
         #endif
             if ( IsLittleEndian() )
             {
                 if ( str.length() > 0 ) InvertByteOrderArray( &str[0], str.length() );
             }
-            output->append( { '\xfe', '\xff' } );
-            Utf16String res = convertNewline ? NewlineToFile( str.c_str(), str.length(), IsLittleEndian() ) : str;
-            output->append( res.c_str(), res.length() * sizeof(Utf16String::value_type) );
+            output->appendType( { '\xfe', '\xff' } );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), IsLittleEndian() ) : str );
         }
         break;
     case winux::feUtf32Le:
@@ -1231,16 +1227,14 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         #if defined(_UNICODE) || defined(UNICODE)
             Utf32String str = UnicodeConverter(content).toUtf32();
         #else
-            UnicodeString wstr = LocalToUnicode(content);
-            Utf32String str = UnicodeConverter(wstr).toUtf32();
+            Utf32String str = UnicodeConverter( LocalToUnicode(content) ).toUtf32();
         #endif
             if ( IsBigEndian() )
             {
                 if ( str.length() > 0 ) InvertByteOrderArray( &str[0], str.length() );
             }
-            output->append( { '\xff', '\xfe', '\0', '\0' } );
-            Utf32String res = convertNewline ? NewlineToFile( str.c_str(), str.length(), IsBigEndian() ) : str;
-            output->append( res.c_str(), res.length() * sizeof(Utf32String::value_type) );
+            output->appendType( { '\xff', '\xfe', '\0', '\0' } );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), IsBigEndian() ) : str );
         }
         break;
     case winux::feUtf32Be:
@@ -1248,16 +1242,14 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         #if defined(_UNICODE) || defined(UNICODE)
             Utf32String str = UnicodeConverter(content).toUtf32();
         #else
-            UnicodeString wstr = LocalToUnicode(content);
-            Utf32String str = UnicodeConverter(wstr).toUtf32();
+            Utf32String str = UnicodeConverter( LocalToUnicode(content) ).toUtf32();
         #endif
             if ( IsLittleEndian() )
             {
                 if ( str.length() > 0 ) InvertByteOrderArray( &str[0], str.length() );
             }
-            output->append( { '\0', '\0', '\xfe', '\xff' } );
-            Utf32String res = convertNewline ? NewlineToFile( str.c_str(), str.length(), IsLittleEndian() ) : str;
-            output->append( res.c_str(), res.length() * sizeof(Utf32String::value_type) );
+            output->appendType( { '\0', '\0', '\xfe', '\xff' } );
+            output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), IsLittleEndian() ) : str );
         }
         break;
     }

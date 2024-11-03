@@ -1068,11 +1068,13 @@ union _Int64Uint64Union
 
 // enum Mixed::MixedType strings ------------------------------------------------------------
 static AnsiString __MixedTypeStringsA[] = {
-    MixedType_ENUM_ITEMLIST(MixedType_ENUM_ITEMSTRINGA)
+    "MT_NULL",
+    MIXED_TYPE_LIST(MIXED_TYPE_ENUM_ITEMSTRINGA)
 };
 
 static UnicodeString __MixedTypeStringsW[] = {
-    MixedType_ENUM_ITEMLIST(MixedType_ENUM_ITEMSTRINGW)
+    L"MT_NULL",
+    MIXED_TYPE_LIST(MIXED_TYPE_ENUM_ITEMSTRINGW)
 };
 
 WINUX_FUNC_IMPL(AnsiString const &) TypeStringA( Mixed const & v )

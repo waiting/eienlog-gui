@@ -243,9 +243,9 @@ bool LogReader::readRecord( LogRecord * record, time_t waitTimeout, time_t updat
     return false;
 }
 
-eiennet::SocketLib * __sockLib = nullptr; // Socket库初始化
-LogWriter * __logWriter = nullptr; // 日志写入器对象
-winux::MutexNative __mtxLogWriter; // 日志写入器共享互斥锁
+static eiennet::SocketLib * __sockLib = nullptr; // Socket库初始化
+static LogWriter * __logWriter = nullptr; // 日志写入器对象
+static winux::MutexNative __mtxLogWriter; // 日志写入器共享互斥锁
 
 EIENLOG_FUNC_IMPL(bool) EnableLog( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize )
 {

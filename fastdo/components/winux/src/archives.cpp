@@ -1260,7 +1260,7 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             winux::Conv conv{ encoding, this->_mbsEncoding };
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
-            output->append( NewlineToFile( buf, n, false ) );
+            output->appendString( NewlineToFile( buf, n, false ) );
             Buffer::Free(buf);
         }
         break;
@@ -1269,7 +1269,7 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             winux::Conv conv{ encoding, "UTF-8" };
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
-            output->append( NewlineToFile( buf, n, false ) );
+            output->appendString( NewlineToFile( buf, n, false ) );
             Buffer::Free(buf);
         }
         break;
@@ -1279,8 +1279,8 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
-            output->append( { '\xef', '\xbb', '\xbf' } );
-            output->append( NewlineToFile( buf, n, false ) );
+            output->appendType( { '\xef', '\xbb', '\xbf' } );
+            output->appendString( NewlineToFile( buf, n, false ) );
             Buffer::Free(buf);
         }
         break;
@@ -1290,10 +1290,10 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
-            output->append( { '\xff', '\xfe' } );
+            output->appendType( { '\xff', '\xfe' } );
             winux::Utf16String res2 = NewlineToFile( (winux::Utf16String::value_type *)buf, n / sizeof(winux::Utf16String::value_type), IsBigEndian() );
             Buffer::Free(buf);
-            output->append( res2.c_str(), res2.length() * sizeof(winux::Utf16String::value_type) );
+            output->appendString(res2);
         }
         break;
     case feUtf16Be:
@@ -1302,10 +1302,10 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
-            output->append( { '\xfe', '\xff' } );
+            output->appendType( { '\xfe', '\xff' } );
             winux::Utf16String res2 = NewlineToFile( (winux::Utf16String::value_type *)buf, n / sizeof(winux::Utf16String::value_type), IsLittleEndian() );
             Buffer::Free(buf);
-            output->append( res2.c_str(), res2.length() * sizeof(winux::Utf16String::value_type) );
+            output->appendString(res2);
         }
         break;
     case feUtf32Le:
@@ -1314,10 +1314,10 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
-            output->append( { '\xff', '\xfe', '\0', '\0' } );
+            output->appendType( { '\xff', '\xfe', '\0', '\0' } );
             winux::Utf32String res2 = NewlineToFile( (winux::Utf32String::value_type *)buf, n / sizeof(winux::Utf32String::value_type), IsBigEndian() );
             Buffer::Free(buf);
-            output->append( res2.c_str(), res2.length() * sizeof(winux::Utf32String::value_type) );
+            output->appendString(res2);
         }
         break;
     case feUtf32Be:
@@ -1326,10 +1326,10 @@ void TextArchive::saveEx( winux::Buffer const & content, winux::AnsiString const
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
-            output->append( { '\0', '\0', '\xfe', '\xff' } );
+            output->appendType( { '\0', '\0', '\xfe', '\xff' } );
             winux::Utf32String res2 = NewlineToFile( (winux::Utf32String::value_type *)buf, n / sizeof(winux::Utf32String::value_type), IsLittleEndian() );
             Buffer::Free(buf);
-            output->append( res2.c_str(), res2.length() * sizeof(winux::Utf32String::value_type) );
+            output->appendString(res2);
         }
         break;
     }
