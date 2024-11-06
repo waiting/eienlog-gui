@@ -290,19 +290,8 @@ EIENLOG_FUNC_IMPL(void) WriteLog( winux::String const & str )
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        __logWriter->log( winux::Format( TEXT("[pid:%d] - "), getpid() ) + winux::AddCSlashes(str), eienlog::leUtf8 );
+        __logWriter->log( winux::Format( TEXT("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, "\t\r\n" ), eienlog::leUtf8 );
     }
-
-    //winux::String exeFile;
-    //winux::String exePath = winux::FilePath( winux::GetExecutablePath(), &exeFile );
-    //winux::File out( exePath + winux::DirSep + winux::FileTitle(exeFile) + TEXT(".log"), TEXT("at") );
-    //time_t tt = winux::GetUtcTime();
-    //struct tm * t = gmtime(&tt);
-    //winux::tchar sz[32] = { 0 };
-    //_tcsftime( sz, 32, TEXT("%a, %d %b %Y %H:%M:%S GMT"), t );
-    //winux::String log;
-    //winux::StringWriter(&log) << winux::Format( TEXT("[pid:%d]"), getpid() ) << sz << TEXT(" - \"") << winux::AddCSlashes(s) << TEXT("\"") << std::endl;
-    //out.puts(log);
 }
 
 EIENLOG_FUNC_IMPL(void) WriteLogBin( void const * data, size_t size )
@@ -312,11 +301,6 @@ EIENLOG_FUNC_IMPL(void) WriteLogBin( void const * data, size_t size )
         winux::ScopeGuard guard(__mtxLogWriter);
         __logWriter->logBin( winux::Buffer( data, size, true ) );
     }
-
-    /*winux::String exeFile;
-    winux::String exePath = winux::FilePath( winux::GetExecutablePath(), &exeFile );
-    winux::File out( exePath + winux::DirSep + winux::FileTitle(exeFile) + TEXT(".binlog"), TEXT("ab") );
-    out.write( data, size );*/
 }
 
 EIENLOG_FUNC_IMPL(size_t) Log( winux::String const & str, winux::uint8 logEncoding )

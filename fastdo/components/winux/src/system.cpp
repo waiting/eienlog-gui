@@ -1,5 +1,4 @@
-﻿
-#include "utilities.hpp"
+﻿#include "utilities.hpp"
 #include "system.hpp"
 #include "strings.hpp"
 #include "smartptr.hpp"
@@ -10,10 +9,11 @@
 #endif
 
 #if defined(OS_WIN)
-
+#include <process.h>
 #else
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -26,6 +26,24 @@
 namespace winux
 {
 #include "is_x_funcs.inl"
+
+WINUX_FUNC_IMPL(uint) GetPid()
+{
+#if defined(OS_WIN)
+    return (uint)GetCurrentProcessId();
+#else
+    return (uint)getpid();
+#endif
+}
+
+WINUX_FUNC_IMPL(uint) GetTid()
+{
+#if defined(OS_WIN)
+    return (uint)GetCurrentThreadId();
+#else
+    return (uint)syscall(SYS_gettid);
+#endif
+}
 
 template < typename _ChTy >
 inline static void Impl_ParseCommandLineString( XString<_ChTy> const & cmd, size_t * pI, XString<_ChTy> * str )
@@ -581,7 +599,7 @@ WINUX_FUNC_IMPL(String) GetExec(
     return stdoutStr;
 }
 
-// ----------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 
 inline static void __MixedAppendToStringArray( Mixed const & mx, StringArray * arr )
 {

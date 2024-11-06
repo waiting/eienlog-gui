@@ -47,7 +47,7 @@ void IoService::postConnect( winux::SharedPointer<AsyncSocket> sock, EndPoint co
     this->_post( sock, ioConnect, ctx );
 }
 
-void IoService::postRecv( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvCtx::RecvTimeoutFunction cbTimeout )
+void IoService::postRecv( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFunction cbTimeout )
 {
     auto ctx = winux::MakeShared(new IoRecvCtx);
     ctx->timeoutMs = timeoutMs;
@@ -489,7 +489,7 @@ void AsyncSocket::connectAsync( EndPoint const & ep, IoConnectCtx::OkFunction cb
     _ioServ->postConnect( this->sharedFromThis(), ep, cbOk, timeoutMs, cbTimeout );
 }
 
-void AsyncSocket::recvUntilSizeAsync( size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvCtx::RecvTimeoutFunction cbTimeout )
+void AsyncSocket::recvUntilSizeAsync( size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFunction cbTimeout )
 {
     _ioServ->postRecv( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout );
 }
@@ -509,5 +509,6 @@ void AsyncSocket::sendToAsync( EndPoint const & ep, void const * data, size_t si
     if ( !this->_tryCreate( ep.getAddrFamily(), true, sockDatagram, true, protoUnspec, false ) ) return;
     _ioServ->postSendTo( this->sharedFromThis(), ep, data, size, cbOk, timeoutMs, cbTimeout );
 }
+
 
 } // namespace eiennet

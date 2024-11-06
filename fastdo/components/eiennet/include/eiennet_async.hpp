@@ -4,6 +4,7 @@ namespace eiennet
 {
 class AsyncSocket;
 
+// IO类型
 enum IoType
 {
     ioAccept,
@@ -14,6 +15,7 @@ enum IoType
     ioSendTo,
 };
 
+// IO场景基类
 struct IoCtx
 {
     winux::uint64 startTime; //!< 请求开启的时间
@@ -28,6 +30,7 @@ struct IoCtx
     }
 };
 
+// 接受场景
 struct IoAcceptCtx : IoCtx
 {
     using OkFunction = std::function< bool ( winux::SharedPointer<AsyncSocket> servSock, winux::SharedPointer<AsyncSocket> clientSock, ip::EndPoint const & ep ) >;
@@ -41,6 +44,7 @@ struct IoAcceptCtx : IoCtx
     IoAcceptCtx() { }
 };
 
+// 连接场景
 struct IoConnectCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::uint64 costTimeMs ) >;
@@ -54,13 +58,14 @@ struct IoConnectCtx : IoCtx
     IoConnectCtx() : costTimeMs(0) { }
 };
 
+// 数据接收场景
 struct IoRecvCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::Buffer & data, bool cnnAvail ) >;
-    using RecvTimeoutFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, IoRecvCtx * ctx ) >;
+    using TimeoutFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, IoRecvCtx * ctx ) >;
 
     OkFunction cbOk; //!< 成功回调函数
-    RecvTimeoutFunction cbTimeout; //!< 超时回调函数
+    TimeoutFunction cbTimeout; //!< 超时回调函数
 
     size_t hadBytes;        //!< 已接收数据量
     size_t targetBytes;     //!< 目标数据量
@@ -70,6 +75,7 @@ struct IoRecvCtx : IoCtx
     IoRecvCtx() : hadBytes(0), targetBytes(0), cnnAvail(false) { }
 };
 
+// 数据发送场景
 struct IoSendCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::uint64 costTimeMs, bool cnnAvail ) >;
@@ -86,6 +92,7 @@ struct IoSendCtx : IoCtx
     IoSendCtx() : hadBytes(0), costTimeMs(0), cnnAvail(false) { }
 };
 
+// 无连接，数据接收场景
 struct IoRecvFromCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::Buffer & data, EndPoint const & ep ) >;
@@ -102,6 +109,7 @@ struct IoRecvFromCtx : IoCtx
     IoRecvFromCtx() : hadBytes(0), targetBytes(0) { }
 };
 
+// 无连接，数据发送场景
 struct IoSendToCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::uint64 costTimeMs ) >;
@@ -142,7 +150,7 @@ public:
 
     void postAccept( winux::SharedPointer<AsyncSocket> sock, IoAcceptCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoAcceptCtx::TimeoutFunction cbTimeout = nullptr );
     void postConnect( winux::SharedPointer<AsyncSocket> sock, EndPoint const & ep, IoConnectCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoConnectCtx::TimeoutFunction cbTimeout = nullptr );
-    void postRecv( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::RecvTimeoutFunction cbTimeout = nullptr );
+    void postRecv( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::TimeoutFunction cbTimeout = nullptr );
     void postSend( winux::SharedPointer<AsyncSocket> sock, void const * data, size_t size, IoSendCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoSendCtx::TimeoutFunction cbTimeout = nullptr );
     void postRecvFrom( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvFromCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvFromCtx::TimeoutFunction cbTimeout = nullptr );
     void postSendTo( winux::SharedPointer<AsyncSocket> sock, EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoSendToCtx::TimeoutFunction cbTimeout = nullptr );
@@ -231,9 +239,9 @@ public:
     /** \brief 连接服务器（异步） */
     void connectAsync( EndPoint const & ep, IoConnectCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoConnectCtx::TimeoutFunction cbTimeout = nullptr );
     /** \brief 接收直到指定大小的数据（异步） */
-    void recvUntilSizeAsync( size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::RecvTimeoutFunction cbTimeout = nullptr );
+    void recvUntilSizeAsync( size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::TimeoutFunction cbTimeout = nullptr );
     /** \brief 接收数据（异步） */
-    void recvAsync( IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::RecvTimeoutFunction cbTimeout = nullptr )
+    void recvAsync( IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::TimeoutFunction cbTimeout = nullptr )
     {
         this->recvUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout );
     }

@@ -28,4 +28,5 @@ WINUX_FUNC_IMPL(long) LongAtomicCompareExchange( long volatile * p, long exchang
     return t;
 }
 
+
 } // namespace winux

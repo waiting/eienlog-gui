@@ -2555,20 +2555,14 @@ ClientCtx::~ClientCtx()
 {
     if ( this->server && this->server->_verbose )
     {
-        winux::ColorOutputLine( winux::fgBlue, this->getStamp(), "析构" );
+        winux::ColorOutputLine( winux::fgBlue, this->getStamp(), " destruct" );
     }
 }
 
 winux::String ClientCtx::getStamp() const
 {
     winux::String stamp;
-    winux::StringWriter(&stamp)
-    #if defined(OS_WIN)
-        << "{tid:" << GetCurrentThreadId() << "}"
-    #else
-        << "{tid:" << std::hex << pthread_self() << "}"
-    #endif
-        << "[客户-" << this->clientId << "]<" << this->clientEpStr << ">";
+    winux::StringWriter(&stamp) << "{tid:" << winux::GetTid() << "}" << "[client-" << this->clientId << "]<" << this->clientEpStr << ">";
     return stamp;
 }
 
@@ -2657,7 +2651,7 @@ void __StartupSockets( ip::EndPoint const & ep, int backlog, bool verbose, ip::E
             int err = Socket::ErrNo();
             winux::ColorOutputLine(
                 winux::fgRed,
-                "Socket#1启动失败",
+                "Socket#1 startup failed",
                 ", ep=", ep.toString(),
                 ", err=", err
             );
@@ -2670,7 +2664,7 @@ void __StartupSockets( ip::EndPoint const & ep, int backlog, bool verbose, ip::E
             int err2 = Socket::ErrNo();
             winux::ColorOutputLine(
                 winux::fgRed,
-                "Socket#2启动失败",
+                "Socket#2 startup failed",
                 ", ep2=", ep2.toString(),
                 ", err2=", err2
             );
@@ -2705,7 +2699,7 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
         {
             winux::ColorOutputLine(
                 winux::fgRed,
-                "启动服务器失败",
+                "Server startup failed",
                 ", ep=", ep.toString(),
                 ", ep2=", ep2.toString(),
                 ", threads=", threadCount,
@@ -2720,7 +2714,7 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
         {
             winux::ColorOutputLine(
                 winux::fgGreen,
-                "启动服务器成功",
+                "Server startup success",
                 ", ep=", ep.toString(),
                 ", ep2=", ep2.toString(),
                 ", threads=", threadCount,
@@ -2768,8 +2762,8 @@ int Server::run( void * runParam )
                 winux::ColorOutput(
                     winux::fgWhite,
                     dtl.fromCurrent(),
-                    ", 总客户数:", this->_clients.size(),
-                    ", 当前任务数:",
+                    ", Total clients:", this->_clients.size(),
+                    ", Current tasks:",
                     this->_pool.getTaskCount(),
                     winux::String( 20, ' ' ),
                     "\r"
@@ -2781,7 +2775,7 @@ int Server::run( void * runParam )
             {
                 if ( it->second->canRemove ) // 删除标记为可删除的客户
                 {
-                    if ( this->_verbose ) winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), "移除" );
+                    if ( this->_verbose ) winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), " remove" );
                     it = this->_clients.erase(it);
                 }
                 else if ( it->second->processingEvent ) // 跳过有事件在处理中的客户
@@ -2801,7 +2795,7 @@ int Server::run( void * runParam )
         int rc = sel.wait(this->_serverWait); // 返回就绪的套接字数
         if ( rc > 0 )
         {
-            if ( this->_verbose ) winux::ColorOutputLine( winux::fgGreen, "io.Select()模型获取到就绪的套接字数:", rc );
+            if ( this->_verbose ) winux::ColorOutputLine( winux::fgGreen, "io.Select() model get the number of ready sockets:", rc );
 
             // 处理servSockA事件
             if ( _servSockAIsListening )
@@ -2817,7 +2811,7 @@ int Server::run( void * runParam )
                         winux::SharedPointer<ClientCtx> * pClientCtxPtr = nullptr;
                         if ( this->_addClient( clientEp, clientSockPtr, &pClientCtxPtr ) )
                         {
-                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgFuchsia, (*pClientCtxPtr)->getStamp(), "新加入服务器" );
+                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgFuchsia, (*pClientCtxPtr)->getStamp(), " new client join the server" );
                         }
                     }
 
@@ -2846,7 +2840,7 @@ int Server::run( void * runParam )
                         winux::SharedPointer<ClientCtx> * pClientCtxPtr = nullptr;
                         if ( this->_addClient( clientEp, clientSockPtr, &pClientCtxPtr ) )
                         {
-                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgFuchsia, (*pClientCtxPtr)->getStamp(), "新加入服务器" );
+                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgFuchsia, (*pClientCtxPtr)->getStamp(), " new client join the server" );
                         }
                     }
 
@@ -2874,13 +2868,13 @@ int Server::run( void * runParam )
 
                         if ( readableSize > 0 )
                         {
-                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), "有数据到达(bytes:", readableSize, ")" );
+                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), " data arrived(bytes:", readableSize, ")" );
 
                             if ( _isAutoReadData )
                             {
                                 // 收数据
                                 winux::Buffer data = it->second->clientSockPtr->recv(readableSize);
-                                if ( this->_verbose ) winux::ColorOutputLine( winux::fgGreen, it->second->getStamp(), "收到数据:", data.getSize() );
+                                if ( this->_verbose ) winux::ColorOutputLine( winux::fgGreen, it->second->getStamp(), " data received:", data.getSize() );
 
                                 // 投递数据到达事件到线程池处理
                                 this->_postTask( it->second, &Server::onClientDataArrived, this, it->second, std::move(data) );
@@ -2893,7 +2887,7 @@ int Server::run( void * runParam )
                         }
                         else // readableSize <= 0
                         {
-                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgRed, it->second->getStamp(), "有数据到达(bytes:", readableSize, ")，其关闭了连接" );
+                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgRed, it->second->getStamp(), " data arrived(bytes:", readableSize, "), the connection may be closed" );
 
                             it->second->canRemove = true;
                         }
@@ -2902,7 +2896,7 @@ int Server::run( void * runParam )
                     }
                     else if ( sel.hasExceptSock(*it->second->clientSockPtr.get()) ) // 该套接字有错误
                     {
-                        if ( this->_verbose ) winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), "出错，标记可移除" );
+                        if ( this->_verbose ) winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), " error, marked as removable" );
 
                         it->second->canRemove = true;
 

@@ -26,6 +26,10 @@ public:
     typedef pid_t HProcess;
 #endif
 
+/** \brief 获取当前进程ID */
+WINUX_FUNC_DECL(uint) GetPid();
+/** \brief 获取当前线程ID */
+WINUX_FUNC_DECL(uint) GetTid();
 
 WINUX_FUNC_DECL(size_t) CommandLineToArgvA( AnsiString const & cmd, AnsiStringArray * argv );
 WINUX_FUNC_DECL(size_t) CommandLineToArgvW( UnicodeString const & cmd, UnicodeStringArray * argv );
@@ -212,7 +216,6 @@ public:
 /** \brief 作用域范围保护 */
 class WINUX_DLL ScopeGuard
 {
-    ILockObj & _lockObj;
 public:
     ScopeGuard( ILockObj & lockObj ) : _lockObj(lockObj)
     {
@@ -222,6 +225,9 @@ public:
     {
         _lockObj.unlock();
     }
+
+private:
+    ILockObj & _lockObj;
     DISABLE_OBJECT_COPY(ScopeGuard)
 };
 
@@ -334,10 +340,10 @@ private:
 /** \brief 文件映射旗标 */
 enum FileMappingFlag
 {
-    fmfUnspec = 0,  //!< 未指定
-    fmfReadOnly = 1, //!< 只读
-    fmfWriteCopy = 2, //!< 写时拷贝
-    fmfReadWrite = 3, //!< 读写
+    fmfUnspec = 0,      //!< 未指定
+    fmfReadOnly = 1,    //!< 只读
+    fmfWriteCopy = 2,   //!< 写时拷贝
+    fmfReadWrite = 3,   //!< 读写
     fmfExecuteReadOnly = 5, //!< 只读执行
     fmfExecuteWriteCopy = 6, //!< 写时拷贝执行
     fmfExecuteReadWrite = 7, //!< 读写执行
