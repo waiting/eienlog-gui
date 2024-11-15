@@ -10,6 +10,7 @@ struct LogTextRecord
 {
     winux::Buffer content; //!< 日志内容
     winux::AnsiString strContent; //!< 字符串内容
+    winux::AnsiString strContentSlashes; //!< 字符串转义内容
     winux::AnsiString utcTime;  //!< UTC时间戳
     eienlog::LogFlag flag;  //!< 日志样式FLAG
 };

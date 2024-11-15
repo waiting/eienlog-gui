@@ -737,7 +737,7 @@ bool Socket::recvUntilSize( size_t targetSize, winux::GrowBuffer * data, int msg
         size_t oneWant = remaining > sizeof(tmp) ? sizeof(tmp) : remaining; // 这次想读的数据量
         int oneRead = this->recv( tmp, oneWant, msgFlags );
         if ( oneRead <= 0 ) return false; // 连接可能关闭或者出错，接收数据失败，返回false。
-        data->append( tmp, oneRead );
+        if ( data != nullptr ) data->append( tmp, oneRead );
         hadRead += oneRead;
     }
     return true;
@@ -758,7 +758,7 @@ int Socket::recvWaitUntilSize( size_t targetSize, winux::GrowBuffer * data, size
             oneRead = this->recv( tmp, oneWant, msgFlags );
             if ( oneRead > 0 )
             {
-                data->append( tmp, oneRead );
+                if ( data != nullptr ) data->append( tmp, oneRead );
                 *hadRead += oneRead;
                 if ( eachSuccessCallback ) eachSuccessCallback( oneRead, param );
             }
@@ -2868,19 +2868,19 @@ int Server::run( void * runParam )
 
                         if ( readableSize > 0 )
                         {
-                            if ( this->_verbose ) winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), " data arrived(bytes:", readableSize, ")" );
-
                             if ( _isAutoReadData )
                             {
                                 // 收数据
                                 winux::Buffer data = it->second->clientSockPtr->recv(readableSize);
-                                if ( this->_verbose ) winux::ColorOutputLine( winux::fgGreen, it->second->getStamp(), " data received:", data.getSize() );
+                                if ( this->_verbose ) winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), " data arrived(bytes:", data.getSize(), ")" );
 
                                 // 投递数据到达事件到线程池处理
                                 this->_postTask( it->second, &Server::onClientDataArrived, this, it->second, std::move(data) );
                             }
                             else
                             {
+                                if ( this->_verbose ) winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), " data notify(bytes:", readableSize, ")" );
+
                                 // 投递数据到达事件到线程池处理
                                 this->_postTask( it->second, &Server::onClientDataNotify, this, it->second, readableSize );
                             }
@@ -2896,7 +2896,7 @@ int Server::run( void * runParam )
                     }
                     else if ( sel.hasExceptSock(*it->second->clientSockPtr.get()) ) // 该套接字有错误
                     {
-                        if ( this->_verbose ) winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), " error, marked as removable" );
+                        if ( this->_verbose ) winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), " error, mark it as removable" );
 
                         it->second->canRemove = true;
 

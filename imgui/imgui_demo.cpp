@@ -6625,6 +6625,7 @@ static void ShowDemoWindowTables()
             ImGui::TableSetupColumn("Two");
             ImGui::TableSetupColumn("Three");
 
+            static int selected = -1;
             // [2.1] Right-click on the TableHeadersRow() line to open the default table context menu.
             ImGui::TableHeadersRow();
             for (int row = 0; row < 4; row++)
@@ -6634,7 +6635,23 @@ static void ShowDemoWindowTables()
                 {
                     // Submit dummy contents
                     ImGui::TableSetColumnIndex(column);
-                    ImGui::Text("Cell %d,%d", column, row);
+                    if (column == 0)
+                    {
+                        char sz[32];
+                        sprintf( sz, "Cell %d,%d", column, row );
+                        if ( ImGui::Selectable( sz, selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) selected = row;
+                        ImGui::PushID(row * COLUMNS_COUNT + column);
+                        if (ImGui::BeginPopupContextItem())
+                        {
+                            ImGui::Text("This is the popup for Selectable(\"%s\") in Cell %d,%d", sz, column, row);
+                            if (ImGui::Button("Close"))
+                                ImGui::CloseCurrentPopup();
+                            ImGui::EndPopup();
+                        }
+                        ImGui::PopID();
+                    }
+                    else
+                        ImGui::Text("Cell %d,%d", column, row);
                     ImGui::SameLine();
 
                     // [2.2] Right-click on the ".." to open a custom popup

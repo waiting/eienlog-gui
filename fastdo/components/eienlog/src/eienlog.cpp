@@ -33,7 +33,7 @@ static std::vector< winux::Packet<LogChunk> > _BuildChunks( winux::Buffer const 
         pack->packetSize = chunkSize;
         pack->flag = flag;
         pack->index = index++;
-        pack->chunks = chunks;
+        pack->chunks = (winux::uint32)chunks;
         pack->realLen = logSpaceSize;
         pack->utcTime = utcTime;
         memcpy( pack->logSpace, data.get<winux::byte>() + ( data.size() - remainingSize ), logSpaceSize );
@@ -47,7 +47,7 @@ static std::vector< winux::Packet<LogChunk> > _BuildChunks( winux::Buffer const 
         pack->packetSize = chunkSize;
         pack->flag = flag;
         pack->index = index++;
-        pack->chunks = chunks;
+        pack->chunks = (winux::uint32)chunks;
         pack->realLen = (winux::uint16)remainingSize;
         pack->utcTime = utcTime;
         memcpy( pack->logSpace, data.get<winux::byte>() + ( data.size() - remainingSize ), remainingSize );
@@ -290,7 +290,7 @@ EIENLOG_FUNC_IMPL(void) WriteLog( winux::String const & str )
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        __logWriter->log( winux::Format( TEXT("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, "\t\r\n" ), eienlog::leUtf8 );
+        __logWriter->log( winux::Format( TEXT("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, TEXT("\t\r\n") ), eienlog::leUtf8 );
     }
 }
 

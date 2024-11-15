@@ -27,18 +27,21 @@ ConsoleAttr::ConsoleAttr( winux::ushort attr, bool isSetBgColor ) : _isSetBgColo
     GetConsoleScreenBufferInfo( _hStdHandle, &csbi );
     _wPrevAttributes = csbi.wAttributes;
 #else
-    union
+    if ( ( attr & 0x8000 ) == 0 )
     {
-        winux::byte bAttr[2];
-        winux::ushort usAttr;
-    } tmp;
-    tmp.usAttr = attr;
+        union
+        {
+            winux::byte bAttr[2];
+            winux::ushort usAttr;
+        } tmp;
+        tmp.usAttr = attr;
 
-    this->_strAttr = __TerminalFgColorAttrs[tmp.bAttr[0]];
-    if ( tmp.bAttr[1] )
-    {
-        this->_strAttr += ";";
-        this->_strAttr += __TerminalBgColorAttrs[tmp.bAttr[1]];
+        this->_strAttr = __TerminalFgColorAttrs[tmp.bAttr[0]];
+        if ( tmp.bAttr[1] )
+        {
+            this->_strAttr += ";";
+            this->_strAttr += __TerminalBgColorAttrs[tmp.bAttr[1]];
+        }
     }
 #endif
 }
@@ -46,18 +49,20 @@ ConsoleAttr::ConsoleAttr( winux::ushort attr, bool isSetBgColor ) : _isSetBgColo
 void ConsoleAttr::modify() const
 {
 #if defined(OS_WIN)
-    SetConsoleTextAttribute( _hStdHandle, _wAttributes | ( _wPrevAttributes & ( _isSetBgColor ? 0xFF00 : 0xFFF0 ) ) );
+    if ( ( _wAttributes & 0x8000 ) == 0 )
+        SetConsoleTextAttribute( _hStdHandle, _wAttributes | ( _wPrevAttributes & ( _isSetBgColor ? 0xFF00 : 0xFFF0 ) ) );
 #else
-    std::cout << "\033[" << this->_strAttr << "m";
+    if ( !this->_strAttr.empty() ) std::cout << "\033[" << this->_strAttr << "m";
 #endif
 }
 
 void ConsoleAttr::resume() const
 {
 #if defined(OS_WIN)
-    SetConsoleTextAttribute( _hStdHandle, _wPrevAttributes );
+    if ( ( _wAttributes & 0x8000 ) == 0 )
+        SetConsoleTextAttribute( _hStdHandle, _wPrevAttributes );
 #else
-    std::cout << "\033[0m";
+    if ( !this->_strAttr.empty() ) std::cout << "\033[0m";
 #endif
 }
 

@@ -292,8 +292,8 @@ public:
     ) { return this->sendWaitUntil( data.getSize(), data.getBuf(), hadSent, sec, rcWait, std::move(eachSuccessCallback), param, msgFlags ); }
 
     /** \brief 发送一个`Plain of Data`类型的变量，若成功返回true，否则返回false。 */
-    template < typename _PodType, size_t _N = sizeof(_PodType) >
-    bool sendUntilType( _PodType const & v, int msgFlags = MsgDefault ) { return this->sendUntil( _N, &v, msgFlags ); }
+    template < typename _PodType >
+    bool sendUntilType( _PodType const & v, size_t size = sizeof(_PodType), int msgFlags = MsgDefault ) { return this->sendUntil( size, &v, msgFlags ); }
 
     /** \brief 尝试接收size大小数据。返回实际接收的数据大小，出错返回-1。 */
     int recv( void * buf, size_t size, int msgFlags = MsgDefault );
@@ -359,12 +359,12 @@ public:
     );
 
     /** \brief 接收一个`Plain of Data`类型的变量，若成功返回true，否则返回false。 */
-    template < typename _PodType, size_t _N = sizeof(_PodType) >
-    bool recvUntilType( _PodType * v, int msgFlags = MsgDefault )
+    template < typename _PodType >
+    bool recvUntilType( _PodType * v, size_t size = sizeof(_PodType), int msgFlags = MsgDefault )
     {
         winux::GrowBuffer data;
-        data.setBuf( v, 0, _N, true );
-        return this->recvUntilSize( _N, &data, msgFlags );
+        data.setBuf( v, 0, size, true );
+        return this->recvUntilSize( size, &data, msgFlags );
     }
 
     /** \brief 接收不用阻塞即可接收的数据，返回收到的数据Buffer。
@@ -570,9 +570,9 @@ struct DataRecvSendCtx
         this->data.append(data);
     }
 
-    /** \brief 在data里查找target内容。startpos指定起始位置，pos表示搜索到的位置。
+    /** \brief 在`data`里查找`target`内容。`startpos`指定起始位置，`pos`接收搜索到的位置。
      *
-     *  如果没找到，自动设置startpos为下次搜索起始位置 */
+     *  如果没找到，自动设置`startpos`为下次搜索起始位置 */
     template < typename _IndexType >
     bool find( winux::AnsiString const & target, std::vector<_IndexType> const & targetNextVal )
     {
@@ -588,21 +588,22 @@ struct DataRecvSendCtx
         }
     }
 
-    /** \brief data里搜到target内容后，调整data大小，把多余的数据放入extraData，然后返回data，并把extraData移到data，重置状态 */
-    winux::Buffer adjust( winux::AnsiString const & target )
+    /** \brief 在find()到目标内容后，调整`data`大小。把多余的数据放入`extraData`，然后返回`data`内容，并把`extraData`移到`data`，最后重置状态。
+     *
+     *  \param actualDataSize 指定实际数据大小 */
+    winux::Buffer adjust( size_t actualDataSize )
     {
-        // 搜到指定标记时收到数据的大小（含指定标记）
-        size_t searchedDataSize = this->pos + target.size();
         this->extraData._setSize(0);
         // 额外收到的数据
-        this->extraData.append( this->data.getBuf<char>() + searchedDataSize, this->data.getSize() - searchedDataSize );
-        this->data._setSize(searchedDataSize);
+        this->extraData.append( this->data.getBuf<char>() + actualDataSize, this->data.getSize() - actualDataSize );
+        this->data._setSize(actualDataSize);
 
         winux::Buffer actualData(this->data);
 
         // 额外的数据移入主数据中
         this->data = std::move(extraData);
-        this->resetStatus(); // 重置数据收发场景
+        // 重置数据收发场景
+        this->resetStatus();
 
         return actualData;
     }
@@ -904,6 +905,7 @@ public:
      *  若有fd就绪则返回就绪的fd的总数；若超时则返回0；若有错误发生则返回SOCKET_ERROR(-1)。\n
      *  可用`Socket::ErrNo()`查看`select()`调用的错误，可用`Socket::getError()`查看`select()`无错时socket发生的错误。*/
     int wait( double sec = -1 );
+
 protected:
     winux::MembersWrapper<struct SelectWrite_Data> _self;
     DISABLE_OBJECT_COPY(SelectWrite)
@@ -1069,23 +1071,6 @@ protected:
         } ).post();
     }
 
-    winux::ThreadPool _pool;            //!< 线程池
-    winux::RecursiveMutex _mtxServer;   //!< 互斥量保护服务器共享数据
-    ip::tcp::Socket _servSockA;         //!< 服务器监听套接字A
-    ip::tcp::Socket _servSockB;         //!< 服务器监听套接字B
-    std::map< winux::uint64, winux::SharedPointer<ClientCtx> > _clients; //!< 客户映射表
-
-    winux::uint64 _cumulativeClientId;  //!< 客户唯一标识
-    bool _stop;                         //!< 是否停止
-    bool _servSockAIsListening;         //!< servSockA是否处于监听中
-    bool _servSockBIsListening;         //!< servSockB是否处于监听中
-    bool _isAutoReadData;               //!< 是否自动读取客户到达的数据。当为true时，客户数据达到时调用ClientDataArrived事件，否则调用ClientDataNotify事件
-
-    double _serverWait;                 //!< 服务器IO等待时间间隔（秒）
-    double _verboseInterval;            //!< Verbose信息刷新间隔（秒）
-    bool _verbose;                      //!< 显示提示信息
-
-protected:
     // 客户数据通知
     /** \brief 客户数据通知，当`Server#_isAutoReadData`为false时有效
      *
@@ -1119,6 +1104,23 @@ protected:
         CreateClient,
         ( winux::uint64 clientId, winux::String const & clientEpStr, winux::SharedPointer<ip::tcp::Socket> clientSockPtr )
     );
+
+protected:
+    winux::ThreadPool _pool;            //!< 线程池
+    winux::RecursiveMutex _mtxServer;   //!< 互斥量保护服务器共享数据
+    ip::tcp::Socket _servSockA;         //!< 服务器监听套接字A
+    ip::tcp::Socket _servSockB;         //!< 服务器监听套接字B
+    std::map< winux::uint64, winux::SharedPointer<ClientCtx> > _clients; //!< 客户映射表
+
+    winux::uint64 _cumulativeClientId;  //!< 客户唯一标识
+    bool _stop;                         //!< 是否停止
+    bool _servSockAIsListening;         //!< servSockA是否处于监听中
+    bool _servSockBIsListening;         //!< servSockB是否处于监听中
+    bool _isAutoReadData;               //!< 是否自动读取客户到达的数据。当为true时，客户数据达到时调用ClientDataArrived事件，否则调用ClientDataNotify事件
+
+    double _serverWait;                 //!< 服务器IO等待时间间隔（秒）
+    double _verboseInterval;            //!< Verbose信息刷新间隔（秒）
+    bool _verbose;                      //!< 显示提示信息
 
     friend class ClientCtx;
 

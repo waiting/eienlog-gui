@@ -61,7 +61,7 @@ EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name
                     }
                     break;
                 }
-
+                tr.strContentSlashes = winux::AddCSlashes(tr.strContent);
                 this->logs.push_back(tr);
             }
         }
@@ -108,7 +108,7 @@ void EienLogWindow::render()
     }
     ImGui::SameLine();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 6.0f, 0 ) );
-    if ( ImGui::Button( u8"清空列表" ) )
+    if ( ImGui::Button(u8"清空列表") )
     {
         std::lock_guard<std::mutex> lk(this->mtx);
         this->logs.clear();
@@ -118,20 +118,19 @@ void EienLogWindow::render()
 
     // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
     // This is generally more convenient when you have code manually submitting the contents of each column.
-    static ImGuiTableFlags flags = // ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY;
-        ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
+    static ImGuiTableFlags flags = ImGuiTableFlags_Hideable |
+        ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ContextMenuInBody;
 
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImVec2(6.0f, 2.0f) );
     if (ImGui::BeginTable("table_logs", 4, flags))
     {
-        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupScrollFreeze(0, 1); // 固定第一行（表格头）
         ImGui::TableSetupColumn(u8"编号", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn(u8"时间", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn(u8"长度", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn(u8"日志内容", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableHeadersRow();
 
-        //static auto dts = winux::DateTimeL().fromCurrent().toString<char>();
+        ImGui::TableHeadersRow();
 
         {
             std::lock_guard<std::mutex> lk(this->mtx);
@@ -142,13 +141,54 @@ void EienLogWindow::render()
             {
                 for ( int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++ )
                 {
+                    auto & log = this->logs[row];
+
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     char sz[20] = { 0 };
                     sprintf( sz, "%u", row + 1 );
                     if ( ImGui::Selectable( sz, this->selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) this->selected = row;
+                    // 弹出详细显示框
+                    ImGui::PushID(row);
+                    if (ImGui::BeginPopupContextItem())
+                    {
+                        //ImGui::Text(u8"编号%s", sz);
+                        bool copyToClipboard = ImGui::Button(u8"复制日志");
+                        ImGui::Separator();
+                        if (copyToClipboard)
+                        {
+                            ImGui::LogToClipboard();
+                            //ImGui::LogText("```\n"); // Back quotes will make text appears without formatting when pasting on GitHub
+                        }
 
-                    auto & log = this->logs[row];
+                        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
+                        if (log.flag.fgColorUse)
+                        {
+                            ImVec4 color;
+                            _GetImVec4ColorFromLogFgColor(log.flag.fgColor, &color);
+                            ImGui::PushStyleColor(ImGuiCol_Text, color);
+                        }
+                        ImGui::TextUnformatted(log.strContent.c_str());
+                        if (log.flag.fgColorUse)
+                        {
+                            ImGui::PopStyleColor();
+                        }
+                        ImGui::PopTextWrapPos();
+
+                        if (copyToClipboard)
+                        {
+                            //ImGui::LogText("\n```\n");
+                            ImGui::LogFinish();
+                        }
+
+                        ImGui::Separator();
+                        if (ImGui::Button(u8"关闭"))
+                            ImGui::CloseCurrentPopup();
+                        ImGui::EndPopup();
+                    }
+                    ImGui::PopID();
+
+
                     ImGui::TableSetColumnIndex(1);
                     ImGui::Text( log.utcTime.c_str() );
 
@@ -167,11 +207,11 @@ void EienLogWindow::render()
                     {
                         ImVec4 color;
                         _GetImVec4ColorFromLogFgColor( log.flag.fgColor, &color );
-                        ImGui::TextColored( color, log.strContent.c_str() );
+                        ImGui::TextColored( color, log.strContentSlashes.c_str() );
                     }
                     else
                     {
-                        ImGui::Text( log.strContent.c_str() );
+                        ImGui::Text( log.strContentSlashes.c_str() );
                     }
                 }
             }

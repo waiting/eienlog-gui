@@ -8,7 +8,6 @@
 
 namespace winux
 {
-
 /** \brief 颜色属性标记 */
 enum ConsoleColorAttrFlags : winux::ushort
 {
@@ -90,7 +89,7 @@ enum ConsoleColorAttrFlags : winux::ushort
     bgFuchsia = bgPurple,
     bgYellow = bgOlive,
 #endif
-
+    ccaIgnore = 0x8000,
 };
 
 /** \brief 控制台属性类 */
