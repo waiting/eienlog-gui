@@ -116,13 +116,14 @@ void EienLogWindow::render()
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
 
+    int columns = 4;
     // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
     // This is generally more convenient when you have code manually submitting the contents of each column.
     static ImGuiTableFlags flags = ImGuiTableFlags_Hideable |
         ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ContextMenuInBody;
 
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImVec2(6.0f, 2.0f) );
-    if (ImGui::BeginTable("table_logs", 4, flags))
+    if (ImGui::BeginTable("table_logs", columns, flags))
     {
         ImGui::TableSetupScrollFreeze(0, 1); // 固定第一行（表格头）
         ImGui::TableSetupColumn(u8"编号", ImGuiTableColumnFlags_WidthFixed);
@@ -145,15 +146,18 @@ void EienLogWindow::render()
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    char sz[20] = { 0 };
-                    sprintf( sz, "%u", row + 1 );
-                    if ( ImGui::Selectable( sz, this->selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) this->selected = row;
+                    char szNo[20] = { 0 };
+                    sprintf( szNo, "%u", row + 1 );
+                    if ( ImGui::Selectable( szNo, this->selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) this->selected = row;
                     // 弹出详细显示框
-                    ImGui::PushID(row);
+                    ImGui::PushID(row * columns);
                     if (ImGui::BeginPopupContextItem())
                     {
-                        //ImGui::Text(u8"编号%s", sz);
+                        this->selected = row;
+
                         bool copyToClipboard = ImGui::Button(u8"复制日志");
+                        ImGui::SameLine();
+                        ImGui::Text(u8"编号：%s，大小：%u，时间：%s", szNo, log.content.getSize(), log.utcTime.c_str());
                         ImGui::Separator();
                         if (copyToClipboard)
                         {
@@ -168,7 +172,7 @@ void EienLogWindow::render()
                             _GetImVec4ColorFromLogFgColor(log.flag.fgColor, &color);
                             ImGui::PushStyleColor(ImGuiCol_Text, color);
                         }
-                        ImGui::TextUnformatted(log.strContent.c_str());
+                        ImGui::TextUnformatted(log.strContent.c_str(), log.strContent.c_str() + log.strContent.length());
                         if (log.flag.fgColorUse)
                         {
                             ImGui::PopStyleColor();
@@ -190,7 +194,7 @@ void EienLogWindow::render()
 
 
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::Text( log.utcTime.c_str() );
+                    ImGui::TextEx(log.utcTime.c_str(), log.utcTime.c_str() + log.utcTime.length());
 
                     ImGui::TableSetColumnIndex(2);
                     ImGui::Text( "%u", (winux::uint)log.content.getSize() );
@@ -207,11 +211,14 @@ void EienLogWindow::render()
                     {
                         ImVec4 color;
                         _GetImVec4ColorFromLogFgColor( log.flag.fgColor, &color );
-                        ImGui::TextColored( color, log.strContentSlashes.c_str() );
+                        //ImGui::TextColored( color, log.strContentSlashes.c_str() );
+                        ImGui::PushStyleColor(ImGuiCol_Text, color);
+                        ImGui::TextUnformatted( log.strContentSlashes.c_str(), log.strContentSlashes.c_str() + log.strContentSlashes.length() );
+                        ImGui::PopStyleColor();
                     }
                     else
                     {
-                        ImGui::Text( log.strContentSlashes.c_str() );
+                        ImGui::TextUnformatted( log.strContentSlashes.c_str(), log.strContentSlashes.c_str() + log.strContentSlashes.length() );
                     }
                 }
             }
@@ -221,9 +228,9 @@ void EienLogWindow::render()
         float a = ImGui::GetScrollY();
         float b = ImGui::GetScrollMaxY();
         //printf("%f/%f\n", a, b);
-        if ( bToggleVScrollToBottom )
+        if ( this->bToggleVScrollToBottom )
         {
-            if ( vScrollToBottom )
+            if ( this->vScrollToBottom )
             {
                 a = b;
             }
@@ -232,7 +239,7 @@ void EienLogWindow::render()
                 a = ( a > 1.0f ? a - 1.0f : 0.0f );
                 ImGui::SetScrollY(a);
             }
-            bToggleVScrollToBottom = false;
+            this->bToggleVScrollToBottom = false;
         }
 
         if ( b > 0.0f )
@@ -240,15 +247,15 @@ void EienLogWindow::render()
             float f = a / b;
             if ( 1.0f - f < 1.0e-6f ) // f == 1.0f
             {
-                vScrollToBottom = true;
+                this->vScrollToBottom = true;
             }
             else
             {
-                vScrollToBottom = false;
+                this->vScrollToBottom = false;
             }
         }
 
-        if ( vScrollToBottom ) ImGui::SetScrollHereY(1.0f);
+        if ( this->vScrollToBottom ) ImGui::SetScrollHereY(1.0f);
 
         ImGui::EndTable();
     }

@@ -30,7 +30,7 @@ struct EienLogWindow
     std::vector<LogTextRecord> logs;
     int selected = -1;
     bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
-    bool vScrollToBottom = true;
+    bool vScrollToBottom = true; // 是否滚动到底
     std::mutex mtx;
     winux::SimplePointer<std::thread> th;
     bool show = true;
