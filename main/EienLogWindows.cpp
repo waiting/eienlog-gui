@@ -24,43 +24,63 @@ EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name
                 tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
                 tr.content = std::move(record.data);
 
-                // 根据编码进行转换
-                switch ( tr.flag.logEncoding )
+                // 如果非二进制，才进行编码转换
+                if ( !tr.flag.binary )
                 {
-                case eienlog::leUtf8:
+                    // 根据编码进行转换
+                    switch ( tr.flag.logEncoding )
                     {
-                        tr.strContent.assign( tr.content.toString<char>() );
-                    }
-                    break;
-                case eienlog::leUtf16Le:
-                    {
-                        winux::Utf16String ustr = tr.content.toString<winux::char16>();
-                        if ( winux::IsBigEndian() )
+                    case eienlog::leUtf8:
                         {
-                            if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
+                            tr.strContent.assign( tr.content.toString<char>() );
                         }
-                        tr.strContent.assign( winux::UnicodeConverter(ustr).toUtf8() );
-                    }
-                    break;
-                case eienlog::leUtf16Be:
-                    {
-                        winux::Utf16String ustr = tr.content.toString<winux::char16>();
-                        if ( winux::IsLittleEndian() )
+                        break;
+                    case eienlog::leUtf16Le:
                         {
-                            if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
+                            winux::Utf16String ustr = tr.content.toString<winux::char16>();
+                            if ( winux::IsBigEndian() )
+                            {
+                                if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
+                            }
+                            tr.strContent.assign( winux::UnicodeConverter(ustr).toUtf8() );
                         }
-                        tr.strContent.assign( winux::UnicodeConverter(ustr).toUtf8() );
-                    }
-                    break;
-                default:
-                    {
-                        if ( tr.flag.binary )
-                            tr.strContent.assign( "<" + winux::BufferToHex<char>(tr.content) + ">" );
-                        else
+                        break;
+                    case eienlog::leUtf16Be:
+                        {
+                            winux::Utf16String ustr = tr.content.toString<winux::char16>();
+                            if ( winux::IsLittleEndian() )
+                            {
+                                if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
+                            }
+                            tr.strContent.assign( winux::UnicodeConverter(ustr).toUtf8() );
+                        }
+                        break;
+                    default:
+                        {
                             tr.strContent.assign( winux::LocalToUtf8( tr.content.toString<char>() ) );
+                        }
+                        break;
                     }
-                    break;
                 }
+                else // 二进制数据
+                {
+                    int i = 1;
+                    for ( auto && byt : tr.content )
+                    {
+                        tr.strContent += winux::BufferToHex<char>( winux::Buffer( &byt, 1, true ) );
+                        if ( i % 16 )
+                        {
+                            tr.strContent += " ";
+                        }
+                        else
+                        {
+                            tr.strContent += "\n";
+                        }
+                        i++;
+                    }
+                    winux::StrMakeUpper(&tr.strContent);
+                }
+
                 tr.strContentSlashes = winux::AddCSlashes(tr.strContent);
                 this->logs.push_back(tr);
             }
@@ -157,7 +177,7 @@ void EienLogWindow::render()
 
                         bool copyToClipboard = ImGui::Button(u8"复制日志");
                         ImGui::SameLine();
-                        ImGui::Text(u8"编号：%s，大小：%u，时间：%s", szNo, log.content.getSize(), log.utcTime.c_str());
+                        ImGui::Text(u8"编号：%s，大小：%u", szNo, log.content.getSize() );
                         ImGui::Separator();
                         if (copyToClipboard)
                         {
@@ -186,8 +206,10 @@ void EienLogWindow::render()
                         }
 
                         ImGui::Separator();
-                        if (ImGui::Button(u8"关闭"))
+                        if (ImGui::Button(u8"关闭浮窗"))
                             ImGui::CloseCurrentPopup();
+                        ImGui::SameLine();
+                        ImGui::Text(u8"时间：%s", log.utcTime.c_str());
                         ImGui::EndPopup();
                     }
                     ImGui::PopID();
