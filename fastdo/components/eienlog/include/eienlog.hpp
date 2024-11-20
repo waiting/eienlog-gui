@@ -117,11 +117,12 @@ union LogFlag
 /** \brief 日志分块头部 */
 struct LogChunkHeader
 {
-    winux::uint16 packetSize;   //!< 数据包固定大小0~255
+    winux::uint16 chunkSize;    //!< 数据包固定大小0~65535
     winux::uint16 realLen;      //!< 数据包日志数据占用长度
-    winux::uint32 flag;         //!< 控制日志字体样式或颜色等信息，目前暂且保留为0
-    winux::uint32 index;        //!< 分块编号
-    winux::uint32 chunks;       //!< 总块数
+    winux::uint16 index;        //!< 分块编号
+    winux::uint16 total;        //!< 总块数
+    winux::uint32 flag;         //!< 控制日志样式或颜色等信息
+    winux::uint32 id;           //!< 记录ID
     winux::uint64 utcTime;      //!< UTC时间戳(ms)
 };
 
@@ -157,7 +158,10 @@ public:
     size_t log( winux::String const & str, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding );
 
     /** \brief 发送二进制日志 */
-    size_t logBin( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor );
+    size_t logBin( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor )
+    {
+        return this->logEx( data, useFgColor, fgColor, useBgColor, bgColor, 0, true );
+    }
 
     /** \brief 发送字符串日志
      *
@@ -205,7 +209,7 @@ class EIENLOG_DLL LogReader
 public:
     struct LogChunksData
     {
-        std::vector< winux::Packet<LogChunk> > packs;
+        std::vector< winux::Packet<LogChunk> > chunks;
         time_t lastUpdate;
     };
 
@@ -218,10 +222,10 @@ public:
 
     /** \brief 阻塞读取一个分块封包
      *
-     *  \param pack 接受封包
+     *  \param chunk 接受封包
      *  \param ep 接受发送者EndPoint
      *  \return bool */
-    bool readPack( winux::Packet<LogChunk> * pack, eiennet::ip::EndPoint * ep );
+    bool readChunk( winux::Packet<LogChunk> * chunk, eiennet::ip::EndPoint * ep );
 
     /** \brief 读取一条日志记录
      *
@@ -236,7 +240,7 @@ public:
 private:
     eiennet::ip::udp::Socket _sock;
     eiennet::ip::EndPoint _ep;
-    std::map< time_t, LogChunksData > _packsMap;
+    std::map< winux::uint32, LogChunksData > _chunksMap;
     winux::uint16 const _chunkSize;
     int _errno;
 };

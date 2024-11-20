@@ -1,4 +1,4 @@
-#include "App.h"
+ï»¿#include "App.h"
 #include "WindowModal.h"
 #include "NewEienLogWindowModal.h"
 #include "EienLogWindows.h"
@@ -11,54 +11,54 @@ NewEienLogWindowModal::NewEienLogWindowModal( EienLogWindows * manager, std::str
 static std::string __addr = u8"";
 static int __port = 22345;
 static char __ch[] = { 'A', '\0' };
-static std::string __name = std::string(u8"ÈÕÖ¾") + __ch;
-static std::string __strWaitTimeout = "500";
-static std::string __strUpdateTimeout = "3000";
+static std::string __name = std::string(u8"æ—¥å¿—") + __ch;
+static std::string __strWaitTimeout = "50";
+static std::string __strUpdateTimeout = "300";
 static bool __vScrollToBottom = true;
 
 void NewEienLogWindowModal::renderComponents()
 {
-    ImGui::Text( u8"ÐÂ½¨Ò»¸öÈÕÖ¾´°¿Ú£¬¼àÌýÈÕÖ¾ÐÅÏ¢" );
+    ImGui::Text( u8"æ–°å»ºä¸€ä¸ªæ—¥å¿—çª—å£ï¼Œç›‘å¬æ—¥å¿—ä¿¡æ¯" );
     ImGui::Separator();
 
-    // ¶ÔÆë±êÇ©ÎÄ±¾
+    // å¯¹é½æ ‡ç­¾æ–‡æœ¬
     ImGui::AlignTextToFramePadding();
-    ImGui::Text(u8"µØÖ·"); // Õâ½«ÊÇ×ó²àµÄ±êÇ©
+    ImGui::Text(u8"åœ°å€"); // è¿™å°†æ˜¯å·¦ä¾§çš„æ ‡ç­¾
     ImGui::SameLine( 0.0f, 1.0f );
-    // ÉèÖÃÊäÈë¿òµÄ¿í¶È
+    // è®¾ç½®è¾“å…¥æ¡†çš„å®½åº¦
     ImGui::PushItemWidth(160);
     ImGui::InputText( u8"##addr", &__addr );
     ImGui::PopItemWidth();
     ImGui::SameLine();
 
     ImGui::AlignTextToFramePadding();
-    ImGui::Text(u8"¶Ë¿Ú");
+    ImGui::Text(u8"ç«¯å£");
     ImGui::SameLine( 0.0f, 1.0f );
     ImGui::PushItemWidth(120);
     ImGui::InputInt( u8"##port", &__port, 1 );
     ImGui::PopItemWidth();
 
     ImGui::AlignTextToFramePadding();
-    ImGui::Text(u8"Ãû³Æ");
+    ImGui::Text(u8"åç§°");
     ImGui::SameLine( 0.0f, 1.0f );
     ImGui::InputText( u8"##name", &__name );
 
     ImGui::AlignTextToFramePadding();
-    ImGui::Text(u8"µÈ´ý³¬Ê±");
+    ImGui::Text(u8"ç­‰å¾…è¶…æ—¶");
     ImGui::SameLine( 0.0f, 1.0f );
     ImGui::PushItemWidth(80);
     ImGui::InputText( u8"##wait_timeout", &__strWaitTimeout );
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
-    ImGui::Text(u8"¸üÐÂ³¬Ê±");
+    ImGui::Text(u8"æ›´æ–°è¶…æ—¶");
     ImGui::SameLine( 0.0f, 1.0f );
     ImGui::PushItemWidth(80);
     ImGui::InputText( u8"##update_timeout", &__strUpdateTimeout );
     ImGui::PopItemWidth();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
-    ImGui::Checkbox( u8"×Ô¶¯¹ö¶¯µ½µ×²¿", &__vScrollToBottom );
+    ImGui::Checkbox( u8"è‡ªåŠ¨æ»šåŠ¨åˆ°åº•éƒ¨", &__vScrollToBottom );
     ImGui::PopStyleVar();
 }
 
@@ -67,7 +67,7 @@ void NewEienLogWindowModal::onOk()
     this->_manager->addWindow( __name, __addr, (USHORT)__port, winux::Mixed(__strWaitTimeout), winux::Mixed(__strUpdateTimeout), __vScrollToBottom );
 
     __ch[0]++;
-    __name = std::string(u8"ÈÕÖ¾") + __ch;
+    __name = std::string(u8"æ—¥å¿—") + __ch;
     __port++;
 }
 

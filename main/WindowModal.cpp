@@ -1,4 +1,4 @@
-#include "App.h"
+ï»¿#include "App.h"
 #include "WindowModal.h"
 
 WindowModal::WindowModal( std::string const & name ) : _name(name), _toggled(false)
@@ -23,14 +23,14 @@ void WindowModal::render()
         this->renderComponents();
 
         ImGui::Separator();
-        if ( ImGui::Button( u8"È·¶¨", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) )
+        if ( ImGui::Button( u8"ç¡®å®š", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) )
         {
             ImGui::CloseCurrentPopup();
             this->onOk();
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if ( ImGui::Button( u8"È¡Ïû", ImVec2( 120, 0 ) ) )
+        if ( ImGui::Button( u8"å–æ¶ˆ", ImVec2( 120, 0 ) ) )
         {
             ImGui::CloseCurrentPopup();
             this->onCancel();

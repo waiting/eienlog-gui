@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 struct WindowModal
 {
     WindowModal( std::string const & name );
