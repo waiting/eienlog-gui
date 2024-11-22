@@ -119,7 +119,11 @@ WINUX_FUNC_IMPL(bool) JsonSetByteOrderForUtf16( bool isLittleEndian )
     return old;
 }
 
+#if defined(_UNICODE) || defined(UNICODE)
+thread_local String __convertToCharsetForUtf16 = IsBigEndian() ? TEXT("UTF-16BE") : TEXT("UTF-16LE");
+#else
 thread_local String __convertToCharsetForUtf16 = TEXT("");
+#endif
 WINUX_FUNC_IMPL(String) JsonSetConvertToCharsetForUtf16( String const & charset )
 {
     auto old = __convertToCharsetForUtf16;
@@ -234,12 +238,69 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
                 }
             }
 
-            winux::ulong code0 = NumberStringToNumber( hexStr.c_str(), 16 );
-            UnicodeString16::value_type chars[] = { (UnicodeString16::value_type)code0, 0 };
+            // 编码处理
+            winux::uint16 code0 = NumberStringToNumber( hexStr.c_str(), 16 );
+            UnicodeString16 chars;
+            chars += (UnicodeString16::value_type)code0;
+            if ( code0 >= 0xD800 && code0 <= 0xDBFF )
+            {
+                int saveI = i;
+                if ( i < (int)json.length() )
+                {
+                    if ( json[i] == '\\' )
+                    {
+                        ++i; // skip '\\'
+                        if ( i < (int)json.length() )
+                        {
+                            if ( ( json[i] | 0x20 ) == 'u' )
+                            {
+                                ++i; // skip 'u'
+                                String hexStr;
+                                for ( ; i < (int)json.length(); ++i )
+                                {
+                                    ch = json[i];
+                                    if ( IsHex(ch) && hexStr.length() < 4 )
+                                    {
+                                        hexStr += ch;
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+                                winux::uint16 code1 = NumberStringToNumber( hexStr.c_str(), 16 );
+                                if ( code1 >= 0xDC00 && code1 <= 0xDFFF )
+                                {
+                                    chars += (UnicodeString16::value_type)code1;
+                                }
+                                else
+                                {
+                                    i = saveI;
+                                }
+                            }
+                            else
+                            {
+                                i = saveI;
+                            }
+                        }
+                        else
+                        {
+                            i = saveI;
+                        }
+                    }
+                    else
+                    {
+                        i = saveI;
+                    }
+                }
+            }
             AnsiString convertToCharsetForUtf16 = StringToLocal(__convertToCharsetForUtf16);
             Conv conv( ( __byteOrderForUtf16 ? "UTF-16LE" : "UTF-16BE" ), convertToCharsetForUtf16 );
-            *str += conv.convert< String, UnicodeString16 >(chars);
-
+        #if defined(_UNICODE) || defined(UNICODE)
+            *str += UnicodeConverter( conv.convert< UnicodeString16, UnicodeString16 >(chars) ).toUnicode();
+        #else
+            *str += conv.convert< AnsiString, UnicodeString16 >(chars);
+        #endif
             break;
         }
         else // 其余加\的字符都照原样输出

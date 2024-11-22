@@ -14,7 +14,6 @@
 #include "WindowInterface.h"
 #include "MainWindow.h"
 
-
 // 本应用程序
 struct App
 {
@@ -36,6 +35,35 @@ struct App
     // 渲染界面
     void renderUI();
 
+    // 加载应用配置
+    void loadConfig();
+
+    // 保存应用配置
+    void saveConfig();
+
+    // 监听参数
+    struct ListenParams
+    {
+        winux::Utf8String name;
+        winux::Utf8String addr;
+        winux::ushort port;
+        time_t waitTimeout;
+        time_t updateTimeout;
+        bool vScrollToBottom;
+    };
+
+    // JSON配置参数
+    struct AppConfig
+    {
+        winux::Utf8String fontPath;
+        float fontSize;
+        winux::Utf8String bigFontPath;
+        float bigFontSize;
+        bool logTableColumnResize;
+        std::vector<ListenParams> listenHistory;
+        std::vector<winux::Utf8String> logFileHistory;
+    } appConfig;
+
     GraphicsInterface gi; // DirectX 3D
     WindowInterface wi; // Win32 Window
     ImGuiContext * ctx; // ImGui Context
@@ -50,7 +78,7 @@ struct App
     ImFont * normalFont;
     // 主渲染窗口
     MainWindow * mainWindow = nullptr;
-    std::string welcomeText;
+    winux::Utf8String welcomeText;
 };
 
 extern App g_app;

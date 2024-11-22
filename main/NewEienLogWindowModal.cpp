@@ -8,12 +8,12 @@ NewEienLogWindowModal::NewEienLogWindowModal( EienLogWindows * manager, std::str
 {
 }
 
-static std::string __addr = u8"";
+static winux::Utf8String __addr = u8"";
 static int __port = 22345;
 static char __ch[] = { 'A', '\0' };
-static std::string __name = std::string(u8"日志") + __ch;
-static std::string __strWaitTimeout = "50";
-static std::string __strUpdateTimeout = "300";
+static winux::Utf8String __name = winux::Utf8String(u8"日志") + __ch;
+static winux::Utf8String __strWaitTimeout = u8"50";
+static winux::Utf8String __strUpdateTimeout = u8"300";
 static bool __vScrollToBottom = true;
 
 void NewEienLogWindowModal::renderComponents()
@@ -64,10 +64,10 @@ void NewEienLogWindowModal::renderComponents()
 
 void NewEienLogWindowModal::onOk()
 {
-    this->_manager->addWindow( __name, __addr, (USHORT)__port, winux::Mixed(__strWaitTimeout), winux::Mixed(__strUpdateTimeout), __vScrollToBottom );
+    this->_manager->addWindow( __name, __addr, (winux::ushort)__port, winux::Mixed(__strWaitTimeout), winux::Mixed(__strUpdateTimeout), __vScrollToBottom );
 
     __ch[0]++;
-    __name = std::string(u8"日志") + __ch;
+    __name = winux::Utf8String(u8"日志") + __ch;
     __port++;
 }
 

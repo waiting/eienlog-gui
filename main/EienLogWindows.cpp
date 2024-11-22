@@ -5,8 +5,16 @@ using namespace winux;
 using namespace eienlog;
 
 // struct EienLogWindow -----------------------------------------------------------------------
-EienLogWindow::EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom ) :
-    manager(manager), name(name), addr(addr), port(port), waitTimeout(waitTimeout), updateTimeout(updateTimeout), vScrollToBottom(vScrollToBottom)
+EienLogWindow::EienLogWindow(
+    EienLogWindows * manager,
+    winux::Utf8String const & name,
+    winux::Utf8String const & addr,
+    winux::ushort port,
+    time_t waitTimeout,
+    time_t updateTimeout,
+    bool vScrollToBottom
+)
+: manager(manager), name(name), addr(addr), port(port), waitTimeout(waitTimeout), updateTimeout(updateTimeout), vScrollToBottom(vScrollToBottom)
 {
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
@@ -139,7 +147,8 @@ void EienLogWindow::render()
     int columns = 4;
     // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
     // This is generally more convenient when you have code manually submitting the contents of each column.
-    static ImGuiTableFlags flags = ImGuiTableFlags_Hideable |
+    bool logTableColumnResize = this->manager->mainWindow->app.appConfig.logTableColumnResize;
+    static ImGuiTableFlags flags = ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ( logTableColumnResize ? ImGuiTableFlags_Resizable : 0 ) |
         ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ContextMenuInBody;
 
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImVec2(6.0f, 2.0f) );
@@ -291,7 +300,7 @@ EienLogWindows::EienLogWindows( MainWindow * mainWindow ) : mainWindow(mainWindo
 
 }
 
-void EienLogWindows::addWindow( std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom )
+void EienLogWindows::addWindow( winux::Utf8String const & name, winux::Utf8String const & addr, winux::ushort port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom )
 {
     auto p = winux::MakeSimple( new EienLogWindow( this, name, addr, port, waitTimeout, updateTimeout, vScrollToBottom ) );
     this->wins.emplace_back(p);

@@ -9,22 +9,22 @@ struct EienLogWindows;
 struct LogTextRecord
 {
     winux::Buffer content; //!< 日志内容
-    winux::AnsiString strContent; //!< 字符串内容
-    winux::AnsiString strContentSlashes; //!< 字符串转义内容
-    winux::AnsiString utcTime;  //!< UTC时间戳
+    winux::Utf8String strContent; //!< 字符串内容
+    winux::Utf8String strContentSlashes; //!< 字符串转义内容
+    winux::Utf8String utcTime;  //!< UTC时间戳
     eienlog::LogFlag flag;  //!< 日志样式FLAG
 };
 
 struct EienLogWindow
 {
-    EienLogWindow( EienLogWindows * manager, std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
+    EienLogWindow( EienLogWindows * manager, winux::Utf8String const & name, winux::Utf8String const & addr, winux::ushort port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
     ~EienLogWindow();
     void render();
 
     EienLogWindows * manager = nullptr;
-    std::string name;
-    std::string addr;
-    USHORT port = 0;
+    winux::Utf8String name;
+    winux::Utf8String addr;
+    winux::ushort port = 0;
     time_t waitTimeout;
     time_t updateTimeout;
     std::vector<LogTextRecord> logs;
@@ -40,7 +40,7 @@ struct EienLogWindows
 {
     EienLogWindows( MainWindow * mainWindow );
 
-    void addWindow( std::string const & name, std::string const & addr, USHORT port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
+    void addWindow( winux::Utf8String const & name, winux::Utf8String const & addr, winux::ushort port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
     void render();
 
     std::vector< winux::SimplePointer<EienLogWindow> > wins;
