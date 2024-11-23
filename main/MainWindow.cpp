@@ -134,13 +134,37 @@ void MainWindow::renderDockSpace()
 
 void MainWindow::renderDockSpaceMenuBar()
 {
+    bool isCtrlDown = ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_LeftCtrl) ) || ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_RightCtrl) );
+    // 快捷 新建监听
+    if ( isCtrlDown && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_N) ) )
+    {
+        this->newEienLogWindowModal->toggle();
+    }
+    // 快捷 打开日志
+    if ( isCtrlDown && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_O) ) )
+    {
+    }
+
+    // 菜单栏
     if (ImGui::BeginMenuBar())
     {
         if ( ImGui::BeginMenu(u8"文件") )
         {
-            if ( ImGui::MenuItem(u8"新建...") )
+            if ( ImGui::MenuItem(u8"新建监听...", u8"Ctrl+N") )
             {
                 this->newEienLogWindowModal->toggle();
+            }
+            if ( ImGui::MenuItem(u8"打开日志...", u8"Ctrl+O") )
+            {
+            }
+            ImGui::Separator();
+            if ( ImGui::BeginMenu(u8"最近开启监听") )
+            {
+                ImGui::EndMenu();
+            }
+            if ( ImGui::BeginMenu(u8"最近打开日志") )
+            {
+                ImGui::EndMenu();
             }
             ImGui::Separator();
             if ( ImGui::MenuItem(u8"退出") )
@@ -151,20 +175,19 @@ void MainWindow::renderDockSpaceMenuBar()
         }
         if ( ImGui::BeginMenu(u8"主题") )
         {
-            static int colorsTheme = 2;
-            if ( ImGui::MenuItem( u8"暗黑（Dark）", nullptr, colorsTheme == 0 ) )
+            if ( ImGui::MenuItem( u8"暗黑（Dark）", nullptr, this->app.appConfig.colorTheme == 0 ) )
             {
-                colorsTheme = 0;
+                this->app.appConfig.colorTheme = 0;
                 ImGui::StyleColorsDark();
             }
-            if ( ImGui::MenuItem( u8"明亮（Light）", nullptr, colorsTheme == 1 ) )
+            if ( ImGui::MenuItem( u8"明亮（Light）", nullptr, this->app.appConfig.colorTheme == 1 ) )
             {
-                colorsTheme = 1;
+                this->app.appConfig.colorTheme = 1;
                 ImGui::StyleColorsLight();
             }
-            if ( ImGui::MenuItem( u8"经典（Classic）", nullptr, colorsTheme == 2 ) )
+            if ( ImGui::MenuItem( u8"经典（Classic）", nullptr, this->app.appConfig.colorTheme == 2 ) )
             {
-                colorsTheme = 2;
+                this->app.appConfig.colorTheme = 2;
                 ImGui::StyleColorsClassic();
             }
             ImGui::EndMenu();

@@ -55,6 +55,7 @@ struct App
     // JSON配置参数
     struct AppConfig
     {
+        int colorTheme;
         winux::Utf8String fontPath;
         float fontSize;
         winux::Utf8String bigFontPath;

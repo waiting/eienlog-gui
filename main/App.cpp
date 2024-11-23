@@ -11,6 +11,9 @@ inline static winux::String __CalcAppConfigPath()
 void App::loadConfig()
 {
     auto jsonConfig = winux::Json( winux::FileGetString( __CalcAppConfigPath(), winux::feUnspec ) );
+
+    this->appConfig.colorTheme = jsonConfig.get( TEXT("color_theme"), 2 ).toInt();
+
     if ( jsonConfig.has( TEXT("font") ) )
     {
         auto && fontConfig = jsonConfig[TEXT("font")];
@@ -63,6 +66,7 @@ void App::saveConfig()
 {
     winux::Mixed jsonConfig;
     jsonConfig.createCollection();
+    jsonConfig[TEXT("color_theme")] = this->appConfig.colorTheme;
     jsonConfig[TEXT("font")] = winux::$c{
         { TEXT("path"), winux::UnicodeConverter(this->appConfig.fontPath).toUnicode() },
         { TEXT("size"), this->appConfig.fontSize }
@@ -120,9 +124,18 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     //io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style
-    //ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
-    ImGui::StyleColorsClassic();
+    switch ( this->appConfig.colorTheme )
+    {
+    case 0:
+        ImGui::StyleColorsDark();
+        break;
+    case 1:
+        ImGui::StyleColorsLight();
+        break;
+    case 2:
+        ImGui::StyleColorsClassic();
+        break;
+    }
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();

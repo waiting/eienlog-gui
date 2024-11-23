@@ -239,10 +239,10 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
             }
 
             // 编码处理
-            winux::uint16 code0 = NumberStringToNumber( hexStr.c_str(), 16 );
+            winux::uint16 code0 = (winux::uint16)NumberStringToNumber( hexStr.c_str(), 16 );
             UnicodeString16 chars;
             chars += (UnicodeString16::value_type)code0;
-            if ( code0 >= 0xD800 && code0 <= 0xDBFF )
+            if ( code0 >= 0xD800 && code0 <= 0xDBFF ) // 是UTF16代理对，尝试读取下一'\uHHHH'。若失败则退回原位
             {
                 int saveI = i;
                 if ( i < (int)json.length() )
@@ -268,7 +268,7 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
                                         break;
                                     }
                                 }
-                                winux::uint16 code1 = NumberStringToNumber( hexStr.c_str(), 16 );
+                                winux::uint16 code1 = (winux::uint16)NumberStringToNumber( hexStr.c_str(), 16 );
                                 if ( code1 >= 0xDC00 && code1 <= 0xDFFF )
                                 {
                                     chars += (UnicodeString16::value_type)code1;
