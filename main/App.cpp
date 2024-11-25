@@ -11,6 +11,7 @@ inline static winux::String __CalcAppConfigPath()
 void App::loadConfig()
 {
     auto jsonConfig = winux::Json( winux::FileGetString( __CalcAppConfigPath(), winux::feUnspec ) );
+    if ( !jsonConfig.isCollection() ) jsonConfig.createCollection();
 
     this->appConfig.colorTheme = jsonConfig.get( TEXT("color_theme"), 2 ).toInt();
 

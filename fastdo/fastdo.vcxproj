@@ -186,7 +186,6 @@
     <None Include="components\winux\include\func_traits.inl" />
     <None Include="components\winux\include\is_x_funcs.inl" />
     <None Include="components\winux\include\literal_str.inl" />
-    <None Include="components\winux\include\mixed_ref_specified_type.inl" />
     <None Include="components\winux\include\system_detection.inl" />
   </ItemGroup>
   <ItemGroup>

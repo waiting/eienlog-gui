@@ -15,6 +15,7 @@ int APIENTRY wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 int wmain()
 {
+    winux::Locale loc;
     eiennet::SocketLib sockLib;
 
     if ( !g_app.initInstance( GetModuleHandle(nullptr), SW_NORMAL ) ) return 1;

@@ -156,6 +156,11 @@ void MainWindow::renderDockSpaceMenuBar()
             }
             if ( ImGui::MenuItem(u8"打开日志...", u8"Ctrl+O") )
             {
+                winplus::FileDialog dlg{app.wi.hWnd};
+                if ( dlg.doModal( L".", L"全部文件(*.*)\0*.*\0\0" ) )
+                {
+                    winplus::MsgBox( dlg.getFilePath() );
+                }
             }
             ImGui::Separator();
             if ( ImGui::BeginMenu(u8"最近开启监听") )

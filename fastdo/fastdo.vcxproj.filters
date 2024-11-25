@@ -113,9 +113,6 @@
     <None Include="components\winux\include\literal_str.inl">
       <Filter>头文件</Filter>
     </None>
-    <None Include="components\winux\include\mixed_ref_specified_type.inl">
-      <Filter>头文件</Filter>
-    </None>
     <None Include="components\winux\include\system_detection.inl">
       <Filter>头文件</Filter>
     </None>

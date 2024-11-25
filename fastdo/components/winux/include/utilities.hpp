@@ -69,10 +69,18 @@ namespace winux
 #endif
 
 #if !defined(TEXT)
-    #if defined(UNICODE) || defined(_UNICODE)
+    #if defined(_UNICODE) || defined(UNICODE)
         #define TEXT(__x) L##__x
     #else
         #define TEXT(__x) __x
+    #endif
+#endif
+
+#if !defined($T)
+    #if defined(_UNICODE) || defined(UNICODE)
+        #define $T(__x) L##__x
+    #else
+        #define $T(__x) __x
     #endif
 #endif
 
@@ -239,7 +247,7 @@ typedef long long int64;
 typedef long long longlong;
 #endif
 
-#if defined(UNICODE) || defined(_UNICODE)
+#if defined(_UNICODE) || defined(UNICODE)
 typedef wchar tchar;
 #else
 typedef char tchar;

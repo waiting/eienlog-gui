@@ -20,33 +20,33 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{5C33B72D-351E-400B-A7C9-1774E8AE94BD}</ProjectGuid>
+    <ProjectGuid>{0EA241ED-B8FF-4037-AC53-CAB42E65D684}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>eienloggui</RootNamespace>
+    <RootNamespace>winplus</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -70,10 +70,10 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -82,116 +82,102 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;..\winplus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>winplus.lib;fastdo.lib;imgui.lib;pthreadVC2.lib;gdiplus.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;..\winplus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\fastdo\components\winux\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>winplus.lib;fastdo.lib;imgui.lib;pthreadVC2.lib;gdiplus.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\fastdo\components\winux\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;..\winplus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\fastdo\components\winux\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>winplus.lib;fastdo.lib;imgui.lib;pthreadVC2.lib;gdiplus.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\imgui;..\imgui\backends;$(DXSDK_DIR)\Include;..\fastdo\components\winux\include;..\fastdo\components\eienexpr\include;..\fastdo\components\eiennet\include;..\fastdo\components\eienlog\include;..\winplus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\fastdo\components\winux\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>winplus.lib;fastdo.lib;imgui.lib;pthreadVC2.lib;gdiplus.lib;d3dx9.lib;d3d9.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(PlatformShortName)-$(Configuration);$(DXSDK_DIR)\Lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="App.h" />
-    <ClInclude Include="EienLogWindows.h" />
-    <ClInclude Include="GraphicsInterface.h" />
-    <ClInclude Include="MainWindow.h" />
-    <ClInclude Include="NewEienLogWindowModal.h" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="WindowInterface.h" />
-    <ClInclude Include="WindowModal.h" />
+    <ClInclude Include="include\winplus.hpp" />
+    <ClInclude Include="include\winplus_compoundfile.hpp" />
+    <ClInclude Include="include\winplus_console.hpp" />
+    <ClInclude Include="include\winplus_definitions.hpp" />
+    <ClInclude Include="include\winplus_graphics.hpp" />
+    <ClInclude Include="include\winplus_ini.hpp" />
+    <ClInclude Include="include\winplus_picture.hpp" />
+    <ClInclude Include="include\winplus_resource.hpp" />
+    <ClInclude Include="include\winplus_shell.hpp" />
+    <ClInclude Include="include\winplus_strings.hpp" />
+    <ClInclude Include="include\winplus_system.hpp" />
+    <ClInclude Include="include\winplus_winctrl.hpp" />
+    <ClInclude Include="include\winplus_wordslib.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="eienlog-gui.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="eienlog-gui.ico" />
-    <Image Include="small.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="App.cpp" />
-    <ClCompile Include="EienLogWindows.cpp" />
-    <ClCompile Include="GraphicsInterface.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="MainWindow.cpp" />
-    <ClCompile Include="NewEienLogWindowModal.cpp" />
-    <ClCompile Include="WindowInterface.cpp" />
-    <ClCompile Include="WindowModal.cpp" />
+    <ClCompile Include="src\winplus_compoundfile.cpp" />
+    <ClCompile Include="src\winplus_console.cpp" />
+    <ClCompile Include="src\winplus_definitions.cpp" />
+    <ClCompile Include="src\winplus_graphics.cpp" />
+    <ClCompile Include="src\winplus_ini.cpp" />
+    <ClCompile Include="src\winplus_picture.cpp" />
+    <ClCompile Include="src\winplus_resource.cpp" />
+    <ClCompile Include="src\winplus_shell.cpp" />
+    <ClCompile Include="src\winplus_strings.cpp" />
+    <ClCompile Include="src\winplus_system.cpp" />
+    <ClCompile Include="src\winplus_winctrl.cpp" />
+    <ClCompile Include="src\winplus_wordslib.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

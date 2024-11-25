@@ -10,6 +10,7 @@
 #include "winux.hpp"
 #include "eiennet.hpp"
 #include "eienlog.hpp"
+#include "winplus.hpp"
 #include "GraphicsInterface.h"
 #include "WindowInterface.h"
 #include "MainWindow.h"
