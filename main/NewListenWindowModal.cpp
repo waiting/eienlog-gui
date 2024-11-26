@@ -1,10 +1,11 @@
 ﻿#include "App.h"
+#include "MainWindow.h"
 #include "WindowModal.h"
-#include "NewEienLogWindowModal.h"
+#include "NewListenWindowModal.h"
 #include "EienLogWindows.h"
 
-// struct NewEienLogWindowModal ---------------------------------------------------------------
-NewEienLogWindowModal::NewEienLogWindowModal( EienLogWindows * manager, std::string const & name ) : WindowModal(name), _manager(manager)
+// struct NewListenWindowModal ---------------------------------------------------------------
+NewListenWindowModal::NewListenWindowModal( EienLogWindowsManager * manager, winux::Utf8String const & name ) : WindowModal(name), _manager(manager)
 {
 }
 
@@ -16,7 +17,7 @@ static winux::Utf8String __strWaitTimeout = u8"50";
 static winux::Utf8String __strUpdateTimeout = u8"300";
 static bool __vScrollToBottom = true;
 
-void NewEienLogWindowModal::renderComponents()
+void NewListenWindowModal::renderComponents()
 {
     ImGui::Text( u8"新建一个日志窗口，监听日志信息" );
     ImGui::Separator();
@@ -62,16 +63,24 @@ void NewEienLogWindowModal::renderComponents()
     ImGui::PopStyleVar();
 }
 
-void NewEienLogWindowModal::onOk()
+void NewListenWindowModal::onOk()
 {
-    this->_manager->addWindow( __name, __addr, (winux::ushort)__port, winux::Mixed(__strWaitTimeout), winux::Mixed(__strUpdateTimeout), __vScrollToBottom );
+    App::ListenParams lparams;
+    lparams.name = __name;
+    lparams.addr = __addr;
+    lparams.port = (winux::ushort)__port;
+    lparams.waitTimeout = winux::Mixed(__strWaitTimeout);
+    lparams.updateTimeout = winux::Mixed(__strUpdateTimeout);
+    lparams.vScrollToBottom = __vScrollToBottom;
+
+    this->_manager->addWindow(lparams);
 
     __ch[0]++;
     __name = winux::Utf8String(u8"日志") + __ch;
     __port++;
 }
 
-void NewEienLogWindowModal::onCancel()
+void NewListenWindowModal::onCancel()
 {
 
 }

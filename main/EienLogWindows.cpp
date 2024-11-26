@@ -1,29 +1,21 @@
 ﻿#include "App.h"
+#include "MainWindow.h"
 #include "EienLogWindows.h"
 
 using namespace winux;
 using namespace eienlog;
 
 // struct EienLogWindow -----------------------------------------------------------------------
-EienLogWindow::EienLogWindow(
-    EienLogWindows * manager,
-    winux::Utf8String const & name,
-    winux::Utf8String const & addr,
-    winux::ushort port,
-    time_t waitTimeout,
-    time_t updateTimeout,
-    bool vScrollToBottom
-)
-: manager(manager), name(name), addr(addr), port(port), waitTimeout(waitTimeout), updateTimeout(updateTimeout), vScrollToBottom(vScrollToBottom)
+EienLogWindow::EienLogWindow( EienLogWindowsManager * manager, App::ListenParams const & lparams ) : manager(manager), lparams(lparams)
 {
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
-        LogReader reader( UnicodeConverter(this->addr).toUnicode(), this->port );
+        LogReader reader( UnicodeConverter(this->lparams.addr).toUnicode(), this->lparams.port );
         if ( reader.errNo() ) this->show = false;
         while ( this->show )
         {
             LogRecord record;
-            if ( reader.readRecord( &record, this->waitTimeout, this->updateTimeout ) )
+            if ( reader.readRecord( &record, this->lparams.waitTimeout, this->lparams.updateTimeout ) )
             {
                 std::lock_guard<std::mutex> lk(this->mtx);
 
@@ -124,13 +116,13 @@ inline static void _GetImVec4ColorFromLogBgColor( winux::uint16 bgColor, ImVec4 
 
 void EienLogWindow::render()
 {
-    ImGui::Begin( this->name.c_str(), &this->show );
+    ImGui::Begin( this->lparams.name.c_str(), &this->show );
     ImGui::SetWindowDock( ImGui::GetCurrentWindow(), manager->mainWindow->dockSpaceId, ImGuiCond_Once );
 
-    ImGui::Text( u8"正在读取<%s#%u>的日志...", this->addr.c_str(), this->port );
+    ImGui::Text( u8"正在读取<%s#%u>的日志...", this->lparams.addr.c_str(), this->lparams.port );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
     ImGui::SameLine();
-    if ( ImGui::Checkbox( u8"自动滚动到底部", &this->vScrollToBottom ) )
+    if ( ImGui::Checkbox( u8"自动滚动到底部", &this->lparams.vScrollToBottom ) )
     {
         bToggleVScrollToBottom = true;
     }
@@ -261,7 +253,7 @@ void EienLogWindow::render()
         //printf("%f/%f\n", a, b);
         if ( this->bToggleVScrollToBottom )
         {
-            if ( this->vScrollToBottom )
+            if ( this->lparams.vScrollToBottom )
             {
                 a = b;
             }
@@ -278,15 +270,15 @@ void EienLogWindow::render()
             float f = a / b;
             if ( 1.0f - f < 1.0e-6f ) // f == 1.0f
             {
-                this->vScrollToBottom = true;
+                this->lparams.vScrollToBottom = true;
             }
             else
             {
-                this->vScrollToBottom = false;
+                this->lparams.vScrollToBottom = false;
             }
         }
 
-        if ( this->vScrollToBottom ) ImGui::SetScrollHereY(1.0f);
+        if ( this->lparams.vScrollToBottom ) ImGui::SetScrollHereY(1.0f);
 
         ImGui::EndTable();
     }
@@ -294,19 +286,21 @@ void EienLogWindow::render()
     ImGui::End();
 }
 
-// struct EienLogWindows ----------------------------------------------------------------------
-EienLogWindows::EienLogWindows( MainWindow * mainWindow ) : mainWindow(mainWindow)
+// struct EienLogWindowsManager ----------------------------------------------------------------------
+EienLogWindowsManager::EienLogWindowsManager( MainWindow * mainWindow ) : mainWindow(mainWindow)
 {
 
 }
 
-void EienLogWindows::addWindow( winux::Utf8String const & name, winux::Utf8String const & addr, winux::ushort port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom )
+void EienLogWindowsManager::addWindow( App::ListenParams const & lparams )
 {
-    auto p = winux::MakeSimple( new EienLogWindow( this, name, addr, port, waitTimeout, updateTimeout, vScrollToBottom ) );
+    auto p = winux::MakeSimple( new EienLogWindow( this, lparams ) );
     this->wins.emplace_back(p);
+
+    this->mainWindow->app.setRecentListen(lparams);
 }
 
-void EienLogWindows::render()
+void EienLogWindowsManager::render()
 {
     for ( auto it = this->wins.begin(); it != this->wins.end(); )
     {

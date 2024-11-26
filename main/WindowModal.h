@@ -1,7 +1,7 @@
 ﻿#pragma once
 struct WindowModal
 {
-    WindowModal( std::string const & name );
+    WindowModal( winux::Utf8String const & name );
 
     void toggle();
 
@@ -12,6 +12,6 @@ struct WindowModal
     DEFINE_CUSTOM_EVENT( Ok, (), () )
     DEFINE_CUSTOM_EVENT( Cancel, (), () )
 
-    std::string _name;
+    winux::Utf8String _name;
     bool _toggled;
 };

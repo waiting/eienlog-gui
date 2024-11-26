@@ -1,4 +1,5 @@
 ﻿#include "App.h"
+#include "MainWindow.h"
 
 inline static winux::String __CalcAppConfigPath()
 {
@@ -96,6 +97,17 @@ void App::saveConfig()
         logFileHistory.add( winux::UnicodeConverter(logFilePath).toUnicode() );
     }
     winux::FilePutString( __CalcAppConfigPath(), jsonConfig.myJson( false, TEXT("    "), TEXT("\n") ), winux::feUtf8Bom );
+}
+
+void App::setRecentListen( ListenParams const & lparams )
+{
+    auto & listenHistory = this->appConfig.listenHistory;
+    auto it = listenHistory.begin();
+    if ( ( it = std::find( it, listenHistory.end(), lparams ) ) != listenHistory.end() )
+    {
+        listenHistory.erase(it);
+    }
+    listenHistory.insert( listenHistory.begin(), lparams );
 }
 
 bool App::initInstance( HINSTANCE hInstance, int nCmdShow )

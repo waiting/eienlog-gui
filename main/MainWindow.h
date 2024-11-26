@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "NewEienLogWindowModal.h"
+#include "NewListenWindowModal.h"
 #include "EienLogWindows.h"
 
 struct App;
@@ -24,7 +24,7 @@ struct MainWindow
     ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_None;
 
     // MyData
-    winux::SimplePointer<EienLogWindows> logWinManager;
-    winux::SimplePointer<NewEienLogWindowModal> newEienLogWindowModal;
+    winux::SimplePointer<EienLogWindowsManager> logWinManager;
+    winux::SimplePointer<NewListenWindowModal> newListenWindow;
 };
 

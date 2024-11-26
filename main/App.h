@@ -13,35 +13,11 @@
 #include "winplus.hpp"
 #include "GraphicsInterface.h"
 #include "WindowInterface.h"
-#include "MainWindow.h"
 
+struct MainWindow;
 // 本应用程序
 struct App
 {
-    App()
-    {
-    }
-
-    ~App()
-    {
-    }
-
-    bool initInstance( HINSTANCE hInstance, int nCmdShow );
-
-    void exitInstance();
-
-    // 消息循环
-    int run();
-
-    // 渲染界面
-    void renderUI();
-
-    // 加载应用配置
-    void loadConfig();
-
-    // 保存应用配置
-    void saveConfig();
-
     // 监听参数
     struct ListenParams
     {
@@ -50,7 +26,19 @@ struct App
         winux::ushort port;
         time_t waitTimeout;
         time_t updateTimeout;
-        bool vScrollToBottom;
+        bool vScrollToBottom; // 是否滚动到底
+
+        bool operator == ( ListenParams const & other ) const
+        {
+            return
+                this->name == other.name &&
+                this->addr == other.addr &&
+                this->port == other.port &&
+                this->waitTimeout == other.waitTimeout &&
+                this->updateTimeout == other.updateTimeout &&
+                this->vScrollToBottom == other.vScrollToBottom
+            ;
+        }
     };
 
     // JSON配置参数
@@ -64,7 +52,36 @@ struct App
         bool logTableColumnResize;
         std::vector<ListenParams> listenHistory;
         std::vector<winux::Utf8String> logFileHistory;
-    } appConfig;
+    };
+
+    App()
+    {
+    }
+
+    ~App()
+    {
+    }
+
+    // 加载应用配置
+    void loadConfig();
+
+    // 保存应用配置
+    void saveConfig();
+
+    // 设置一条最近监听，如果没有则加入到第一条，如果存在则移动到第一条
+    void setRecentListen( ListenParams const & lparams );
+
+    bool initInstance( HINSTANCE hInstance, int nCmdShow );
+
+    void exitInstance();
+
+    // 消息循环
+    int run();
+
+    // 渲染界面
+    void renderUI();
+
+    AppConfig appConfig;
 
     GraphicsInterface gi; // DirectX 3D
     WindowInterface wi; // Win32 Window

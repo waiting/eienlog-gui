@@ -3,8 +3,8 @@
 
 MainWindow::MainWindow( App & app ) : app(app)
 {
-    this->logWinManager.attachNew( new EienLogWindows(this) );
-    this->newEienLogWindowModal.attachNew( new NewEienLogWindowModal( this->logWinManager.get(), u8"新建..." ) );
+    this->logWinManager.attachNew( new EienLogWindowsManager(this) );
+    this->newListenWindow.attachNew( new NewListenWindowModal( this->logWinManager.get(), u8"新建监听..." ) );
 }
 
 void MainWindow::render()
@@ -44,7 +44,7 @@ void MainWindow::render()
         //ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 10, 5 ) );
         if ( ImGui::Button(u8"创建新日志窗口") )
         {
-            this->newEienLogWindowModal->toggle();
+            this->newListenWindow->toggle();
         }
         //ImGui::PopStyleVar();
 
@@ -52,7 +52,7 @@ void MainWindow::render()
     }
 
     this->logWinManager->render();
-    this->newEienLogWindowModal->render();
+    this->newListenWindow->render();
 
     if ( showDemoWindow )
         ImGui::ShowDemoWindow(&showDemoWindow);
@@ -138,7 +138,7 @@ void MainWindow::renderDockSpaceMenuBar()
     // 快捷 新建监听
     if ( isCtrlDown && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_N) ) )
     {
-        this->newEienLogWindowModal->toggle();
+        this->newListenWindow->toggle();
     }
     // 快捷 打开日志
     if ( isCtrlDown && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_O) ) )
@@ -152,12 +152,12 @@ void MainWindow::renderDockSpaceMenuBar()
         {
             if ( ImGui::MenuItem(u8"新建监听...", u8"Ctrl+N") )
             {
-                this->newEienLogWindowModal->toggle();
+                this->newListenWindow->toggle();
             }
             if ( ImGui::MenuItem(u8"打开日志...", u8"Ctrl+O") )
             {
                 winplus::FileDialog dlg{app.wi.hWnd};
-                if ( dlg.doModal( L".", L"全部文件(*.*)\0*.*\0\0" ) )
+                if ( dlg.doModal( L".", L"日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0" ) )
                 {
                     winplus::MsgBox( dlg.getFilePath() );
                 }
@@ -165,6 +165,15 @@ void MainWindow::renderDockSpaceMenuBar()
             ImGui::Separator();
             if ( ImGui::BeginMenu(u8"最近开启监听") )
             {
+                auto & listenHistory = this->app.appConfig.listenHistory;
+                for ( size_t i = 0; i < listenHistory.size(); i++ )
+                {
+                    auto & lparams = listenHistory[i];
+                    if ( ImGui::MenuItem( winux::FormatA( u8"%s-%s-%hu-%u-%u-%u", lparams.name.c_str(), lparams.addr.c_str(), lparams.port, lparams.waitTimeout, lparams.updateTimeout, lparams.vScrollToBottom ).c_str() ) )
+                    {
+                        this->logWinManager->addWindow( App::ListenParams(lparams) ); // 不能直接传引用进去，因为内部可能会删除本元素导致引用悬垂
+                    }
+                }
                 ImGui::EndMenu();
             }
             if ( ImGui::BeginMenu(u8"最近打开日志") )

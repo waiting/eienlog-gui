@@ -4,7 +4,7 @@
 #include <mutex>
 
 struct MainWindow;
-struct EienLogWindows;
+struct EienLogWindowsManager;
 
 struct LogTextRecord
 {
@@ -17,33 +17,27 @@ struct LogTextRecord
 
 struct EienLogWindow
 {
-    EienLogWindow( EienLogWindows * manager, winux::Utf8String const & name, winux::Utf8String const & addr, winux::ushort port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
+    EienLogWindow( EienLogWindowsManager * manager, App::ListenParams const & lparams );
     ~EienLogWindow();
     void render();
 
-    EienLogWindows * manager = nullptr;
-    winux::Utf8String name;
-    winux::Utf8String addr;
-    winux::ushort port = 0;
-    time_t waitTimeout;
-    time_t updateTimeout;
+    EienLogWindowsManager * manager = nullptr;
+    App::ListenParams lparams;
     std::vector<LogTextRecord> logs;
     int selected = -1;
     bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
-    bool vScrollToBottom = true; // 是否滚动到底
     std::mutex mtx;
     winux::SimplePointer<std::thread> th;
     bool show = true;
 };
 
-struct EienLogWindows
+struct EienLogWindowsManager
 {
-    EienLogWindows( MainWindow * mainWindow );
+    EienLogWindowsManager( MainWindow * mainWindow );
 
-    void addWindow( winux::Utf8String const & name, winux::Utf8String const & addr, winux::ushort port, time_t waitTimeout, time_t updateTimeout, bool vScrollToBottom );
+    void addWindow( App::ListenParams const & lparams );
     void render();
 
     std::vector< winux::SimplePointer<EienLogWindow> > wins;
     MainWindow * mainWindow;
 };
-

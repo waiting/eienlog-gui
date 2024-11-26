@@ -36,7 +36,7 @@
     <ClInclude Include="WindowModal.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="NewEienLogWindowModal.h">
+    <ClInclude Include="NewListenWindowModal.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -75,7 +75,7 @@
     <ClCompile Include="WindowModal.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="NewEienLogWindowModal.cpp">
+    <ClCompile Include="NewListenWindowModal.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

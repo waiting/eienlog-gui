@@ -1,7 +1,7 @@
 ﻿#include "App.h"
 #include "WindowModal.h"
 
-WindowModal::WindowModal( std::string const & name ) : _name(name), _toggled(false)
+WindowModal::WindowModal( winux::Utf8String const & name ) : _name(name), _toggled(false)
 {
 }
 
