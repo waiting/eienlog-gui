@@ -3,8 +3,8 @@
 
 MainWindow::MainWindow( App & app ) : app(app)
 {
-    this->logWinManager.attachNew( new EienLogWindowsManager(this) );
-    this->newListenWindow.attachNew( new NewListenWindowModal( this->logWinManager.get(), u8"新建监听..." ) );
+    this->logWinManager.attachNew( new LogWindowsManager(this) );
+    this->newListenWindow.attachNew( new NewLogListenWindowModal( this->logWinManager.get(), u8"新建监听..." ) );
 }
 
 void MainWindow::render()

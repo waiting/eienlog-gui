@@ -30,13 +30,19 @@
     <ClInclude Include="WindowInterface.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="EienLogWindows.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="WindowModal.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="NewListenWindowModal.h">
+    <ClInclude Include="LogWindowsManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NewLogListenWindowModal.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LogViewerWindow.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LogListenWindow.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -69,13 +75,19 @@
     <ClCompile Include="WindowInterface.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="EienLogWindows.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="WindowModal.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="NewListenWindowModal.cpp">
+    <ClCompile Include="LogWindowsManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NewLogListenWindowModal.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LogViewerWindow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LogListenWindow.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

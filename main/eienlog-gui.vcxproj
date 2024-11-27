@@ -168,10 +168,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
-    <ClInclude Include="EienLogWindows.h" />
+    <ClInclude Include="LogListenWindow.h" />
+    <ClInclude Include="LogViewerWindow.h" />
+    <ClInclude Include="LogWindowsManager.h" />
     <ClInclude Include="GraphicsInterface.h" />
     <ClInclude Include="MainWindow.h" />
-    <ClInclude Include="NewListenWindowModal.h" />
+    <ClInclude Include="NewLogListenWindowModal.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="WindowInterface.h" />
     <ClInclude Include="WindowModal.h" />
@@ -185,11 +187,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
-    <ClCompile Include="EienLogWindows.cpp" />
+    <ClCompile Include="LogListenWindow.cpp" />
+    <ClCompile Include="LogViewerWindow.cpp" />
+    <ClCompile Include="LogWindowsManager.cpp" />
     <ClCompile Include="GraphicsInterface.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
-    <ClCompile Include="NewListenWindowModal.cpp" />
+    <ClCompile Include="NewLogListenWindowModal.cpp" />
     <ClCompile Include="WindowInterface.cpp" />
     <ClCompile Include="WindowModal.cpp" />
   </ItemGroup>

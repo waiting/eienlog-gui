@@ -4,24 +4,24 @@
 #include <mutex>
 
 struct MainWindow;
-struct EienLogWindowsManager;
+struct LogWindowsManager;
 
 struct LogTextRecord
 {
-    winux::Buffer content; //!< 日志内容
-    winux::Utf8String strContent; //!< 字符串内容
-    winux::Utf8String strContentSlashes; //!< 字符串转义内容
+    winux::Buffer content;  //!< 日志内容
+    winux::Utf8String strContent;   //!< 字符串内容
+    winux::Utf8String strContentSlashes;    //!< 字符串转义内容
     winux::Utf8String utcTime;  //!< UTC时间戳
     eienlog::LogFlag flag;  //!< 日志样式FLAG
 };
 
-struct EienLogWindow
+struct LogListenWindow
 {
-    EienLogWindow( EienLogWindowsManager * manager, App::ListenParams const & lparams );
-    ~EienLogWindow();
+    LogListenWindow( LogWindowsManager * manager, App::ListenParams const & lparams );
+    ~LogListenWindow();
     void render();
 
-    EienLogWindowsManager * manager = nullptr;
+    LogWindowsManager * manager = nullptr;
     App::ListenParams lparams;
     std::vector<LogTextRecord> logs;
     int selected = -1;
@@ -31,13 +31,13 @@ struct EienLogWindow
     bool show = true;
 };
 
-struct EienLogWindowsManager
+struct LogWindowsManager
 {
-    EienLogWindowsManager( MainWindow * mainWindow );
+    LogWindowsManager( MainWindow * mainWindow );
 
     void addWindow( App::ListenParams const & lparams );
     void render();
 
-    std::vector< winux::SimplePointer<EienLogWindow> > wins;
+    std::vector< winux::SimplePointer<LogListenWindow> > wins;
     MainWindow * mainWindow;
 };

@@ -1,23 +1,23 @@
 ﻿#include "App.h"
 #include "MainWindow.h"
 #include "WindowModal.h"
-#include "NewListenWindowModal.h"
-#include "EienLogWindows.h"
+#include "NewLogListenWindowModal.h"
+#include "LogWindowsManager.h"
 
-// struct NewListenWindowModal ---------------------------------------------------------------
-NewListenWindowModal::NewListenWindowModal( EienLogWindowsManager * manager, winux::Utf8String const & name ) : WindowModal(name), _manager(manager)
+// struct NewLogListenWindowModal ---------------------------------------------------------------
+NewLogListenWindowModal::NewLogListenWindowModal( LogWindowsManager * manager, winux::Utf8String const & name ) : WindowModal(name), _manager(manager)
 {
 }
 
 static winux::Utf8String __addr = u8"";
 static int __port = 22345;
 static char __ch[] = { 'A', '\0' };
-static winux::Utf8String __name = winux::Utf8String(u8"日志") + __ch;
+static winux::Utf8String __name = winux::Utf8String(u8"日志监听") + __ch;
 static winux::Utf8String __strWaitTimeout = u8"50";
 static winux::Utf8String __strUpdateTimeout = u8"300";
 static bool __vScrollToBottom = true;
 
-void NewListenWindowModal::renderComponents()
+void NewLogListenWindowModal::renderComponents()
 {
     ImGui::Text( u8"新建一个日志窗口，监听日志信息" );
     ImGui::Separator();
@@ -63,7 +63,7 @@ void NewListenWindowModal::renderComponents()
     ImGui::PopStyleVar();
 }
 
-void NewListenWindowModal::onOk()
+void NewLogListenWindowModal::onOk()
 {
     App::ListenParams lparams;
     lparams.name = __name;
@@ -76,11 +76,11 @@ void NewListenWindowModal::onOk()
     this->_manager->addWindow(lparams);
 
     __ch[0]++;
-    __name = winux::Utf8String(u8"日志") + __ch;
+    __name = winux::Utf8String(u8"日志监听") + __ch;
     __port++;
 }
 
-void NewListenWindowModal::onCancel()
+void NewLogListenWindowModal::onCancel()
 {
 
 }

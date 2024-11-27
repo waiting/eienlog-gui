@@ -1,12 +1,12 @@
 ﻿#include "App.h"
 #include "MainWindow.h"
-#include "EienLogWindows.h"
+#include "LogWindowsManager.h"
 
 using namespace winux;
 using namespace eienlog;
 
 // struct EienLogWindow -----------------------------------------------------------------------
-EienLogWindow::EienLogWindow( EienLogWindowsManager * manager, App::ListenParams const & lparams ) : manager(manager), lparams(lparams)
+LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams const & lparams ) : manager(manager), lparams(lparams)
 {
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
@@ -88,7 +88,7 @@ EienLogWindow::EienLogWindow( EienLogWindowsManager * manager, App::ListenParams
     } ) );
 }
 
-EienLogWindow::~EienLogWindow()
+LogListenWindow::~LogListenWindow()
 {
     this->show = false;
     this->th->join();
@@ -114,7 +114,7 @@ inline static void _GetImVec4ColorFromLogBgColor( winux::uint16 bgColor, ImVec4 
     color->w = 1.0f;
 }
 
-void EienLogWindow::render()
+void LogListenWindow::render()
 {
     ImGui::Begin( this->lparams.name.c_str(), &this->show );
     ImGui::SetWindowDock( ImGui::GetCurrentWindow(), manager->mainWindow->dockSpaceId, ImGuiCond_Once );
@@ -286,21 +286,21 @@ void EienLogWindow::render()
     ImGui::End();
 }
 
-// struct EienLogWindowsManager ----------------------------------------------------------------------
-EienLogWindowsManager::EienLogWindowsManager( MainWindow * mainWindow ) : mainWindow(mainWindow)
+// struct LogWindowsManager ----------------------------------------------------------------------
+LogWindowsManager::LogWindowsManager( MainWindow * mainWindow ) : mainWindow(mainWindow)
 {
 
 }
 
-void EienLogWindowsManager::addWindow( App::ListenParams const & lparams )
+void LogWindowsManager::addWindow( App::ListenParams const & lparams )
 {
-    auto p = winux::MakeSimple( new EienLogWindow( this, lparams ) );
+    auto p = winux::MakeSimple( new LogListenWindow( this, lparams ) );
     this->wins.emplace_back(p);
 
     this->mainWindow->app.setRecentListen(lparams);
 }
 
-void EienLogWindowsManager::render()
+void LogWindowsManager::render()
 {
     for ( auto it = this->wins.begin(); it != this->wins.end(); )
     {
