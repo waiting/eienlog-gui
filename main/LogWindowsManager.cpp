@@ -5,7 +5,7 @@
 using namespace winux;
 using namespace eienlog;
 
-// struct EienLogWindow -----------------------------------------------------------------------
+// struct LogListenWindow ---------------------------------------------------------------------
 LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams const & lparams ) : manager(manager), lparams(lparams)
 {
     // 创建线程读取LOGs
@@ -22,7 +22,7 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                 LogTextRecord tr;
                 tr.flag.value = record.flag;
                 tr.utcTime = DateTimeL( DateTimeL::MilliSec(record.utcTime) ).toString<char>();
-                tr.content = std::move(record.data);
+                tr.contentSize = record.data.getSize();
 
                 // 如果非二进制，才进行编码转换
                 if ( !tr.flag.binary )
@@ -32,12 +32,12 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                     {
                     case eienlog::leUtf8:
                         {
-                            tr.strContent.assign( tr.content.toString<char>() );
+                            tr.strContent.assign( record.data.toString<char>() );
                         }
                         break;
                     case eienlog::leUtf16Le:
                         {
-                            winux::Utf16String ustr = tr.content.toString<winux::char16>();
+                            winux::Utf16String ustr = record.data.toString<winux::char16>();
                             if ( winux::IsBigEndian() )
                             {
                                 if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
@@ -47,7 +47,7 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                         break;
                     case eienlog::leUtf16Be:
                         {
-                            winux::Utf16String ustr = tr.content.toString<winux::char16>();
+                            winux::Utf16String ustr = record.data.toString<winux::char16>();
                             if ( winux::IsLittleEndian() )
                             {
                                 if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
@@ -57,7 +57,7 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                         break;
                     default:
                         {
-                            tr.strContent.assign( winux::LocalToUtf8( tr.content.toString<char>() ) );
+                            tr.strContent.assign( winux::LocalToUtf8( record.data.toString<char>() ) );
                         }
                         break;
                     }
@@ -65,7 +65,7 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                 else // 二进制数据
                 {
                     int i = 1;
-                    for ( auto && byt : tr.content )
+                    for ( auto && byt : record.data )
                     {
                         tr.strContent += winux::BufferToHex<char>( winux::Buffer( &byt, 1, true ) );
                         if ( i % 16 )
@@ -94,26 +94,6 @@ LogListenWindow::~LogListenWindow()
     this->th->join();
 }
 
-// Foreground color: R5G5B5
-inline static void _GetImVec4ColorFromLogFgColor( winux::uint16 fgColor, ImVec4 * color )
-{
-    float r = ( fgColor & 31 ) / 31.0f, g = ( ( fgColor >> 5 ) & 31 ) / 31.0f, b = ( ( fgColor >> 10 ) & 31 ) / 31.0f;
-    color->x = r;
-    color->y = g;
-    color->z = b;
-    color->w = 1.0f;
-}
-
-// Background color: R4G4B4
-inline static void _GetImVec4ColorFromLogBgColor( winux::uint16 bgColor, ImVec4 * color )
-{
-    float r = ( bgColor & 15 ) / 15.0f, g = ( ( bgColor >> 4 ) & 15 ) / 15.0f, b = ( ( bgColor >> 8 ) & 15 ) / 15.0f;
-    color->x = r;
-    color->y = g;
-    color->z = b;
-    color->w = 1.0f;
-}
-
 void LogListenWindow::render()
 {
     ImGui::Begin( this->lparams.name.c_str(), &this->show );
@@ -132,13 +112,12 @@ void LogListenWindow::render()
     {
         std::lock_guard<std::mutex> lk(this->mtx);
         this->logs.clear();
+        this->selected = -1;
     }
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
 
     int columns = 4;
-    // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
-    // This is generally more convenient when you have code manually submitting the contents of each column.
     bool logTableColumnResize = this->manager->mainWindow->app.appConfig.logTableColumnResize;
     static ImGuiTableFlags flags = ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ( logTableColumnResize ? ImGuiTableFlags_Resizable : 0 ) |
         ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ContextMenuInBody;
@@ -178,7 +157,7 @@ void LogListenWindow::render()
 
                         bool copyToClipboard = ImGui::Button(u8"复制日志");
                         ImGui::SameLine();
-                        ImGui::Text(u8"编号：%s，大小：%u", szNo, log.content.getSize() );
+                        ImGui::Text(u8"编号：%s，大小：%u", szNo, log.contentSize );
                         ImGui::Separator();
                         if (copyToClipboard)
                         {
@@ -190,7 +169,7 @@ void LogListenWindow::render()
                         if (log.flag.fgColorUse)
                         {
                             ImVec4 color;
-                            _GetImVec4ColorFromLogFgColor(log.flag.fgColor, &color);
+                            _GetImVec4ColorFromColorR5G5B5(log.flag.fgColor, &color);
                             ImGui::PushStyleColor(ImGuiCol_Text, color);
                         }
                         ImGui::TextUnformatted(log.strContent.c_str(), log.strContent.c_str() + log.strContent.length());
@@ -220,21 +199,21 @@ void LogListenWindow::render()
                     ImGui::TextEx(log.utcTime.c_str(), log.utcTime.c_str() + log.utcTime.length());
 
                     ImGui::TableSetColumnIndex(2);
-                    ImGui::Text( "%u", (winux::uint)log.content.getSize() );
+                    ImGui::Text( "%u", (winux::uint)log.contentSize );
 
                     ImGui::TableSetColumnIndex(3);
                     if ( log.flag.bgColorUse )
                     {
                         ImVec4 color;
-                        _GetImVec4ColorFromLogBgColor( log.flag.bgColor, &color );
+                        _GetImVec4ColorFromColorR4G4B4( log.flag.bgColor, &color );
                         ImGui::TableSetBgColor( ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(color) );
                     }
 
                     if ( log.flag.fgColorUse )
                     {
                         ImVec4 color;
-                        _GetImVec4ColorFromLogFgColor( log.flag.fgColor, &color );
-                        //ImGui::TextColored( color, log.strContentSlashes.c_str() );
+                        _GetImVec4ColorFromColorR5G5B5( log.flag.fgColor, &color );
+
                         ImGui::PushStyleColor(ImGuiCol_Text, color);
                         ImGui::TextUnformatted( log.strContentSlashes.c_str(), log.strContentSlashes.c_str() + log.strContentSlashes.length() );
                         ImGui::PopStyleColor();
@@ -250,7 +229,6 @@ void LogListenWindow::render()
         // 自动滚动到底部的操作代码
         float a = ImGui::GetScrollY();
         float b = ImGui::GetScrollMaxY();
-        //printf("%f/%f\n", a, b);
         if ( this->bToggleVScrollToBottom )
         {
             if ( this->lparams.vScrollToBottom )
@@ -286,7 +264,7 @@ void LogListenWindow::render()
     ImGui::End();
 }
 
-// struct LogWindowsManager ----------------------------------------------------------------------
+// struct LogWindowsManager -------------------------------------------------------------------
 LogWindowsManager::LogWindowsManager( MainWindow * mainWindow ) : mainWindow(mainWindow)
 {
 

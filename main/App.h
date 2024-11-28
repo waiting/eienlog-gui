@@ -114,3 +114,23 @@ static void HelpMarker(const char* desc)
         ImGui::EndTooltip();
     }
 }
+
+// Foreground color: R5G5B5
+inline static void _GetImVec4ColorFromColorR5G5B5( winux::uint16 fgColor, ImVec4 * color )
+{
+    float r = ( fgColor & 31 ) / 31.0f, g = ( ( fgColor >> 5 ) & 31 ) / 31.0f, b = ( ( fgColor >> 10 ) & 31 ) / 31.0f;
+    color->x = r;
+    color->y = g;
+    color->z = b;
+    color->w = 1.0f;
+}
+
+// Background color: R4G4B4
+inline static void _GetImVec4ColorFromColorR4G4B4( winux::uint16 bgColor, ImVec4 * color )
+{
+    float r = ( bgColor & 15 ) / 15.0f, g = ( ( bgColor >> 4 ) & 15 ) / 15.0f, b = ( ( bgColor >> 8 ) & 15 ) / 15.0f;
+    color->x = r;
+    color->y = g;
+    color->z = b;
+    color->w = 1.0f;
+}

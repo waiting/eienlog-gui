@@ -1,19 +1,11 @@
 ﻿#pragma once
-#include <vector>
+
 #include <thread>
 #include <mutex>
 
-struct MainWindow;
-struct LogWindowsManager;
+#include "LogViewerWindow.h"
 
-struct LogTextRecord
-{
-    winux::Buffer content;  //!< 日志内容
-    winux::Utf8String strContent;   //!< 字符串内容
-    winux::Utf8String strContentSlashes;    //!< 字符串转义内容
-    winux::Utf8String utcTime;  //!< UTC时间戳
-    eienlog::LogFlag flag;  //!< 日志样式FLAG
-};
+struct LogWindowsManager;
 
 struct LogListenWindow
 {
@@ -24,12 +16,14 @@ struct LogListenWindow
     LogWindowsManager * manager = nullptr;
     App::ListenParams lparams;
     std::vector<LogTextRecord> logs;
-    int selected = -1;
+    int selected = -1; // 选中行
     bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
-    std::mutex mtx;
-    winux::SimplePointer<std::thread> th;
+    std::mutex mtx; // 数据同步互斥量
+    winux::SimplePointer<std::thread> th; // 监听线程
     bool show = true;
 };
+
+struct MainWindow;
 
 struct LogWindowsManager
 {
