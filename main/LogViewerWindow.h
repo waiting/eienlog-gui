@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <mutex>
+
 struct LogWindowsManager;
 
 struct LogTextRecord
@@ -12,5 +14,20 @@ struct LogTextRecord
 
 struct LogViewerWindow
 {
+    LogViewerWindow( LogWindowsManager * manager, winux::Utf8String const & name, bool vScrollToBottom, winux::Utf8String const & logFile = u8"" );
+    virtual ~LogViewerWindow();
 
+    void render();
+    virtual void renderComponents();
+
+    LogWindowsManager * manager;
+    winux::Utf8String name;
+    bool vScrollToBottom;
+    winux::Utf8String logFile;
+    std::vector<LogTextRecord> logs;
+
+    int selected = -1; // 选中行
+    bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
+    std::mutex mtx; // 数据同步互斥量
+    bool show = true;
 };

@@ -157,7 +157,7 @@ void MainWindow::renderDockSpaceMenuBar()
             if ( ImGui::MenuItem(u8"打开日志...", u8"Ctrl+O") )
             {
                 winplus::FileDialog dlg{app.wi.hWnd};
-                if ( dlg.doModal( L".", L"日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0" ) )
+                if ( dlg.doModal( $T("."), $T("日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0") ) )
                 {
                     winplus::MsgBox( dlg.getFilePath() );
                 }

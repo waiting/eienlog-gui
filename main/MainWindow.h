@@ -6,6 +6,7 @@ struct App;
 struct MainWindow
 {
     MainWindow( App & app );
+
     void render();
 
     void renderDockSpace();
