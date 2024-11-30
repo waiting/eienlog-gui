@@ -71,6 +71,8 @@ struct App
     // 设置一条最近监听，如果没有则加入到第一条，如果存在则移动到第一条
     void setRecentListen( ListenParams const & lparams );
 
+    void setRecentOpen( winux::Utf8String const & logFile );
+
     bool initInstance( HINSTANCE hInstance, int nCmdShow );
 
     void exitInstance();

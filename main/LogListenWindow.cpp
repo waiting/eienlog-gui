@@ -4,7 +4,7 @@
 
 // struct LogListenWindow ---------------------------------------------------------------------
 LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams const & lparams ) :
-    LogViewerWindow( manager, lparams.name, lparams.vScrollToBottom, {} ), lparams(lparams)
+    LogViewerWindow( manager, lparams.name, lparams.vScrollToBottom ), lparams(lparams)
 {
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
@@ -102,13 +102,24 @@ void LogListenWindow::renderComponents()
     {
         std::lock_guard<std::mutex> lk(this->mtx);
 
-        winplus::FileDialog dlg{ this->manager->mainWindow->app.wi.hWnd, FALSE, $T("保存日志文件"), $T("csvlog") };
-        if ( dlg.doModal( $T("."), $T("日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0") ) )
+        winplus::FileDialog dlg{ this->manager->mainWindow->app.wi.hWnd, FALSE, L"保存日志文件", L"csvlog" };
+        if ( dlg.doModal( L".", L"日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0" ) )
         {
             winux::String path = dlg.getFilePath();
-            winplus::MsgBox(path);
+            winux::MemoryFile memFile;
+            winux::CsvWriter csv(&memFile);
+            for ( auto && log : this->logs )
+            {
+                csv.writeRecord( winux::$a{
+                    log.contentSize,
+                    winux::UnicodeConverter(log.strContent).toUnicode(),
+                    winux::UnicodeConverter(log.utcTime).toUnicode(),
+                    log.flag.value
+                } );
+            }
 
-            //winux::CsvWriter();
+            winux::TextArchive ta;
+            ta.saveEx( memFile.buffer(), winux::IsLittleEndian() ? "UTF-16LE" : "UTF-16BE", path, winux::feUtf8Bom );
         }
     }
     ImGui::PopStyleVar();

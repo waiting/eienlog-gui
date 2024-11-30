@@ -360,12 +360,12 @@ interface WINUX_DLL IFile
     virtual bool eof();
     /** \brief 文件大小 */
     virtual size_t size();
-    /** \brief 读取整个文件内容，取得数据大小
+    /** \brief 读取整个文件内容，返回缓冲区
      *
-     *  \param size 输出数据大小
-     *  \return 数据指针
+     *  \param isPeek 是否为窥探模式，默认true
+     *  \return Buffer
      *  \attention 由于文本模式可能存在字符转换，数据大小并不一定等于文件大小 */
-    virtual void * entire( size_t * size );
+    virtual Buffer buffer( bool isPeek = true );
     /** \brief 读取整个文件内容作字符串
      *
      *  \param encoding 文件编码。默认为`feMultiByte`
@@ -397,7 +397,7 @@ public:
      *  \param[in] isPeek 是否为窥探模式 */
     MemoryFile( AnsiString const & content, bool isPeek = false );
 
-    /** \brief 以字符串内容以内存文件的方式读写
+    /** \brief 字符串内容（不会进行编码转换）以内存文件的方式读写
      *
      *  与IFile接口定义时不同，内存式文件open()方法的第一个参数指定内存内容。
      *  \param[in] content 字符串内容
@@ -410,14 +410,14 @@ public:
     virtual bool seek( offset_t offset, SeekType origin = seekSet ) override;
     virtual size_t tell() override;
     virtual String getLine() override;
+    /** \brief 输出字符串（不会进行编码转换） */
     virtual int puts( String const & str ) override;
     virtual bool eof() override;
     virtual size_t size() override;
-    virtual void * entire( size_t * size ) override;
+    virtual Buffer buffer( bool isPeek = true ) override;
 
     using IFile::read;
     using IFile::write;
-    using IFile::entire;
 
 protected:
     GrowBuffer _buf;
@@ -444,11 +444,10 @@ public:
     virtual String getLine() override;
     virtual bool eof() override;
     virtual size_t size() override;
-    virtual void * entire( size_t * size ) override;
+    virtual Buffer buffer( bool isPeek = true ) override;
 
     using IFile::read;
     using IFile::write;
-    using IFile::entire;
 
     /** \brief 流式文件API指针 */
     FILE * get() const { return _fp; }
@@ -467,7 +466,7 @@ public:
     operator bool() const { return _fp != NULL; }
 
 protected:
-    FILE * _fp;         //!< FILE*指针
+    FILE * _fp; //!< FILE*指针
 
     DISABLE_OBJECT_COPY(File)
 };

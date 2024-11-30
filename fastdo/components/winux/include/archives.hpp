@@ -253,9 +253,7 @@ public:
      *  \param mbsEncoding 多字节编码 */
     void load( winux::IFile * f, bool isConvert, winux::AnsiString const & targetEncoding = "", winux::AnsiString const & mbsEncoding = "" )
     {
-        size_t n;
-        void * buf = f->entire(&n);
-        this->load( winux::Buffer( buf, n, true ), isConvert, targetEncoding, mbsEncoding );
+        this->load( f->buffer(true), isConvert, targetEncoding, mbsEncoding );
     }
 
     /** \brief 载入指定内容

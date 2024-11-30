@@ -1134,7 +1134,7 @@ void CsvWriter::writeRecord( Mixed const & record )
     }
     else // 只有1列
     {
-        _outputFile->puts( (String)__JudgeAddQuotes(record) + TEXT("\n") );
+        _outputFile->puts( __JudgeAddQuotes(record) + TEXT("\n") );
     }
 }
 

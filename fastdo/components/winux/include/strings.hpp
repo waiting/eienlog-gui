@@ -1131,6 +1131,14 @@ private:
     } _type;
 };
 
+/** \brief `UnicodeConverter`简单别名 */
+using UC = UnicodeConverter;
+// 定义一些转换宏
+#define $u8(s) winux::UnicodeConverter(s).toUtf8()
+#define $L(s) winux::UnicodeConverter(s).toUnicode()
+#define $u(s) winux::UnicodeConverter(s).toUtf16()
+#define $U(s) winux::UnicodeConverter(s).toUtf32()
+
 // UTF-8编码转换
 /** \brief 从utf-8转到本地编码 */
 WINUX_FUNC_DECL(AnsiString) LocalFromUtf8( AnsiString const & str );

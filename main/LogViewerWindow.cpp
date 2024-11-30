@@ -6,6 +6,35 @@
 LogViewerWindow::LogViewerWindow( LogWindowsManager * manager, winux::Utf8String const & name, bool vScrollToBottom, winux::Utf8String const & logFile ) :
     manager(manager), name(name), vScrollToBottom(vScrollToBottom), logFile(logFile)
 {
+    if ( !this->logFile.empty() )
+    {
+        winux::String logFilePath = $L(this->logFile);
+        winux::CsvReader csv{ winux::FileGetString( logFilePath, winux::feUnspec ) };
+        for ( size_t i = 0; i < csv.getCount(); i++ )
+        {
+            auto && row = csv[(int)i];
+            LogTextRecord tr;
+            size_t columns = row.getCount();
+            if ( columns > 0 )
+            {
+                tr.contentSize = row[0];
+            }
+            if ( columns > 1 )
+            {
+                tr.strContent = $u8(row[1].refUnicode());
+                tr.strContentSlashes = winux::AddCSlashes(tr.strContent);
+            }
+            if ( columns > 2 )
+            {
+                tr.utcTime = $u8(row[2].refUnicode());
+            }
+            if ( columns > 3 )
+            {
+                tr.flag.value = row[3];
+            }
+            this->logs.push_back( std::move(tr) );
+        }
+    }
 }
 
 LogViewerWindow::~LogViewerWindow()

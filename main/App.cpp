@@ -110,6 +110,17 @@ void App::setRecentListen( ListenParams const & lparams )
     listenHistory.insert( listenHistory.begin(), lparams );
 }
 
+void App::setRecentOpen( winux::Utf8String const & logFile )
+{
+    auto & logFileHistory = this->appConfig.logFileHistory;
+    auto it = logFileHistory.begin();
+    if ( ( it = std::find( it, logFileHistory.end(), logFile ) ) != logFileHistory.end() )
+    {
+        logFileHistory.erase(it);
+    }
+    logFileHistory.insert( logFileHistory.begin(), logFile );
+}
+
 bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
 {
     // 加载JSON配置文件

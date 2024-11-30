@@ -22,6 +22,7 @@ void LogWindowsManager::addWindow( winux::Utf8String const & name, bool vScrollT
     auto p = winux::MakeSimple( new LogViewerWindow( this, name, vScrollToBottom, logFile ) );
     this->wins.emplace_back(p);
 
+    this->mainWindow->app.setRecentOpen(logFile);
 }
 
 void LogWindowsManager::render()

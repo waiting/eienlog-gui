@@ -889,6 +889,13 @@ public:
     template < typename _Ty >
     _Ty * get() const { return reinterpret_cast<_Ty *>(_buf); }
 
+    /** \brief 暴露缓冲区指定位置指针 */
+    winux::byte * getAt( ssize_t i ) const { return reinterpret_cast<winux::byte *>(_buf) + i; }
+
+    /** \brief 暴露缓冲区指定位置指针 */
+    template < typename _Ty >
+    _Ty * getAt( ssize_t i ) const { return reinterpret_cast<_Ty *>(_buf) + i; }
+
     /** \brief 获取指定索引的字节 */
     winux::byte & operator [] ( size_t i ) { return reinterpret_cast<winux::byte *>(_buf)[i]; }
     /** \brief 获取指定索引的字节 */

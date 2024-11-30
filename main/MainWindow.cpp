@@ -157,9 +157,13 @@ void MainWindow::renderDockSpaceMenuBar()
             if ( ImGui::MenuItem(u8"打开日志...", u8"Ctrl+O") )
             {
                 winplus::FileDialog dlg{app.wi.hWnd};
-                if ( dlg.doModal( $T("."), $T("日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0") ) )
+                if ( dlg.doModal( L".", L"日志文件(*.csvlog)\0*.csvlog\0全部文件(*.*)\0*.*\0\0" ) )
                 {
-                    winplus::MsgBox( dlg.getFilePath() );
+                    winux::String filepath = dlg.getFilePath();
+                    winux::String filename;
+                    winux::FilePath( filepath, &filename );
+
+                    this->logWinManager->addWindow( u8"日志查看" + $u8( winux::FileTitle(filename) ), true, $u8(filepath) );
                 }
             }
             ImGui::Separator();
@@ -178,6 +182,19 @@ void MainWindow::renderDockSpaceMenuBar()
             }
             if ( ImGui::BeginMenu(u8"最近打开日志") )
             {
+                static int no = 1;
+                auto & logFileHistory = this->app.appConfig.logFileHistory;
+                for ( size_t i = 0; i < logFileHistory.size(); i++ )
+                {
+                    auto & logFile = logFileHistory[i];
+                    if ( ImGui::MenuItem( logFile.c_str() ) )
+                    {
+                        winux::String filename;
+                        winux::FilePath( $L(logFile), &filename );
+
+                        this->logWinManager->addWindow( u8"日志查看" + $u8( winux::FileTitle(filename) ) + winux::FormatA( u8" %d", no++ ), true, winux::Utf8String(logFile) );
+                    }
+                }
                 ImGui::EndMenu();
             }
             ImGui::Separator();

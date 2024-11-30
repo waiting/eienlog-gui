@@ -1077,82 +1077,6 @@ static String _ContentGetString( Buffer const & content, FileEncoding encoding, 
     return String();
 }
 
-WINUX_FUNC_IMPL(String) FileGetString( String const & filename, FileEncoding encoding )
-{
-    Buffer content = FileGetContentsEx( filename, false );
-    return _ContentGetString( content, encoding, true );
-}
-
-WINUX_FUNC_IMPL(AnsiString) FileGetContents( String const & filename, bool textMode )
-{
-    AnsiString content;
-    try
-    {
-        SimpleHandle<int> fd(
-        #if defined(OS_WIN)
-            _topen(
-        #else
-            open(
-        #endif
-                filename.c_str(),
-                O_RDONLY | ( textMode ? O_TEXT : O_BINARY )
-            ),
-            -1,
-            close
-        );
-        if ( fd )
-        {
-            int readBytes = 0, currRead = 0;
-            char buf[4096];
-            do
-            {
-                if ( ( currRead = read( fd.get(), buf, 4096 ) ) < 1 ) break;
-                content.append( buf, currRead );
-                readBytes += currRead;
-            } while ( currRead > 0 );
-        }
-    }
-    catch ( std::exception const & )
-    {
-    }
-    return content;
-}
-
-WINUX_FUNC_IMPL(Buffer) FileGetContentsEx( String const & filename, bool textMode )
-{
-    GrowBuffer content;
-    try
-    {
-        SimpleHandle<int> fd(
-        #if defined(OS_WIN)
-            _topen(
-        #else
-            open(
-        #endif
-                filename.c_str(),
-                O_RDONLY | ( textMode ? O_TEXT : O_BINARY )
-            ),
-            -1,
-            close
-        );
-        if ( fd )
-        {
-            int readBytes = 0, currRead = 0;
-            char buf[4096];
-            do
-            {
-                if ( ( currRead = read( fd.get(), buf, 4096 ) ) < 1 ) break;
-                content.append( buf, currRead );
-                readBytes += currRead;
-            } while ( currRead > 0 );
-        }
-    }
-    catch ( std::exception const & )
-    {
-    }
-    return content;
-}
-
 static void _ContentPutString( GrowBuffer * output, String const & content, FileEncoding encoding, bool convertNewline )
 {
     switch ( encoding )
@@ -1253,6 +1177,82 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
         }
         break;
     }
+}
+
+WINUX_FUNC_IMPL(String) FileGetString( String const & filename, FileEncoding encoding )
+{
+    Buffer content = FileGetContentsEx( filename, false );
+    return _ContentGetString( content, encoding, true );
+}
+
+WINUX_FUNC_IMPL(AnsiString) FileGetContents( String const & filename, bool textMode )
+{
+    AnsiString content;
+    try
+    {
+        SimpleHandle<int> fd(
+        #if defined(OS_WIN)
+            _topen(
+        #else
+            open(
+        #endif
+                filename.c_str(),
+                O_RDONLY | ( textMode ? O_TEXT : O_BINARY )
+            ),
+            -1,
+            close
+        );
+        if ( fd )
+        {
+            int readBytes = 0, currRead = 0;
+            char buf[4096];
+            do
+            {
+                if ( ( currRead = read( fd.get(), buf, 4096 ) ) < 1 ) break;
+                content.append( buf, currRead );
+                readBytes += currRead;
+            } while ( currRead > 0 );
+        }
+    }
+    catch ( std::exception const & )
+    {
+    }
+    return content;
+}
+
+WINUX_FUNC_IMPL(Buffer) FileGetContentsEx( String const & filename, bool textMode )
+{
+    GrowBuffer content;
+    try
+    {
+        SimpleHandle<int> fd(
+        #if defined(OS_WIN)
+            _topen(
+        #else
+            open(
+        #endif
+                filename.c_str(),
+                O_RDONLY | ( textMode ? O_TEXT : O_BINARY )
+            ),
+            -1,
+            close
+        );
+        if ( fd )
+        {
+            int readBytes = 0, currRead = 0;
+            char buf[4096];
+            do
+            {
+                if ( ( currRead = read( fd.get(), buf, 4096 ) ) < 1 ) break;
+                content.append( buf, currRead );
+                readBytes += currRead;
+            } while ( currRead > 0 );
+        }
+    }
+    catch ( std::exception const & )
+    {
+    }
+    return content;
 }
 
 WINUX_FUNC_IMPL(bool) FilePutString( String const & filename, String const & content, FileEncoding encoding )
@@ -1615,21 +1615,17 @@ size_t IFile::size()
     throw FileSysError( FileSysError::fseNotImplemented, "This method is not implemented" );
 }
 
-void * IFile::entire( size_t * size )
+Buffer IFile::buffer( bool isPeek )
 {
-    //throw FileSysError( FileSysError::fseNotImplemented, "This method is not implemented" );
-    *size = 0;
-    return nullptr;
+    return Buffer( nullptr, 0, isPeek );
 }
 
 String IFile::entire( FileEncoding encoding, bool convertNewline )
 {
-    size_t len;
-    void * buf = this->entire(&len);
-    return _ContentGetString( Buffer( buf, len, true ), encoding, convertNewline );
+    return _ContentGetString( this->buffer(true), encoding, convertNewline );
 }
 
-// class MemoryFile -----------------------------------------------------------------------
+// class MemoryFile ---------------------------------------------------------------------------
 MemoryFile::MemoryFile() : _p(nullptr)
 {
 }
@@ -1757,10 +1753,9 @@ size_t MemoryFile::size()
     return _buf.getSize();
 }
 
-void * MemoryFile::entire( size_t * size )
+Buffer MemoryFile::buffer( bool isPeek )
 {
-    ASSIGN_PTR(size) = _buf.getSize();
-    return _buf.getBuf();
+    return Buffer( _buf.getBuf(), _buf.getSize(), isPeek );
 }
 
 // class File ---------------------------------------------------------------------------------
@@ -1882,17 +1877,13 @@ size_t File::size()
     return (size_t)st.st_size;
 }
 
-void * File::entire( size_t * size )
+Buffer File::buffer( bool isPeek )
 {
-    size_t fileSize = this->size();
-
     thread_local Buffer buf; // 用于加载文件数据的缓冲区
-
-    buf.alloc(fileSize);
-    *size = this->read( buf.getBuf(), buf.getSize() );
+    buf.alloc( this->size() );
+    this->read( buf.getBuf(), buf.getSize() );
     this->rewind();
-
-    return buf.getBuf();
+    return Buffer( buf.getBuf(), buf.getSize(), isPeek );
 }
 
 int File::getFd() const
