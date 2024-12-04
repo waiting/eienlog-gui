@@ -163,7 +163,7 @@ void MainWindow::renderDockSpaceMenuBar()
                     winux::String filename;
                     winux::FilePath( filepath, &filename );
 
-                    this->logWinManager->addWindow( u8"日志查看" + $u8( winux::FileTitle(filename) ), true, $u8(filepath) );
+                    this->logWinManager->addWindow( u8"查看日志" + $u8( winux::FileTitle(filename) ), true, $u8(filepath) );
                 }
             }
             ImGui::Separator();
@@ -192,7 +192,7 @@ void MainWindow::renderDockSpaceMenuBar()
                         winux::String filename;
                         winux::FilePath( $L(logFile), &filename );
 
-                        this->logWinManager->addWindow( u8"日志查看" + $u8( winux::FileTitle(filename) ) + winux::FormatA( u8" %d", no++ ), true, winux::Utf8String(logFile) );
+                        this->logWinManager->addWindow( u8"查看日志" + $u8( winux::FileTitle(filename) ) + winux::FormatA( u8" %d", no++ ), true, winux::Utf8String(logFile) );
                     }
                 }
                 ImGui::EndMenu();

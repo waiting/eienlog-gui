@@ -90,7 +90,7 @@ inline static winux::ulong NumberStringToNumber( const tchar * number, int base 
 }
 
 // class Configure -----------------------------------------------------------------------------
-String const Configure::ConfigVarsSlashChars = TEXT("\n\r\t\v\a\\\'\"$()");
+String const Configure::ConfigVarsSlashChars = $T("\n\r\t\v\a\\\'\"$()");
 
 Configure::Configure()
 {
@@ -104,8 +104,8 @@ Configure::Configure( String const & configFile )
 
 int Configure::_FindConfigRef( String const & str, int offset, int * length, String * name )
 {
-    String ldelim = TEXT("$(");
-    String rdelim = TEXT(")");
+    String ldelim = $T("$(");
+    String rdelim = $T(")");
     *length = 0;
     int pos1 = (int)str.find( ldelim, offset );
     if ( pos1 == -1 ) return -1;
@@ -118,7 +118,7 @@ int Configure::_FindConfigRef( String const & str, int offset, int * length, Str
 
 String Configure::_expandVarNoStripSlashes( String const & name, StringArray * chains ) const
 {
-    if ( !this->has(name) ) return TEXT("");
+    if ( !this->has(name) ) return $T("");
     chains->push_back(name);
     String configVal = _rawParams.at(name);
     String res;
@@ -130,7 +130,7 @@ String Configure::_expandVarNoStripSlashes( String const & name, StringArray * c
     {
         res += configVal.substr( offset, pos - offset );
         offset = pos + len;
-        res += !ValueIsInArray( *chains, varName ) ? _expandVarNoStripSlashes( varName, chains ) : TEXT("");
+        res += !ValueIsInArray( *chains, varName ) ? _expandVarNoStripSlashes( varName, chains ) : $T("");
     }
     res += configVal.substr(offset);
     chains->pop_back();
@@ -140,7 +140,7 @@ String Configure::_expandVarNoStripSlashes( String const & name, StringArray * c
 inline static bool __GetLine( IFile * f, String * line )
 {
     String tmpLine = f->getLine();
-    *line = tmpLine.empty() ? TEXT("") : ( tmpLine[tmpLine.length() - 1] == '\n' ? tmpLine.substr( 0, tmpLine.length() - 1 ) : tmpLine );
+    *line = tmpLine.empty() ? $T("") : ( tmpLine[tmpLine.length() - 1] == '\n' ? tmpLine.substr( 0, tmpLine.length() - 1 ) : tmpLine );
     return !tmpLine.empty();
 }
 
@@ -151,7 +151,7 @@ int Configure::_load( String const & configFile, StringStringMap * rawParams, St
     int varsCount = 0;
     try
     {
-        File fin( configFile, TEXT("r") );
+        File fin( configFile, $T("r") );
         if ( !fin ) return varsCount;
         String line;
         while ( __GetLine( &fin, &line ) )
@@ -169,14 +169,14 @@ int Configure::_load( String const & configFile, StringStringMap * rawParams, St
                 if ( pos == -1 )
                 {
                     commandName = tmp.substr(1); // 偏移1是为了 skip '@'
-                    commandParam = TEXT("");
+                    commandParam = $T("");
                 }
                 else
                 {
                     commandName = tmp.substr( 1, pos - 1 );
                     commandParam = tmp.substr( pos + 1 );
                 }
-                if ( commandName == TEXT("import") ) // 导入外部配置
+                if ( commandName == $T("import") ) // 导入外部配置
                 {
                     String dirPath = FilePath(configFile);
                     String confPath = commandParam;
@@ -191,7 +191,7 @@ int Configure::_load( String const & configFile, StringStringMap * rawParams, St
 
             int delimPos = (int)line.find('=');
             if ( delimPos == -1 ) // 找不到'='分隔符,就把整行当成参数名
-                (*rawParams)[line] = TEXT("");
+                (*rawParams)[line] = $T("");
             else
                 (*rawParams)[ line.substr( 0, delimPos ) ] = line.substr( delimPos + 1 );
 
@@ -223,7 +223,7 @@ String Configure::get( String const & name, bool stripslashes, bool expand ) con
     }
     else
     {
-        value = this->has(name) ? _rawParams.at(name) : TEXT("");
+        value = this->has(name) ? _rawParams.at(name) : $T("");
     }
 
     if ( stripslashes )
@@ -234,7 +234,7 @@ String Configure::get( String const & name, bool stripslashes, bool expand ) con
 
 String Configure::operator [] ( String const & name ) const
 {
-    return this->has(name) ? StripSlashes( _rawParams.at(name), ConfigVarsSlashChars ) : TEXT("");
+    return this->has(name) ? StripSlashes( _rawParams.at(name), ConfigVarsSlashChars ) : $T("");
 }
 
 String Configure::operator () ( String const & name ) const
@@ -458,7 +458,7 @@ static void ConfigureSettings_ParseString( std::vector<ConfigureSettings_ParseCo
 {
     winux::String::value_type quote = str[i];
 
-    v->assign( TEXT("") );
+    v->assign( $T("") );
     winux::String & result = *v;
 
     i++; // skip left quote
@@ -489,7 +489,7 @@ static void ConfigureSettings_ParseName( std::vector<ConfigureSettings_ParseCont
 {
     int start = i;
 
-    v->assign( TEXT("") );
+    v->assign( $T("") );
     winux::String & result = *v;
 
     while ( i < (int)str.length() )
@@ -525,7 +525,7 @@ static void ConfigureSettings_ParseExpr( std::vector<ConfigureSettings_ParseCont
     i++; // skip '('
     int brackets = 1; // 括号配对。0时表示一个表达式结束
 
-    v->assign( TEXT("") );
+    v->assign( $T("") );
 
     while ( i < (int)str.length() )
     {
@@ -577,8 +577,8 @@ static void _StoreValue( winux::String const & oneValue, OneValueType oneValueTy
 {
     if ( oneValue.empty() )
     {
-        arr.add( TEXT("") );
-        arrExpr.add( TEXT("\"\"") );
+        arr.add( $T("") );
+        arrExpr.add( $T("\"\"") );
     }
     else
     {
@@ -605,13 +605,13 @@ static void _StoreValue( winux::String const & oneValue, OneValueType oneValueTy
             else
             {
                 arr.add(oneValue);
-                arrExpr.add( TEXT("\"") + AddCSlashes(oneValue) + TEXT("\"") );
+                arrExpr.add( $T("\"") + AddCSlashes(oneValue) + $T("\"") );
             }
             break;
         case ovtString:
             {
                 arr.add(oneValue);
-                arrExpr.add( TEXT("\"") + AddCSlashes(oneValue) + TEXT("\"") );
+                arrExpr.add( $T("\"") + AddCSlashes(oneValue) + $T("\"") );
             }
             break;
         case ovtExpr:
@@ -629,7 +629,7 @@ static void _StoreValue( winux::String const & oneValue, OneValueType oneValueTy
                 }
 
                 arr.add(r);
-                arrExpr.add( TEXT("(") + oneValue + TEXT(")") );
+                arrExpr.add( $T("(") + oneValue + $T(")") );
             }
         }
     }
@@ -647,7 +647,7 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
     winux::String oneValue; // 单个值串
     OneValueType oneValueType = ovtAuto; // 值串类型 0:自动判断数字或字符串  1:字符串  2:表达式串
 
-    oneValue.assign( TEXT("") );
+    oneValue.assign( $T("") );
 
     while ( i < (int)str.length() )
     {
@@ -658,13 +658,13 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
             if ( !oneValue.empty() )
             {
                 _StoreValue( oneValue, oneValueType, exprCtx, arr, arrExpr );
-                oneValue.assign( TEXT("") );
+                oneValue.assign( $T("") );
                 oneValueType = ovtAuto;
             }
             else if ( oneValue.empty() && arr._pArr->size() == 0 ) // 遇到了结束分号却依旧没有读取到值，就加个空Mixed作值
             {
                 _StoreValue( oneValue, oneValueType, exprCtx, arr, arrExpr );
-                oneValue.assign( TEXT("") );
+                oneValue.assign( $T("") );
                 oneValueType = ovtAuto;
             }
 
@@ -676,7 +676,7 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
             if ( !oneValue.empty() )
             {
                 _StoreValue( oneValue, oneValueType, exprCtx, arr, arrExpr );
-                oneValue.assign( TEXT("") );
+                oneValue.assign( $T("") );
                 oneValueType = ovtAuto;
             }
 
@@ -719,7 +719,7 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
             arr.add(value);
             arrExpr.add(valExpr);
 
-            oneValue.assign( TEXT("") );
+            oneValue.assign( $T("") );
             oneValueType = ovtAuto;
 
             // 如果是"}\n"，也说明值结束
@@ -751,7 +751,7 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
     if ( !oneValue.empty() )
     {
         _StoreValue( oneValue, oneValueType, exprCtx, arr, arrExpr );
-        oneValue.assign( TEXT("") );
+        oneValue.assign( $T("") );
         oneValueType = ovtAuto;
     }
 
@@ -761,7 +761,7 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
     }
     else if ( arr.getCount() == 0 )
     {
-        value->assign( TEXT("") );
+        value->assign( $T("") );
     }
     else
     {
@@ -774,7 +774,7 @@ static void ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseCon
     }
     else if ( arrExpr.getCount() == 0 )
     {
-        valExpr->assign( TEXT("") );
+        valExpr->assign( $T("") );
     }
     else
     {
@@ -835,7 +835,7 @@ static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_Par
                     exprCtx->getVarContext()->set( name, value );
                     (*collAsExpr)[name] = valExpr;
 
-                    name.assign( TEXT("") );
+                    name.assign( $T("") );
                     value.free();
                     valExpr.free();
                     currIsName = true;
@@ -846,7 +846,7 @@ static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_Par
                     exprCtx->getVarContext()->set( name, winux::mxNull );
                     (*collAsExpr)[name] = valExpr;
 
-                    name.assign( TEXT("") );
+                    name.assign( $T("") );
                     value.free();
                     valExpr.free();
                     currIsName = true;
@@ -1076,7 +1076,7 @@ inline static String __JudgeAddQuotes( String const & valStr )
     }
     if ( it != valStr.end() )
     {
-        return TEXT("\"") + AddQuotes( valStr, Literal<String::value_type>::quoteChar ) + TEXT("\"");
+        return $T("\"") + AddQuotes( valStr, Literal<String::value_type>::quoteChar ) + $T("\"");
     }
     else
     {
@@ -1116,10 +1116,10 @@ void CsvWriter::writeRecord( Mixed const & record )
         String strRecord;
         for ( i = 0; i < n; i++ )
         {
-            if ( i != 0 ) strRecord += TEXT(",");
+            if ( i != 0 ) strRecord += $T(",");
             strRecord += __JudgeAddQuotes(record[i]);
         }
-        _outputFile->puts( strRecord + TEXT("\n") );
+        _outputFile->puts( strRecord + $T("\n") );
     }
     else if ( record.isCollection() )
     {
@@ -1127,14 +1127,14 @@ void CsvWriter::writeRecord( Mixed const & record )
         String strRecord;
         for ( i = 0; i < n; i++ )
         {
-            if ( i != 0 ) strRecord += TEXT(",");
+            if ( i != 0 ) strRecord += $T(",");
             strRecord += __JudgeAddQuotes( record.getPair(i).second );
         }
-        _outputFile->puts( strRecord + TEXT("\n") );
+        _outputFile->puts( strRecord + $T("\n") );
     }
     else // 只有1列
     {
-        _outputFile->puts( __JudgeAddQuotes(record) + TEXT("\n") );
+        _outputFile->puts( __JudgeAddQuotes(record) + $T("\n") );
     }
 }
 

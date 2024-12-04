@@ -247,7 +247,7 @@ private:
 
 
 /** \brief 启用日志 */
-EIENLOG_FUNC_DECL(bool) EnableLog( winux::String const & addr = TEXT("127.0.0.1"), winux::ushort port = 22345, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
+EIENLOG_FUNC_DECL(bool) EnableLog( winux::String const & addr = $T("127.0.0.1"), winux::ushort port = 22345, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
 
 /** \brief 禁用日志 */
 EIENLOG_FUNC_DECL(void) DisableLog();

@@ -68,14 +68,6 @@ namespace winux
     #define countof(arr) ( sizeof(arr) / sizeof(arr[0]) )
 #endif
 
-#if !defined(TEXT)
-    #if defined(_UNICODE) || defined(UNICODE)
-        #define TEXT(__x) L##__x
-    #else
-        #define TEXT(__x) __x
-    #endif
-#endif
-
 #if !defined($T)
     #if defined(_UNICODE) || defined(UNICODE)
         #define $T(__x) L##__x
@@ -910,8 +902,12 @@ public:
     /** \brief 获取数据大小 */
     size_t getSize() const { return _dataSize; }
 
-    /** \brief 获取数据大小 */
+    /** \brief 获取数据字节大小 */
     size_t size() const { return _dataSize; }
+
+    /** \brief 获取大小 */
+    template < typename _Ty >
+    size_t count() const { return _dataSize / sizeof(_Ty); }
 
     /** \brief 设置数据大小，不能超过容量大小（不建议外部调用） */
     void _setSize( size_t dataSize ) { _dataSize = ( dataSize > _capacity ? _capacity : dataSize ); }
@@ -1942,7 +1938,7 @@ public:
     void assign( Collection const & coll, bool caseInsensitive = false );
 
     // JSON相关操作 ----------------------------------------------------------------------------
-    String myJson( bool autoKeyQuotes = true, String const & spacer = TEXT(""), String const & newline = TEXT("") ) const;
+    String myJson( bool autoKeyQuotes = true, String const & spacer = $T(""), String const & newline = $T("") ) const;
     String json() const;
     Mixed & json( String const & jsonStr );
 

@@ -14,28 +14,28 @@
 namespace winux
 {
 // 特殊平台变量 -------------------------------------------------------------
-String const DirSep_WIN = TEXT("\\"); //!< Windows目录分割符
-String const LineSep_WIN = TEXT("\r\n"); //!< Windows行分割符
-String const PathEnvSep_WIN = TEXT(";"); //!< Windows PATH环境变量路径分割符
-String const DirSep_UNIX = TEXT("/"); //!< Unix目录分割符
-String const LineSep_UNIX = TEXT("\n"); //!< Unix行分割符
-String const PathEnvSep_UNIX = TEXT(":"); //!< Unix PATH环境变量路径分割符
-String const DirSep_DARWIN = TEXT("/"); //!< Apple系统目录分割符
-String const LineSep_DARWIN = TEXT("\r"); //!< Apple系统行分割符
-String const PathEnvSep_DARWIN = TEXT(":"); //!< Apple系统PATH环境变量路径分割符
+String const DirSep_WIN = $T("\\"); //!< Windows目录分割符
+String const LineSep_WIN = $T("\r\n"); //!< Windows行分割符
+String const PathEnvSep_WIN = $T(";"); //!< Windows PATH环境变量路径分割符
+String const DirSep_UNIX = $T("/"); //!< Unix目录分割符
+String const LineSep_UNIX = $T("\n"); //!< Unix行分割符
+String const PathEnvSep_UNIX = $T(":"); //!< Unix PATH环境变量路径分割符
+String const DirSep_DARWIN = $T("/"); //!< Apple系统目录分割符
+String const LineSep_DARWIN = $T("\r"); //!< Apple系统行分割符
+String const PathEnvSep_DARWIN = $T(":"); //!< Apple系统PATH环境变量路径分割符
 
 #if defined(OS_WIN)
-String const DirSep = TEXT("\\"); //!< 目录分割符
-String const LineSep = TEXT("\r\n"); //!< 行分割符
-String const PathEnvSep = TEXT(";"); //!< PATH环境变量路径分割符
+String const DirSep = $T("\\"); //!< 目录分割符
+String const LineSep = $T("\r\n"); //!< 行分割符
+String const PathEnvSep = $T(";"); //!< PATH环境变量路径分割符
 #elif defined(OS_DARWIN)
-String const DirSep = TEXT("/"); //!< 目录分割符
-String const LineSep = TEXT("\r"); //!< 行分割符
-String const PathEnvSep = TEXT(":"); //!< PATH环境变量路径分割符
+String const DirSep = $T("/"); //!< 目录分割符
+String const LineSep = $T("\r"); //!< 行分割符
+String const PathEnvSep = $T(":"); //!< PATH环境变量路径分割符
 #else
-String const DirSep = TEXT("/"); //!< 目录分割符
-String const LineSep = TEXT("\n"); //!< 行分割符
-String const PathEnvSep = TEXT(":"); //!< PATH环境变量路径分割符
+String const DirSep = $T("/"); //!< 目录分割符
+String const LineSep = $T("\n"); //!< 行分割符
+String const PathEnvSep = $T(":"); //!< PATH环境变量路径分割符
 #endif
 
 /** \brief 获取可执行文件的全路径 */
@@ -241,7 +241,7 @@ WINUX_FUNC_DECL(bool) FilePutContentsEx( String const & filename, Buffer const &
  *  \param bakDir 备份文件存放的目录（相对于`filePath`）
  *  \param fmt %f是文件标题，%v是版本编号，%e是扩展名（不包含'.'），%E是扩展名（包含'.'）
  *  \return String 备份成功返回文件路径，备份失败返回空串 */
-WINUX_FUNC_DECL(String) BackupFile( String const & filePath, String const & bakDir = TEXT(""), String const & fmt = TEXT("%f_v%v%E") );
+WINUX_FUNC_DECL(String) BackupFile( String const & filePath, String const & bakDir = $T(""), String const & fmt = $T("%f_v%v%E") );
 
 
 /** \brief 文件系统错误类 */
@@ -266,7 +266,7 @@ public:
     /** \brief 构造函数
      *
      *  \param[in] path 路径 */
-    DirIterator( String const & path, String const & pattern = TEXT("*") );
+    DirIterator( String const & path, String const & pattern = $T("*") );
     /** \brief 析构函数 */
     ~DirIterator();
     /** \brief 取得路径 */

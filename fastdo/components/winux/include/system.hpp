@@ -27,9 +27,9 @@ public:
 #endif
 
 /** \brief 获取当前进程ID */
-WINUX_FUNC_DECL(uint) GetPid();
+WINUX_FUNC_DECL(uint) GetPid( void );
 /** \brief 获取当前线程ID */
-WINUX_FUNC_DECL(uint) GetTid();
+WINUX_FUNC_DECL(uint) GetTid( void );
 
 WINUX_FUNC_DECL(size_t) CommandLineToArgvA( AnsiString const & cmd, AnsiStringArray * argv );
 WINUX_FUNC_DECL(size_t) CommandLineToArgvW( UnicodeString const & cmd, UnicodeStringArray * argv );
@@ -85,7 +85,7 @@ WINUX_FUNC_DECL(int) ExecCommand(
  *  \return String 标准输出的内容 */
 WINUX_FUNC_DECL(String) GetExec(
     String const & cmd,
-    String const & stdinStr = TEXT(""),
+    String const & stdinStr = $T(""),
     String * stderrStr = NULL,
     bool closeStdinIfStdinStrEmpty = true
 );
@@ -117,7 +117,7 @@ public:
         Mixed const & desiredParams,
         Mixed const & desiredOptions,
         Mixed const & desiredFlags,
-        Mixed const & optionSymbols = TEXT("=,:")
+        Mixed const & optionSymbols = $T("=,:")
     );
 
     /** \brief 获取参数个数 */
@@ -139,9 +139,9 @@ public:
     bool hasValue( String const & value ) const { return _values.has(value); }
 
     /** \brief 获取指定名字的参数 */
-    Mixed const & getParam( String const & name, Mixed const & defValue = TEXT("") ) const { return this->hasParam(name) ? _params[name] : defValue; }
+    Mixed const & getParam( String const & name, Mixed const & defValue = $T("") ) const { return this->hasParam(name) ? _params[name] : defValue; }
     /** \brief 获取指定名字的选项 */
-    Mixed const & getOption( String const & name, Mixed const & defValue = TEXT("") ) const { return this->hasOption(name) ? _options[name] : defValue; }
+    Mixed const & getOption( String const & name, Mixed const & defValue = $T("") ) const { return this->hasOption(name) ? _options[name] : defValue; }
     /** \brief 获取指定索引的旗标 */
     Mixed const & getFlag( size_t i ) const { return _flags[i]; }
     /** \brief 获取指定索引的值 */
@@ -170,10 +170,10 @@ public:
     {
         CommandLineVars * p = const_cast<CommandLineVars *>(this);
         return $c{
-            { TEXT("params"), p->getParams() },
-            { TEXT("options"), p->getOptions() },
-            { TEXT("flags"), p->getFlags() },
-            { TEXT("values"), p->getValues() },
+            { $T("params"), p->getParams() },
+            { $T("options"), p->getOptions() },
+            { $T("flags"), p->getFlags() },
+            { $T("values"), p->getValues() },
         };
     }
 

@@ -13,6 +13,7 @@
     #include <unistd.h>
     #include <errno.h>
     #include <wchar.h>
+    #include <math.h>
 #endif
 
 
@@ -118,7 +119,7 @@ size_t LogWriter::log( winux::String const & str, bool useFgColor, winux::uint16
         #if defined(_UNICODE) || defined(UNICODE)
             winux::AnsiString mbs = winux::UnicodeConverter(str).toUtf8();
         #else
-            winux::AnsiString mbs = winux::LocalToUtf8(str);
+            winux::AnsiString mbs = LOCAL_TO_UTF8(str);
         #endif
             return this->logEx( winux::Buffer( mbs.c_str(), mbs.length(), true ), useFgColor, fgColor, useBgColor, bgColor, logEncoding, false );
         }
@@ -291,7 +292,7 @@ EIENLOG_FUNC_IMPL(void) WriteLog( winux::String const & str )
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        __logWriter->log( winux::Format( TEXT("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, TEXT("\t\r\n") ), eienlog::leUtf8 );
+        __logWriter->log( winux::Format( $T("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, $T("\t\r\n") ), eienlog::leUtf8 );
     }
 }
 

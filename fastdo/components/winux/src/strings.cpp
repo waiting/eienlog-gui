@@ -1991,7 +1991,7 @@ MultiMatch::MatchResult MultiMatch::commonSearch( String const & str, ssize_t of
 String MultiMatch::replace( String const & str, ssize_t offset, SearchFuncType fnSearch ) const
 {
     ssize_t start = 0;
-    String s = TEXT("");
+    String s = $T("");
     MatchResult r = (this->*fnSearch)( str, start + offset );
     while ( r.pos != -1 )
     {
@@ -2334,6 +2334,9 @@ static struct __ConvLangCodePage
         _convLangCP["CHAR"] = CP_ACP;
         _convLangCP["UTF-7"] = CP_UTF7;
         _convLangCP["UTF-8"] = CP_UTF8;
+        _convLangCP["SHIFT_JIS"] = 932;
+        _convLangCP["GBK"] = 936;
+        _convLangCP["BIG5"] = 950;
         _convLangCP["WCHAR_T"] = 1200;
         _convLangCP["UCS-2LE"] = 1200;
         _convLangCP["UTF-16LE"] = 1200;
@@ -2341,9 +2344,12 @@ static struct __ConvLangCodePage
         _convLangCP["UTF-16"] = 1201;
         _convLangCP["UCS-2BE"] = 1201;
         _convLangCP["UTF-16BE"] = 1201;
-        _convLangCP["GBK"] = 936;
-        _convLangCP["SHIFT_JIS"] = 932;
-        _convLangCP["BIG5"] = 950;
+        _convLangCP["UCS-4LE"] = 12000;
+        _convLangCP["UTF-32LE"] = 12000;
+        _convLangCP["UCS-4"] = 12001;
+        _convLangCP["UTF-32"] = 12001;
+        _convLangCP["UCS-4BE"] = 12001;
+        _convLangCP["UTF-32BE"] = 12001;
     }
 
     // 根据语言串获取代码页编码
@@ -3387,6 +3393,7 @@ size_t UnicodeConverter::calcUtf32Length() const
     }
 }
 
+#if defined(OS_WIN) || defined(LOCAL_ISNT_UTF8)
 WINUX_FUNC_IMPL(AnsiString) LocalFromUtf8( AnsiString const & str )
 {
     ConvFrom<AnsiString> conv("UTF-8");
@@ -3398,6 +3405,7 @@ WINUX_FUNC_IMPL(AnsiString) LocalToUtf8( AnsiString const & str )
     ConvTo<AnsiString> conv("UTF-8");
     return conv(str);
 }
+#endif
 
 
 } // namespace winux

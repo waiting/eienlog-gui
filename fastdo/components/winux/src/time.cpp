@@ -87,7 +87,7 @@ DateTimeL::DateTimeL( MilliSec const & utcMillisec ) : _millisec(0), _second(0),
 
 DateTimeL::DateTimeL( String const & dateTimeStr ) : _millisec(0), _second(0), _minute(0), _hour(0), _day(0), _month(0), _year(0), _wday(0), _yday(0)
 {
-    _stscanf( dateTimeStr.c_str(), TEXT("%04hu-%02hu-%02huT%02hu:%02hu:%02hu.%03hu"), &_year, &_month, &_day, &_hour, &_minute, &_second, &_millisec );
+    _stscanf( dateTimeStr.c_str(), $T("%04hu-%02hu-%02huT%02hu:%02hu:%02hu.%03hu"), &_year, &_month, &_day, &_hour, &_minute, &_second, &_millisec );
     struct tm t = { 0 };
     t.tm_year = _year - 1900;
     t.tm_mon = _month - 1;

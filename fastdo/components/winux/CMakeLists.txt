@@ -38,6 +38,16 @@ if(MIXED_REF_NO_EXCEPTION)
     target_compile_definitions(winux PUBLIC MIXED_REF_NO_EXCEPTION)
     target_compile_definitions(winux_a PUBLIC MIXED_REF_NO_EXCEPTION)
 endif()
+option(LOCAL_IS_UTF8 "Local encoding is utf-8. (Windows only)" OFF)
+if(LOCAL_IS_UTF8)
+    target_compile_definitions(winux PUBLIC LOCAL_IS_UTF8)
+    target_compile_definitions(winux_a PUBLIC LOCAL_IS_UTF8)
+endif()
+option(LOCAL_ISNT_UTF8 "Local encoding is not utf-8. (Unix-like only)" OFF)
+if(LOCAL_ISNT_UTF8)
+    target_compile_definitions(winux PUBLIC LOCAL_ISNT_UTF8)
+    target_compile_definitions(winux_a PUBLIC LOCAL_ISNT_UTF8)
+endif()
 
 
 # Search libraries

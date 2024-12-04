@@ -122,7 +122,7 @@ WINUX_FUNC_IMPL(String) FilePath( String const & fullPath, String * fileName )
     }
     else
     {
-        path = TEXT("");
+        path = $T("");
         if ( fileName != NULL ) *fileName = fullPath;
     }
     return path;
@@ -140,7 +140,7 @@ WINUX_FUNC_IMPL(String) FileTitle( String const & fileName, String * extName )
     else
     {
         fileTitle = fileName;
-        if ( extName != NULL ) *extName = TEXT("");
+        if ( extName != NULL ) *extName = $T("");
     }
     return fileTitle;
 }
@@ -157,11 +157,11 @@ WINUX_FUNC_IMPL(bool) IsAbsPath( String const & path )
 WINUX_FUNC_IMPL(String) NormalizePath( String const & path )
 {
     StringArray pathSubs;
-    size_t n = StrSplit( path, TEXT("/\\"), &pathSubs );
+    size_t n = StrSplit( path, $T("/\\"), &pathSubs );
     size_t i, c = n;
     for ( i = 0; i < c; )
     {
-        if ( i > 0 && pathSubs[i - 1] != TEXT("..") && !IsAbsPath( pathSubs[i - 1] + DirSep ) && pathSubs[i] == TEXT("..") )
+        if ( i > 0 && pathSubs[i - 1] != $T("..") && !IsAbsPath( pathSubs[i - 1] + DirSep ) && pathSubs[i] == $T("..") )
         {
             size_t k;
             for ( k = i + 1; k < c; k++ )
@@ -171,7 +171,7 @@ WINUX_FUNC_IMPL(String) NormalizePath( String const & path )
             c -= 2;
             --i;
         }
-        else if ( pathSubs[i] == TEXT(".") )
+        else if ( pathSubs[i] == $T(".") )
         {
             size_t k;
             for ( k = i + 1; k < c; k++ )
@@ -476,7 +476,7 @@ WINUX_FUNC_IMPL(void) FolderData( String const & path, StringArray * fileArr, St
     while ( iter.next() )
     {
         String const & name = iter.getName();
-        if ( name == TEXT(".") || name == TEXT("..") ) continue;
+        if ( name == $T(".") || name == $T("..") ) continue;
 
         if ( iter.isDir() )
         {
@@ -606,7 +606,7 @@ WINUX_FUNC_IMPL(size_t) CommonDelete( String const & path )
 WINUX_FUNC_IMPL(bool) MakeDirExists( String const & path, int mode )
 {
     StringArray subPaths;
-    size_t const n = StrSplit( path, TEXT("/\\"), &subPaths );
+    size_t const n = StrSplit( path, $T("/\\"), &subPaths );
     size_t i;
     String existsPath;
     for ( i = 0; i < n; ++i )
@@ -986,7 +986,7 @@ static String _ContentGetString( Buffer const & content, FileEncoding encoding, 
         #if defined(_UNICODE) || defined(UNICODE)
             return UnicodeConverter(str).toUnicode();
         #else
-            return LocalFromUtf8(str);
+            return LOCAL_FROM_UTF8(str);
         #endif
         }
         break;
@@ -997,7 +997,7 @@ static String _ContentGetString( Buffer const & content, FileEncoding encoding, 
         #if defined(_UNICODE) || defined(UNICODE)
             return UnicodeConverter(str).toUnicode();
         #else
-            return LocalFromUtf8(str);
+            return LOCAL_FROM_UTF8(str);
         #endif
         }
         break;
@@ -1098,7 +1098,7 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
             AnsiString str = UnicodeConverter(content).toUtf8();
             output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #else
-            AnsiString str = LocalToUtf8(content);
+            AnsiString str = LOCAL_TO_UTF8(content);
             output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #endif
         }
@@ -1110,7 +1110,7 @@ static void _ContentPutString( GrowBuffer * output, String const & content, File
             output->appendType( { '\xef', '\xbb', '\xbf' } );
             output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #else
-            AnsiString str = LocalToUtf8(content);
+            AnsiString str = LOCAL_TO_UTF8(content);
             output->appendType( { '\xef', '\xbb', '\xbf' } );
             output->appendString( convertNewline ? NewlineToFile( str.c_str(), str.length(), false ) : str );
         #endif
@@ -1397,11 +1397,11 @@ WINUX_FUNC_IMPL(String) BackupFile( String const & filePath, String const & bakD
                         i++;
                         break;
                     case 'E':
-                        bakFileName += extName.empty() ? TEXT("") : TEXT(".") + extName;
+                        bakFileName += extName.empty() ? $T("") : $T(".") + extName;
                         i++;
                         break;
                     case 'v':
-                        bakFileName += Format( TEXT("%u"), v );
+                        bakFileName += Format( $T("%u"), v );
                         i++;
                         break;
                     case '%':
@@ -1921,8 +1921,8 @@ bool BlockOutFile::nextBlock()
 {
     this->close(); // 关闭先前的那块
     bool r = this->open(
-        CombinePath( _dirname, _filetitle + TEXT("_") + (String)Mixed(_fileno) + TEXT(".") + _extname ),
-        ( _isTextMode ? TEXT("w") : TEXT("wb") )
+        CombinePath( _dirname, _filetitle + $T("_") + (String)Mixed(_fileno) + $T(".") + _extname ),
+        ( _isTextMode ? $T("w") : $T("wb") )
     );
     if ( r )
     {
@@ -1986,7 +1986,7 @@ BlockInFile::BlockInFile( String const & filename, bool isTextMode ) : _index(0)
         int i;
         for ( i = 1; i <= maxFileNo; ++i )
         {
-            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + TEXT(".") + _extname );
+            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + $T(".") + _extname );
             if ( DetectPath(curFileName) )
             {
                 _blockFiles.push_back(curFileName);
@@ -1995,7 +1995,7 @@ BlockInFile::BlockInFile( String const & filename, bool isTextMode ) : _index(0)
         bool flag = true;
         for ( ; flag; ++i )
         {
-            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + TEXT(".") + _extname );
+            String curFileName = CombinePath( _dirname, _filetitle + (String)Mixed(i) + $T(".") + _extname );
             if ( ( flag = DetectPath(curFileName) ) )
             {
                 _blockFiles.push_back(curFileName);
@@ -2009,7 +2009,7 @@ BlockInFile::BlockInFile( String const & filename, bool isTextMode ) : _index(0)
         _filetitle = fileTitle;
         for ( ; flag; ++i )
         {
-            String curFileName = CombinePath( _dirname, _filetitle + TEXT("_") + (String)Mixed(i) + TEXT(".") + _extname );
+            String curFileName = CombinePath( _dirname, _filetitle + $T("_") + (String)Mixed(i) + $T(".") + _extname );
             if ( ( flag = DetectPath(curFileName) ) )
             {
                 _blockFiles.push_back(curFileName);
@@ -2026,7 +2026,7 @@ bool BlockInFile::nextBlock()
     {
         return false;
     }
-    bool r = this->open( _blockFiles[_index], ( _isTextMode ? TEXT("r") : TEXT("rb") ) );
+    bool r = this->open( _blockFiles[_index], ( _isTextMode ? $T("r") : $T("rb") ) );
     if ( r )
     {
         _index++;
