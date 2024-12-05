@@ -108,20 +108,55 @@ void LogListenWindow::renderComponents()
             winux::String path = dlg.getFilePath();
             winux::MemoryFile memFile;
             winux::CsvWriter csv(&memFile);
-            for ( auto && log : this->logs )
+            switch ( this->saveTargetType )
             {
-                csv.writeRecord( winux::$a{
-                    log.contentSize,
-                    winux::UnicodeConverter(log.strContent).toUnicode(),
-                    winux::UnicodeConverter(log.utcTime).toUnicode(),
-                    log.flag.value
-                } );
+            case 0:
+            case 2:
+                for ( int i = 0; i < (int)this->logs.size(); i++ )
+                {
+                    if ( this->saveTargetType == 2 && winux::isset( this->selected, i ) && this->selected[i] ) continue;
+                    auto && log = this->logs[i];
+                    winux::Mixed record;
+                    record.createArray();
+                    record.add(log.contentSize);
+                    record.add( $L(log.strContent) );
+                    record.add( $L(log.utcTime) );
+                    record.add(log.flag.value);
+                    csv.writeRecord(record);
+                }
+                break;
+            case 1:
+                for ( auto && pr : this->selected )
+                {
+                    if ( pr.second )
+                    {
+                        auto && log = this->logs[pr.first];
+                        winux::Mixed record;
+                        record.createArray();
+                        record.add(log.contentSize);
+                        record.add( $L(log.strContent) );
+                        record.add( $L(log.utcTime) );
+                        record.add(log.flag.value);
+                        csv.writeRecord(record);
+                    }
+                }
+                break;
             }
 
             winux::TextArchive ta;
             ta.saveEx( memFile.buffer(), winux::IsLittleEndian() ? "UTF-16LE" : "UTF-16BE", path, winux::feUtf8Bom );
         }
     }
+    ImGui::SameLine();
+
+    static char const * saveTargetTypes[] = { u8"全部", u8"已选择", u8"非选择" };
+    ImGui::PushItemWidth( ImGui::GetFontSize() * 4 + 2 * 6.0f );
+    if ( ImGui::Combo(u8"##save_target", &this->saveTargetType, saveTargetTypes, countof(saveTargetTypes) ) )
+    {
+        //printf("%d\n", this->saveTarget);
+    }
+    ImGui::PopItemWidth();
+
     ImGui::PopStyleVar();
     ImGui::SameLine();
 

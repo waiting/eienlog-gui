@@ -12,7 +12,7 @@ NewLogListenWindowModal::NewLogListenWindowModal( LogWindowsManager * manager, w
 static winux::Utf8String __addr = u8"";
 static int __port = 22345;
 static char __ch[] = { 'A', '\0' };
-static winux::Utf8String __name = winux::Utf8String(u8"监听日志") + __ch;
+static winux::Utf8String __name = winux::Utf8String(u8"监听[") + __ch + u8"]";
 static winux::Utf8String __strWaitTimeout = u8"50";
 static winux::Utf8String __strUpdateTimeout = u8"300";
 static bool __vScrollToBottom = true;
@@ -76,7 +76,7 @@ void NewLogListenWindowModal::onOk()
     this->_manager->addWindow(lparams);
 
     __ch[0]++;
-    __name = winux::Utf8String(u8"监听日志") + __ch;
+    __name = winux::Utf8String(u8"监听[") + __ch + u8"]";
     __port++;
 }
 

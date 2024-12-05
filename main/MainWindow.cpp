@@ -150,6 +150,8 @@ void MainWindow::renderDockSpaceMenuBar()
     {
         if ( ImGui::BeginMenu(u8"文件") )
         {
+            static int idLogWindow = 1;
+
             if ( ImGui::MenuItem(u8"新建监听...", u8"Ctrl+N") )
             {
                 this->newListenWindow->toggle();
@@ -163,7 +165,7 @@ void MainWindow::renderDockSpaceMenuBar()
                     winux::String filename;
                     winux::FilePath( filepath, &filename );
 
-                    this->logWinManager->addWindow( u8"查看日志" + $u8( winux::FileTitle(filename) ), true, $u8(filepath) );
+                    this->logWinManager->addWindow( u8"日志[" + $u8( winux::FileTitle(filename) ) + winux::FormatA( u8"] %d", idLogWindow++ ), true, $u8(filepath) );
                 }
             }
             ImGui::Separator();
@@ -172,27 +174,26 @@ void MainWindow::renderDockSpaceMenuBar()
                 auto & listenHistory = this->app.appConfig.listenHistory;
                 for ( size_t i = 0; i < listenHistory.size(); i++ )
                 {
-                    auto & lparams = listenHistory[i];
+                    auto lparams = listenHistory[i]; // 这里不能使用引用，因为addWindow()内调用setRecent*()可能会移除本元素导致引用悬垂
                     if ( ImGui::MenuItem( winux::FormatA( u8"%s-%s-%hu-%u-%u-%u", lparams.name.c_str(), lparams.addr.c_str(), lparams.port, lparams.waitTimeout, lparams.updateTimeout, lparams.vScrollToBottom ).c_str() ) )
                     {
-                        this->logWinManager->addWindow( App::ListenParams(lparams) ); // 不能直接传引用进去，因为内部可能会删除本元素导致引用悬垂
+                        this->logWinManager->addWindow(lparams);
                     }
                 }
                 ImGui::EndMenu();
             }
             if ( ImGui::BeginMenu(u8"最近打开日志") )
             {
-                static int no = 1;
                 auto & logFileHistory = this->app.appConfig.logFileHistory;
                 for ( size_t i = 0; i < logFileHistory.size(); i++ )
                 {
-                    auto & logFile = logFileHistory[i];
+                    auto logFile = logFileHistory[i]; // 这里不能使用引用，因为addWindow()内调用setRecent*()可能会移除本元素导致引用悬垂
                     if ( ImGui::MenuItem( logFile.c_str() ) )
                     {
                         winux::String filename;
                         winux::FilePath( $L(logFile), &filename );
 
-                        this->logWinManager->addWindow( u8"查看日志" + $u8( winux::FileTitle(filename) ) + winux::FormatA( u8" %d", no++ ), true, winux::Utf8String(logFile) );
+                        this->logWinManager->addWindow( u8"日志[" + $u8( winux::FileTitle(filename) ) + winux::FormatA( u8"] %d", idLogWindow++ ), true, logFile );
                     }
                 }
                 ImGui::EndMenu();

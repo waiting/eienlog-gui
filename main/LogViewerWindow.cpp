@@ -54,11 +54,18 @@ void LogViewerWindow::render()
 void LogViewerWindow::renderComponents()
 {
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 6.0f, 0 ) );
+    if ( ImGui::Button(u8"取消选择") )
+    {
+        this->selected.clear();
+        this->clickRowPrev = -1;
+    }
+    ImGui::SameLine();
     if ( ImGui::Button(u8"清空列表") )
     {
         std::lock_guard<std::mutex> lk(this->mtx);
         this->logs.clear();
-        this->selected = -1;
+        this->selected.clear();
+        this->clickRowPrev = -1;
     }
     ImGui::PopStyleVar();
 
@@ -101,15 +108,43 @@ void LogViewerWindow::renderComponents()
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     char szNo[20] = { 0 };
-                    sprintf( szNo, "%u", row + 1 );
-                    if ( ImGui::Selectable( szNo, this->selected == row, ImGuiSelectableFlags_SpanAllColumns ) ) this->selected = row;
+                    sprintf( szNo, u8"%u", row + 1 );
+                    bool isCtrlDown = ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_LeftCtrl) ) || ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_RightCtrl) );
+                    bool isShiftDown = ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_LeftShift) ) || ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_RightShift) );
+                    if ( ImGui::Selectable( szNo, this->selected.find(row) != this->selected.end() && this->selected[row], ImGuiSelectableFlags_SpanAllColumns ) )
+                    {
+                        if ( isCtrlDown )
+                        {
+                            this->selected[row] = !this->selected[row];
+                        }
+                        else
+                        {
+                            this->selected.clear();
+                            this->selected[row] = true;
+                        }
+
+                        if ( isShiftDown )
+                        {
+                            if ( this->clickRowPrev != -1 )
+                            {
+                                int a = clickRowPrev, b = row;
+                                for ( int i = a; ( ( clickRowPrev < row ) ? i <= b : i >= b ); ( ( clickRowPrev < row ) ? i++ : i-- ) )
+                                {
+                                    this->selected[i] = true;
+                                }
+                            }
+                        }
+
+                        this->clickRowPrev = row;
+                    }
                     // 弹出详细显示框
                     ImGui::PushID(row * columns);
-                    if (ImGui::BeginPopupContextItem())
+                    if ( ImGui::BeginPopupContextItem() )
                     {
-                        this->selected = row;
+                        this->selected[row] = true;
+                        this->clickRowPrev = row;
 
-                        bool copyToClipboard = ImGui::Button(u8"复制日志");
+                        bool copyToClipboard = ImGui::Button(u8"复制");
                         ImGui::SameLine();
                         ImGui::Text(u8"编号：%s，大小：%u", szNo, log.contentSize );
                         ImGui::Separator();
@@ -140,7 +175,7 @@ void LogViewerWindow::renderComponents()
                         }
 
                         ImGui::Separator();
-                        if (ImGui::Button(u8"关闭浮窗"))
+                        if (ImGui::Button(u8"关闭"))
                             ImGui::CloseCurrentPopup();
                         ImGui::SameLine();
                         ImGui::Text(u8"时间：%s", log.utcTime.c_str());
