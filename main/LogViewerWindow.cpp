@@ -78,6 +78,15 @@ void LogViewerWindow::renderComponents()
     }
     ImGui::PopStyleVar();
 
+    ImGui::SameLine();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 6.0f, 0 ) );
+    if ( ImGui::Button(u8"到顶") )
+    {
+        bToggleToTop = true;
+    }
+    ImGui::PopStyleVar();
+
     int columns = 4; // 列数
     bool logTableColumnResize = this->manager->mainWindow->app.appConfig.logTableColumnResize;
     static ImGuiTableFlags flags = ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ( logTableColumnResize ? ImGuiTableFlags_Resizable : 0 ) |
@@ -245,7 +254,15 @@ void LogViewerWindow::renderComponents()
             }
         }
 
-        if ( this->vScrollToBottom ) ImGui::SetScrollHereY(1.0f);
+        if ( this->vScrollToBottom && !this->bToggleToTop )
+        {
+            ImGui::SetScrollHereY(1.0f);
+        }
+        else if ( this->bToggleToTop )
+        {
+            ImGui::SetScrollY(0.0f);
+            bToggleToTop = false;
+        }
 
         ImGui::EndTable();
     }

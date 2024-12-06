@@ -29,6 +29,7 @@ struct LogViewerWindow
     std::map< int, bool > selected; // 选中行
     int clickRowPrev = -1;  // 上次点击行
     bool bToggleVScrollToBottom = false; // 触发“自动滚动到底”复选框
+    bool bToggleToTop = false; // 触发“到顶”
     std::mutex mtx; // 数据同步互斥量
     bool show = true;
 };
