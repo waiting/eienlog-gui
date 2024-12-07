@@ -175,7 +175,7 @@ void MainWindow::renderDockSpaceMenuBar()
                 for ( size_t i = 0; i < listenHistory.size(); i++ )
                 {
                     auto lparams = listenHistory[i]; // 这里不能使用引用，因为addWindow()内调用setRecent*()可能会移除本元素导致引用悬垂
-                    if ( ImGui::MenuItem( winux::FormatA( u8"%s-%s-%hu-%u-%u-%u", lparams.name.c_str(), lparams.addr.c_str(), lparams.port, lparams.waitTimeout, lparams.updateTimeout, lparams.vScrollToBottom ).c_str() ) )
+                    if ( ImGui::MenuItem( winux::FormatA( u8"%s-%s-%hu-%u-%u-%u-%u", lparams.name.c_str(), lparams.addr.c_str(), lparams.port, lparams.waitTimeout, lparams.updateTimeout, lparams.vScrollToBottom, lparams.soundEffect ).c_str() ) )
                     {
                         this->logWinManager->addWindow(lparams);
                     }

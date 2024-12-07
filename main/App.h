@@ -27,6 +27,7 @@ struct App
         time_t waitTimeout;
         time_t updateTimeout;
         bool vScrollToBottom; // 是否滚动到底
+        bool soundEffect; // 是否有音效
 
         bool operator == ( ListenParams const & other ) const
         {
@@ -36,7 +37,8 @@ struct App
                 this->port == other.port &&
                 this->waitTimeout == other.waitTimeout &&
                 this->updateTimeout == other.updateTimeout &&
-                this->vScrollToBottom == other.vScrollToBottom
+                this->vScrollToBottom == other.vScrollToBottom &&
+                this->soundEffect == other.soundEffect
             ;
         }
     };
@@ -44,14 +46,14 @@ struct App
     // JSON配置参数
     struct AppConfig
     {
-        int colorTheme;
-        winux::Utf8String fontPath;
-        float fontSize;
+        int colorTheme; // 颜色主题
+        winux::Utf8String fontPath; // 字体路径
+        float fontSize; // 字体大小
         winux::Utf8String bigFontPath;
         float bigFontSize;
-        bool logTableColumnResize;
-        std::vector<ListenParams> listenHistory;
-        std::vector<winux::Utf8String> logFileHistory;
+        bool logTableColumnResize; // 日志表格列自定义宽度
+        std::vector<ListenParams> listenHistory; // 监听历史
+        std::vector<winux::Utf8String> logFileHistory; // 打开日志文件历史
     };
 
     App()

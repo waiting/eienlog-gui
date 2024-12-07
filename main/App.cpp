@@ -5,7 +5,7 @@ inline static winux::String __CalcAppConfigPath()
 {
     winux::String exeFileName;
     winux::String exeDirPath = winux::FilePath( winux::GetExecutablePath(), &exeFileName );
-    winux::String jsonConfigFilePath = winux::CombinePath( exeDirPath, winux::FileTitle(exeFileName) + TEXT(".json") );
+    winux::String jsonConfigFilePath = winux::CombinePath( exeDirPath, winux::FileTitle(exeFileName) + L".json" );
     return jsonConfigFilePath;
 }
 
@@ -14,13 +14,13 @@ void App::loadConfig()
     auto jsonConfig = winux::Json( winux::FileGetString( __CalcAppConfigPath(), winux::feUnspec ) );
     if ( !jsonConfig.isCollection() ) jsonConfig.createCollection();
 
-    this->appConfig.colorTheme = jsonConfig.get( TEXT("color_theme"), 2 ).toInt();
+    this->appConfig.colorTheme = jsonConfig.get( L"color_theme", 2 ).toInt();
 
-    if ( jsonConfig.has( TEXT("font") ) )
+    if ( jsonConfig.has(L"font") )
     {
-        auto && fontConfig = jsonConfig[TEXT("font")];
-        this->appConfig.fontPath = winux::UnicodeConverter( fontConfig.get( TEXT("path"), TEXT("C:\\Windows\\Fonts\\simhei.ttf") ).toUnicode() ).toUtf8();
-        this->appConfig.fontSize = fontConfig.get( TEXT("size"), 18.0f ).toFloat();
+        auto && fontConfig = jsonConfig[L"font"];
+        this->appConfig.fontPath = winux::UnicodeConverter( fontConfig.get( L"path", L"C:\\Windows\\Fonts\\simhei.ttf" ).toUnicode() ).toUtf8();
+        this->appConfig.fontSize = fontConfig.get( L"size", 18.0f ).toFloat();
     }
     else
     {
@@ -28,11 +28,11 @@ void App::loadConfig()
         this->appConfig.fontSize = 18.0f;
     }
 
-    if ( jsonConfig.has( TEXT("big_font") ) )
+    if ( jsonConfig.has(L"big_font") )
     {
-        auto && bigFontConfig = jsonConfig[TEXT("big_font")];
-        this->appConfig.bigFontPath = winux::UnicodeConverter( bigFontConfig.get( TEXT("path"), TEXT("C:\\Windows\\Fonts\\simhei.ttf") ).toUnicode() ).toUtf8();
-        this->appConfig.bigFontSize = bigFontConfig.get( TEXT("size"), 32.0f ).toFloat();
+        auto && bigFontConfig = jsonConfig[L"big_font"];
+        this->appConfig.bigFontPath = winux::UnicodeConverter( bigFontConfig.get( L"path", L"C:\\Windows\\Fonts\\simhei.ttf" ).toUnicode() ).toUtf8();
+        this->appConfig.bigFontSize = bigFontConfig.get( L"size", 32.0f ).toFloat();
     }
     else
     {
@@ -40,24 +40,25 @@ void App::loadConfig()
         this->appConfig.bigFontSize = 32.0f;
     }
 
-    this->appConfig.logTableColumnResize = jsonConfig.get( TEXT("log_table_column_resize"), true );
+    this->appConfig.logTableColumnResize = jsonConfig.get( L"log_table_column_resize", true );
 
-    auto const & listenHistory = jsonConfig[TEXT("listen_history")];
+    auto const & listenHistory = jsonConfig[L"listen_history"];
     for ( size_t i = 0; i < listenHistory.getCount(); i++ )
     {
         auto && lparams = listenHistory[i];
         ListenParams listenParams;
-        listenParams.name = winux::UnicodeConverter( lparams.get( TEXT("name"), TEXT("") ).toUnicode() ).toUtf8();
-        listenParams.addr = winux::UnicodeConverter( lparams.get( TEXT("addr"), TEXT("") ).toUnicode() ).toUtf8();
-        listenParams.port = lparams.get( TEXT("port"), 22345 ).toUShort();
-        listenParams.waitTimeout = lparams.get( TEXT("wait_timeout"), 50 ).toUInt64();
-        listenParams.updateTimeout = lparams.get( TEXT("update_timeout"), 300 ).toUInt64();
-        listenParams.vScrollToBottom = lparams.get( TEXT("vscroll_to_bottom"), true ).toBool();
+        listenParams.name = winux::UnicodeConverter( lparams.get( L"name", L"" ).toUnicode() ).toUtf8();
+        listenParams.addr = winux::UnicodeConverter( lparams.get( L"addr", L"" ).toUnicode() ).toUtf8();
+        listenParams.port = lparams.get( L"port", 22345 ).toUShort();
+        listenParams.waitTimeout = lparams.get( L"wait_timeout", 50 ).toUInt64();
+        listenParams.updateTimeout = lparams.get( L"update_timeout", 300 ).toUInt64();
+        listenParams.vScrollToBottom = lparams.get( L"vscroll_to_bottom", true ).toBool();
+        listenParams.soundEffect = lparams.get( L"sound_effect", true ).toBool();
 
         this->appConfig.listenHistory.push_back( std::move(listenParams) );
     }
 
-    auto const & logFileHistory = jsonConfig[TEXT("logfile_history")];
+    auto const & logFileHistory = jsonConfig[L"logfile_history"];
     for ( size_t i = 0; i < logFileHistory.getCount(); i++ )
     {
         this->appConfig.logFileHistory.push_back( winux::UnicodeConverter( logFileHistory[i].toUnicode() ).toUtf8() );
@@ -68,35 +69,36 @@ void App::saveConfig()
 {
     winux::Mixed jsonConfig;
     jsonConfig.createCollection();
-    jsonConfig[TEXT("color_theme")] = this->appConfig.colorTheme;
-    jsonConfig[TEXT("font")] = winux::$c{
-        { TEXT("path"), winux::UnicodeConverter(this->appConfig.fontPath).toUnicode() },
-        { TEXT("size"), this->appConfig.fontSize }
+    jsonConfig[L"color_theme"] = this->appConfig.colorTheme;
+    jsonConfig[L"font"] = winux::$c{
+        { L"path", winux::UnicodeConverter(this->appConfig.fontPath).toUnicode() },
+        { L"size", this->appConfig.fontSize }
     };
-    jsonConfig[TEXT("big_font")] = winux::$c{
-        { TEXT("path"), winux::UnicodeConverter(this->appConfig.bigFontPath).toUnicode() },
-        { TEXT("size"), this->appConfig.bigFontSize }
+    jsonConfig[L"big_font"] = winux::$c{
+        { L"path", winux::UnicodeConverter(this->appConfig.bigFontPath).toUnicode() },
+        { L"size", this->appConfig.bigFontSize }
     };
-    jsonConfig[TEXT("log_table_column_resize")] = this->appConfig.logTableColumnResize;
-    auto & listenHistory = jsonConfig[TEXT("listen_history")].createArray();
+    jsonConfig[L"log_table_column_resize"] = this->appConfig.logTableColumnResize;
+    auto & listenHistory = jsonConfig[L"listen_history"].createArray();
     for ( auto && listenParams : this->appConfig.listenHistory )
     {
         winux::Mixed lparams;
         lparams.createCollection();
-        lparams[TEXT("name")] = winux::UnicodeConverter(listenParams.name).toUnicode();
-        lparams[TEXT("addr")] = winux::UnicodeConverter(listenParams.addr).toUnicode();
-        lparams[TEXT("port")] = listenParams.port;
-        lparams[TEXT("wait_timeout")] = listenParams.waitTimeout;
-        lparams[TEXT("update_timeout")] = listenParams.updateTimeout;
-        lparams[TEXT("vscroll_to_bottom")] = listenParams.vScrollToBottom;
+        lparams[L"name"] = winux::UnicodeConverter(listenParams.name).toUnicode();
+        lparams[L"addr"] = winux::UnicodeConverter(listenParams.addr).toUnicode();
+        lparams[L"port"] = listenParams.port;
+        lparams[L"wait_timeout"] = listenParams.waitTimeout;
+        lparams[L"update_timeout"] = listenParams.updateTimeout;
+        lparams[L"vscroll_to_bottom"] = listenParams.vScrollToBottom;
+        lparams[L"sound_effect"] = listenParams.soundEffect;
         listenHistory.add( std::move(lparams) );
     }
-    auto & logFileHistory = jsonConfig[TEXT("logfile_history")].createArray();
+    auto & logFileHistory = jsonConfig[L"logfile_history"].createArray();
     for ( auto && logFilePath : this->appConfig.logFileHistory )
     {
         logFileHistory.add( winux::UnicodeConverter(logFilePath).toUnicode() );
     }
-    winux::FilePutString( __CalcAppConfigPath(), jsonConfig.myJson( false, TEXT("    "), TEXT("\n") ), winux::feUtf8Bom );
+    winux::FilePutString( __CalcAppConfigPath(), jsonConfig.myJson( false, L"    ", L"\n" ), winux::feUtf8Bom );
 }
 
 void App::setRecentListen( ListenParams const & lparams )

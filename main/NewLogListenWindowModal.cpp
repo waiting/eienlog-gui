@@ -16,6 +16,7 @@ static winux::Utf8String __name = winux::Utf8String(u8"监听[") + __ch + u8"]";
 static winux::Utf8String __strWaitTimeout = u8"50";
 static winux::Utf8String __strUpdateTimeout = u8"300";
 static bool __vScrollToBottom = true;
+static bool __soundEffect = true;
 
 void NewLogListenWindowModal::renderComponents()
 {
@@ -60,6 +61,8 @@ void NewLogListenWindowModal::renderComponents()
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
     ImGui::Checkbox( u8"自动滚动到底部", &__vScrollToBottom );
+    ImGui::SameLine();
+    ImGui::Checkbox( u8"日志音效", &__soundEffect );
     ImGui::PopStyleVar();
 }
 
@@ -72,6 +75,7 @@ void NewLogListenWindowModal::onOk()
     lparams.waitTimeout = winux::Mixed(__strWaitTimeout);
     lparams.updateTimeout = winux::Mixed(__strUpdateTimeout);
     lparams.vScrollToBottom = __vScrollToBottom;
+    lparams.soundEffect = __soundEffect;
 
     this->_manager->addWindow(lparams);
 

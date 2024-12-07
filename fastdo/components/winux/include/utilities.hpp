@@ -858,7 +858,9 @@ public:
      *  \attention 如果新的容量小于数据大小，多余的数据会被丢弃 */
     void realloc( size_t newCapacity );
 
-    /** \brief 把窥探模式变为拷贝模式，如果copyCapacity为true时连容量也一起拷贝，否则只拷贝数据。 */
+    /** \brief 把窥探模式变为拷贝模式，如果copyCapacity为true时连容量也一起拷贝，否则只拷贝数据。
+     *
+     *  \return 如果本来就不是窥探模式则直接返回false，由窥探模式切到拷贝则返回true */
     bool peekCopy( bool copyCapacity = false );
 
     /** \brief 使Buffer对象不再管理内存资源 */

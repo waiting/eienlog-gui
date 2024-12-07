@@ -1,6 +1,7 @@
 ﻿#include "App.h"
 #include "MainWindow.h"
 #include "LogListenWindow.h"
+#include "resource.h"
 
 // struct LogListenWindow ---------------------------------------------------------------------
 LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams const & lparams ) :
@@ -81,9 +82,45 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
 
                 tr.strContentSlashes = winux::AddCSlashes(tr.strContent);
                 this->logs.push_back(tr);
+
+                // 播放音效
+                if ( this->lparams.soundEffect )
+                {
+                    winux::uint idSe = IDR_WAVE_LOG_SE00;
+                    if ( tr.flag.fgColorUse )
+                    {
+                        winux::ushort fgColor = tr.flag.fgColor;
+                        float r = ( fgColor & 31 ) / 31.0f, g = ( ( fgColor >> 5 ) & 31 ) / 31.0f, b = ( ( fgColor >> 10 ) & 31 ) / 31.0f;
+                        if ( r >= g + b ) // 红色系
+                        {
+                            idSe = IDR_WAVE_LOG_SE02;
+                        }
+                        else if ( g >= r + b ) // 绿色系
+                        {
+                            idSe = IDR_WAVE_LOG_SE01;
+                        }
+                    }
+                    else if ( tr.flag.bgColorUse )
+                    {
+                        winux::ushort bgColor = tr.flag.bgColor;
+                        float r = ( bgColor & 15 ) / 15.0f, g = ( ( bgColor >> 4 ) & 15 ) / 15.0f, b = ( ( bgColor >> 8 ) & 15 ) / 15.0f;
+                        if ( r >= g + b ) // 红色系
+                        {
+                            idSe = IDR_WAVE_LOG_SE02;
+                        }
+                        else if ( g >= r + b ) // 绿色系
+                        {
+                            idSe = IDR_WAVE_LOG_SE01;
+                        }
+                    }
+                    PlaySound( MAKEINTRESOURCE(idSe), GetModuleHandle(nullptr), SND_RESOURCE | SND_ASYNC );
+                }
             }
         }
     } ) );
+
+    // 终止多余的异步播放
+    if ( this->lparams.soundEffect ) PlaySound( nullptr, nullptr, 0 );
 }
 
 LogListenWindow::~LogListenWindow()
@@ -95,6 +132,15 @@ LogListenWindow::~LogListenWindow()
 void LogListenWindow::renderComponents()
 {
     ImGui::Text( u8"正在监听<%s#%u>的日志...", this->lparams.addr.c_str(), this->lparams.port );
+    ImGui::SameLine();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 0, 0 ) );
+    if ( ImGui::Checkbox( u8"音效", &this->lparams.soundEffect ) )
+    {
+        bToggleVScrollToBottom = true;
+    }
+    ImGui::PopStyleVar();
+
     ImGui::SameLine();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 6.0f, 0 ) );
@@ -147,6 +193,7 @@ void LogListenWindow::renderComponents()
             ta.saveEx( memFile.buffer(), winux::IsLittleEndian() ? "UTF-16LE" : "UTF-16BE", path, winux::feUtf8Bom );
         }
     }
+
     ImGui::SameLine();
 
     static char const * saveTargetTypes[] = { u8"全部", u8"已选择", u8"非选择" };
@@ -158,6 +205,7 @@ void LogListenWindow::renderComponents()
     ImGui::PopItemWidth();
 
     ImGui::PopStyleVar();
+
     ImGui::SameLine();
 
     LogViewerWindow::renderComponents();
