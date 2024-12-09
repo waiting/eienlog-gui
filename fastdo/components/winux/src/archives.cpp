@@ -1149,44 +1149,52 @@ CsvReader::CsvReader( String const & content, bool hasColumnHeaders )
     if ( !content.empty() ) this->read( content, hasColumnHeaders );
 }
 
-void CsvReader::read( String const & content, bool hasColumnHeaders )
+inline static void _ReadString( String const & str, size_t * pI, String * valStr )
 {
-    int i = 0;
-    if ( hasColumnHeaders )
+    size_t & i = *pI;
+    ++i; // skip '\"'
+    while ( i < str.length() )
     {
-        Mixed hdrs;
-        _readRecord( content, i, hdrs );
-        _columns.createCollection();
-        for ( size_t i = 0, n = hdrs.getCount(); i < n; ++i )
+        String::value_type ch = str[i];
+        if ( ch == '\"' )
         {
-            _columns[ hdrs[i] ] = i;
+            if ( i + 1 < str.length() && str[i + 1] == '\"' ) // double '\"' 解析成一个'\"'
+            {
+                *valStr += '\"';
+                i++; // skip "
+                i++; // skip "
+            }
+            else
+            {
+                i++; // skip 作为字符串结束的尾"
+                break;
+            }
         }
-    }
-
-    _records.createArray();
-    while ( i < (int)content.length() )
-    {
-        Mixed & record = _records[ _records.add(mxNull) ];
-        _readRecord( content, i, record );
+        else
+        {
+            *valStr += ch;
+            i++;
+        }
     }
 }
 
-void CsvReader::_readRecord( String const & str, int & i, Mixed & record )
+inline static void _ReadRecord( String const & str, size_t * pI, Mixed * record )
 {
-    record.createArray();
+    size_t & i = *pI;
+    record->createArray();
     String valStr;
-    while ( i < (int)str.length() )
+    while ( i < str.length() )
     {
         String::value_type ch = str[i];
         if ( ch == '\n' ) // 结束一条记录
         {
-            record.add(valStr);
+            record->add(valStr);
             i++; // skip '\n'
             break;
         }
         else if ( ch == ',' ) // 结束一个值
         {
-            record.add(valStr);
+            record->add(valStr);
             valStr.clear();
             i++; // skip ','
         }
@@ -1196,11 +1204,11 @@ void CsvReader::_readRecord( String const & str, int & i, Mixed & record )
             if ( StrTrim(valStr).empty() )
             {
                 valStr.clear(); // 去除之前可能获得的空白字符
-                _readString( str, i, valStr );
+                _ReadString( str, &i, &valStr );
                 //record.add(valStr);
                 //valStr.clear();
                 // 跳过','以避免再次加入这个值,或者跳过换行符
-                //while ( i < (int)str.length() && str[i] != ',' && str[i] != '\n' ) i++;
+                //while ( i < str.length() && str[i] != ',' && str[i] != '\n' ) i++;
             }
             else
             {
@@ -1217,35 +1225,29 @@ void CsvReader::_readRecord( String const & str, int & i, Mixed & record )
 
     if ( str.length() > 0 && '\n' != str[i - 1] ) // 最后一个字符不是换行符
     {
-        record.add(valStr);
+        record->add(valStr);
     }
 }
 
-void CsvReader::_readString( String const & str, int & i, String & valStr )
+void CsvReader::read( String const & content, bool hasColumnHeaders )
 {
-    ++i; // skip '\"'
-    while ( i < (int)str.length() )
+    size_t i = 0;
+    if ( hasColumnHeaders )
     {
-        String::value_type ch = str[i];
-        if ( ch == '\"' )
+        Mixed hdrs;
+        _ReadRecord( content, &i, &hdrs );
+        _columns.createCollection();
+        for ( size_t i = 0, n = hdrs.getCount(); i < n; ++i )
         {
-            if ( i + 1 < (int)str.length() && str[i+1] == '\"' ) // double '\"' 解析成一个'\"'
-            {
-                valStr += '\"';
-                i++; // skip "
-                i++; // skip "
-            }
-            else
-            {
-                i++; // skip 作为字符串结束的尾"
-                break;
-            }
+            _columns[ hdrs[i] ] = i;
         }
-        else
-        {
-            valStr += ch;
-            i++;
-        }
+    }
+
+    _records.createArray();
+    while ( i < content.length() )
+    {
+        Mixed & record = _records[ _records.add(mxNull) ];
+        _ReadRecord( content, &i, &record );
     }
 }
 

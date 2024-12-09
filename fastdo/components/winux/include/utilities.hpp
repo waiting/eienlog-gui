@@ -909,6 +909,10 @@ public:
 
     /** \brief 获取大小 */
     template < typename _Ty >
+    size_t size() const { return _dataSize / sizeof(_Ty); }
+
+    /** \brief 获取大小 */
+    template < typename _Ty >
     size_t count() const { return _dataSize / sizeof(_Ty); }
 
     /** \brief 设置数据大小，不能超过容量大小（不建议外部调用） */

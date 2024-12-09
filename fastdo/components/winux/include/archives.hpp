@@ -167,10 +167,6 @@ public:
 private:
     Mixed _columns; // 第一行列名代表的索引
     Mixed _records;
-
-    void _readRecord( String const & str, int & i, Mixed & record );
-
-    void _readString( String const & str, int & i, String & valStr );
 };
 
 /** \brief 文本文档类。可载入文本文件自动识别BOM文件编码，转换为指定编码。\n

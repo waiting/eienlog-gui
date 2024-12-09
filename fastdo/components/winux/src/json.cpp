@@ -402,7 +402,6 @@ bool JsonParseArray( std::vector<JsonParseContext> & jpc, String const & json, i
     jpc.pop_back();
 
     return true;
-
 }
 
 // 解析一个对象(map)
@@ -501,7 +500,6 @@ bool JsonParseObject( std::vector<JsonParseContext> & jpc, String const & json, 
     jpc.pop_back();
 
     return true;
-
 }
 
 // 解析一个标识符，这个标识符可能是个常量或者未定义
