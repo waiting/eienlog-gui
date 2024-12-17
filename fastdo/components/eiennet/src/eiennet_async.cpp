@@ -120,13 +120,15 @@ void IoService::removeSock( winux::SharedPointer<AsyncSocket> sock )
 
 int IoService::run()
 {
+    io::Select sel;
     this->_pool.startup(_threadCount);
     while ( !_stop )
     {
         // Hook1
         this->onRunBeforeJoin();
 
-        io::Select sel;
+        sel.clear();
+
         bool hasRequest = false;
         {
             // 监听相应的事件操作

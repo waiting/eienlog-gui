@@ -422,19 +422,34 @@ inline ArrayAssigner<_Ty, _Alloc> Assign( std::vector<_Ty, _Alloc> * a )
     return ArrayAssigner<_Ty, _Alloc>(a);
 }
 
-/** \brief 成员包装
- *
- *  此类的构造函数/析构函数不能直接调用create()/destroy()，因为目标类的实现未知，所以无法创建或销毁。\n
- *  必须要在使用本包装的类中的构造函数/析构函数中分别调用它们。\n
- *  operator=和拷贝构造也是类似。因为目标类的实现未知，所以无法依靠自动生成的函数来自动调用。必须重写使用本包装的类中的operator=和拷贝构造函数 */
+/** \brief 成员隐藏（By pointer） */
 template < typename _TargetCls >
-class MembersWrapper
+class Members
 {
 public:
-    MembersWrapper() : _p(nullptr) { }
+    Members() : _p(nullptr)
+    {
+        this->_create();
+    }
 
+    template < typename... _ArgType >
+    Members( _ArgType&&... arg ) : _p(nullptr)
+    {
+        this->_create( std::forward<_ArgType>(arg)... );
+    }
+
+    ~Members()
+    {
+        this->_destroy();
+    }
+
+    Members( Members const & other ) : _p(nullptr)
+    {
+        this->_create();
+        *_p = *other._p;
+    }
     /** \brief 拷贝赋值，必须保证create()已经调用 */
-    MembersWrapper & operator = ( MembersWrapper const & other )
+    Members & operator = ( Members const & other )
     {
         if ( &other != this )
         {
@@ -444,17 +459,17 @@ public:
     }
 
 #ifndef MOVE_SEMANTICS_DISABLED
-    MembersWrapper( MembersWrapper && other )
+    Members( Members && other ) : _p(nullptr)
     {
         _p = other._p;
         other._p = nullptr;
     }
-    /** \brief 移动赋值，不用保证create()已经调用 */
-    MembersWrapper & operator = ( MembersWrapper && other )
+    /** \brief 移动赋值，必须保证create()已经调用 */
+    Members & operator = ( Members && other )
     {
         if ( &other != this )
         {
-            this->destroy();
+            this->_destroy();
             _p = other._p;
             other._p = nullptr;
         }
@@ -462,24 +477,10 @@ public:
     }
 #endif
 
-    /** \brief 必须在使用者类的析构函数里最后一个调用 */
-    void destroy()
+    _TargetCls * get()
     {
-        if ( _p )
-        {
-            delete (_TargetCls *)_p;
-            _p = nullptr;
-        }
+        return _p;
     }
-
-    /** \brief 必须在使用者类的构造函数里第一个调用 */
-    template < typename... _ArgType >
-    void create( _ArgType&&... arg )
-    {
-        this->destroy();
-        _p = new _TargetCls( std::forward<_ArgType>(arg)... );
-    }
-
     _TargetCls * get() const
     {
         return _p;
@@ -509,9 +510,128 @@ public:
     }
 
 private:
-    _TargetCls * _p;
+    /** \brief 必须在使用者类的析构函数里最后一个调用 */
+    void _destroy()
+    {
+        if ( _p )
+        {
+            delete (_TargetCls *)_p;
+            _p = nullptr;
+        }
+    }
 
-    MembersWrapper( MembersWrapper const & other ) = delete;
+    /** \brief 必须在使用者类的构造函数里第一个调用 */
+    template < typename... _ArgType >
+    void _create( _ArgType&&... arg )
+    {
+        this->_destroy();
+        _p = new _TargetCls( std::forward<_ArgType>(arg)... );
+    }
+
+    _TargetCls * _p;
+};
+
+/** \brief Plain成员隐藏（By plain block） */
+template < typename _TargetCls, size_t _MembersSize >
+class PlainMembers
+{
+public:
+    PlainMembers()
+    {
+        this->_create<sizeof(_TargetCls)>();
+    }
+
+    template < typename... _ArgType >
+    PlainMembers( _ArgType&&... arg )
+    {
+        this->_create<sizeof(_TargetCls)>( std::forward<_ArgType>(arg)... );
+    }
+
+    ~PlainMembers()
+    {
+        this->_destroy();
+    }
+
+    PlainMembers( PlainMembers const & other )
+    {
+        this->_create<sizeof(_TargetCls)>();
+        *this->get() = *other.get();
+    }
+    /** \brief 拷贝赋值，必须保证create()已经调用 */
+    PlainMembers & operator = ( PlainMembers const & other )
+    {
+        if ( &other != this )
+        {
+            *this->get() = *other.get();
+        }
+        return *this;
+    }
+
+#ifndef MOVE_SEMANTICS_DISABLED
+    PlainMembers( PlainMembers && other )
+    {
+        this->_create<sizeof(_TargetCls)>();
+        *this->get() = std::move( *other.get() );
+    }
+    /** \brief 移动赋值，必须保证create()已经调用 */
+    PlainMembers & operator = ( PlainMembers && other )
+    {
+        if ( &other != this )
+        {
+            *this->get() = std::move( *other.get() );
+        }
+        return *this;
+    }
+#endif
+
+    _TargetCls * get()
+    {
+        return reinterpret_cast<_TargetCls*>((char*)_block);
+    }
+    _TargetCls * get() const
+    {
+        return reinterpret_cast<_TargetCls*>((char*)_block);
+    }
+
+    _TargetCls * operator -> ()
+    {
+        return this->get();
+    }
+    _TargetCls const * operator -> () const
+    {
+        return this->get();
+    }
+
+    operator _TargetCls & ()
+    {
+        return *this->get();
+    }
+    operator _TargetCls const & () const
+    {
+        return *this->get();
+    }
+
+    operator bool() const
+    {
+        return _MembersSize >= sizeof(_TargetCls);
+    }
+
+private:
+    /** \brief 必须在使用者类的析构函数里最后一个调用 */
+    void _destroy()
+    {
+        this->get()->~_TargetCls();
+    }
+
+    /** \brief 必须在使用者类的构造函数里第一个调用 */
+    template < size_t _TargetClsSize, typename... _ArgType >
+    void _create( _ArgType&&... arg )
+    {
+        static_assert( !( _TargetClsSize > _MembersSize ), "Error: sizeof(_TargetCls) > _MembersSize, _MembersSize is too small" );
+        new(_block) _TargetCls( std::forward<_ArgType>(arg)... );
+    }
+
+    char _block[_MembersSize];
 };
 
 // 一些函数模板和函数 ------------------------------------------------------------------------

@@ -118,7 +118,7 @@ public:
     SchedulePolicy getSchedPolicy() const;
 
 private:
-    MembersWrapper<struct ThreadAttr_Data> _self;
+    PlainMembers<struct ThreadAttr_Data, 64> _self;
     friend class Thread;
 
     DISABLE_OBJECT_COPY(ThreadAttr)
@@ -139,7 +139,7 @@ public:
     bool operator != ( ThreadId const & other ) const { return !this->operator == (other); }
 
 private:
-    MembersWrapper<struct ThreadId_Data> _self;
+    PlainMembers<struct ThreadId_Data, 24> _self;
 
     friend class Thread;
 };
@@ -149,12 +149,10 @@ class ThreadGroup;
 class WINUX_DLL Thread
 {
 public:
-
     /** \brief 线程处理函数指针类型 */
     typedef void * (* ThreadFuncPtr)( void * param );
 
 public:
-
     /** \brief 得到调用者线程的`ThreadId` */
     static ThreadId Self();
 
@@ -341,7 +339,7 @@ public:
     MutexType getType() const;
 
 private:
-    MembersWrapper<struct MutexAttr_Data> _self;
+    PlainMembers<struct MutexAttr_Data, 16> _self;
     friend class Mutex;
 
     DISABLE_OBJECT_COPY(MutexAttr)
@@ -371,7 +369,7 @@ public:
     MutexAttr & attr();
 private:
     MutexAttr _attr; //!< 互斥量属性
-    MembersWrapper<struct Mutex_Data> _self;
+    PlainMembers<struct Mutex_Data, 48> _self;
     friend class Condition;
 
     DISABLE_OBJECT_COPY(Mutex)
@@ -406,7 +404,7 @@ public:
     operator bool() const;
 
 private:
-    MembersWrapper<struct ConditionAttr_Data> _self;
+    PlainMembers<struct ConditionAttr_Data, 16> _self;
     friend class Condition;
 
     DISABLE_OBJECT_COPY(ConditionAttr)
@@ -457,7 +455,7 @@ public:
 
 private:
     ConditionAttr _attr;
-    MembersWrapper<struct Condition_Data> _self;
+    PlainMembers<struct Condition_Data, 56> _self;
     DISABLE_OBJECT_COPY(Condition)
 };
 
@@ -482,7 +480,7 @@ public:
     void * get() const;
 
 private:
-    MembersWrapper<struct TlsKey_Data> _self;
+    PlainMembers<struct TlsKey_Data, 8> _self;
 
     friend class TlsVar;
     DISABLE_OBJECT_COPY(TlsKey)

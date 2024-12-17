@@ -271,24 +271,20 @@ void Configure::clear()
 // struct ConfigureSettings_Data ----------------------------------------------------------
 struct ConfigureSettings_Data
 {
-    String settingsFile; // 设置文件
-    Mixed collectionVal; // 存储值
-    Mixed collectionExpr; // 存储表达式串
     ExprPackage package; // 表达式语言包，包含自定义函数和算符
     VarContext rootCtx; // 根变量场景
 
     ConfigureSettings_Data()
     {
-        this->collectionVal.createCollection();
-        this->collectionExpr.createCollection();
-        this->rootCtx.setMixedCollection(&collectionVal);
     }
 };
 
 // class ConfigureSettings ----------------------------------------------------------------
 ConfigureSettings::ConfigureSettings( String const & settingsFile )
 {
-    _self.create(); //
+    this->_collectionVal.createCollection();
+    this->_collectionExpr.createCollection();
+    _self->rootCtx.setMixedCollection(&this->_collectionVal);
 
     if ( !settingsFile.empty() )
     {
@@ -298,15 +294,10 @@ ConfigureSettings::ConfigureSettings( String const & settingsFile )
 
 ConfigureSettings::~ConfigureSettings()
 {
-
-
-    _self.destroy(); //
 }
 
 ConfigureSettings::ConfigureSettings( ConfigureSettings const & other )
 {
-    _self.create(); //
-
     _self = other._self;
 }
 
@@ -894,16 +885,16 @@ size_t ConfigureSettings::_load( String const & settingsFile, winux::Mixed * col
 
     //loadFileChains->pop_back(); //注释掉这句，则每一个文件只载入一次
 
-    _self->rootCtx.setMixedCollection(&_self->collectionVal); // 每次载入完设置后重新设置Root变量场景
+    _self->rootCtx.setMixedCollection(&this->_collectionVal); // 每次载入完设置后重新设置Root变量场景
 
-    return _self->collectionVal.getCount();
+    return this->_collectionVal.getCount();
 }
 
 size_t ConfigureSettings::load( String const & settingsFile )
 {
-    _self->settingsFile = settingsFile;
+    this->_settingsFile = settingsFile;
     StringArray loadFileChains;
-    return this->_load( settingsFile, &_self->collectionVal, &_self->collectionExpr, &loadFileChains );
+    return this->_load( settingsFile, &this->_collectionVal, &this->_collectionExpr, &loadFileChains );
 }
 
 static void _Update( struct ConfigureSettings_Data & sd, Expression * parent, Mixed & collVal, Mixed & collExpr, StringArray const & names, String const & updateExprStr, Mixed * * v )
@@ -978,7 +969,7 @@ Mixed & ConfigureSettings::update( String const & multiname, String const & upda
     }
 
     Mixed * v = nullptr;
-    _Update( _self, nullptr, _self->collectionVal, _self->collectionExpr, names, updateExprStr, &v );
+    _Update( _self, nullptr, this->_collectionVal, this->_collectionExpr, names, updateExprStr, &v );
     return *v;
 }
 
@@ -1023,44 +1014,44 @@ Mixed const & ConfigureSettings::operator [] ( String const & name ) const
 
 Mixed & ConfigureSettings::operator [] ( String const & name )
 {
-    return _self->collectionVal[name];
+    return this->_collectionVal[name];
 }
 
 bool ConfigureSettings::has( String const & name ) const
 {
-    return _self->collectionVal.has(name);
+    return this->_collectionVal.has(name);
 }
 
 winux::Mixed const & ConfigureSettings::get( String const & name ) const
 {
     thread_local Mixed const inner;
-    return _self->collectionVal.has(name) ? _self->collectionVal[name] : inner;
+    return this->_collectionVal.has(name) ? this->_collectionVal[name] : inner;
 }
 
 ConfigureSettings & ConfigureSettings::set( String const & name, Mixed const & value )
 {
-    _self->collectionVal[name] = value;
+    this->_collectionVal[name] = value;
     return *this;
 }
 
 Mixed const & ConfigureSettings::val() const
 {
-    return _self->collectionVal;
+    return this->_collectionVal;
 }
 
 Mixed & ConfigureSettings::val()
 {
-    return _self->collectionVal;
+    return this->_collectionVal;
 }
 
 Mixed const & ConfigureSettings::expr() const
 {
-    return _self->collectionExpr;
+    return this->_collectionExpr;
 }
 
 Mixed & ConfigureSettings::expr()
 {
-    return _self->collectionExpr;
+    return this->_collectionExpr;
 }
 
 // class CsvWriter ------------------------------------------------------------------------

@@ -1047,7 +1047,7 @@ public:
     }
 
 private:
-    MembersWrapper<struct Conv_Data> _self;
+    PlainMembers<struct Conv_Data, 8> _self;
 
     DISABLE_OBJECT_COPY(Conv)
 };

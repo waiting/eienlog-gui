@@ -241,8 +241,6 @@ struct SocketLib_Data
 // class SocketLib ------------------------------------------------------------------------
 SocketLib::SocketLib()
 {
-    _self.create(); //
-
 #if defined(OS_WIN)
     WSAStartup( MAKEWORD( 2, 0 ), &_self->wsa );
 #else
@@ -259,79 +257,11 @@ SocketLib::~SocketLib()
 #else
     signal( SIGPIPE, SIG_DFL );
 #endif
-
-    _self.destroy(); //
 }
 
 // struct Socket_Data ---------------------------------------------------------------------
 struct Socket_Data
 {
-    // 延迟创建socket使用参数
-    Socket::AddrFamily addrFamily;  // 地址族
-    Socket::SockType sockType;      // 套接字类型
-    Socket::Protocol protocol;      // 协议
-
-    // 延迟设置socket属性
-    bool _attrBlocking;     // 是否阻塞
-    bool _attrBroadcast;    // 是否启用广播
-    bool _attrReUseAddr;    // 是否开启了地址重用
-    winux::uint32 _attrSendTimeout; // 发送超时(ms)
-    winux::uint32 _attrRecvTimeout; // 接收超时(ms)
-    int _attrSendBufSize;   // 发送缓冲区大小
-    int _attrRecvBufSize;   // 接收缓冲区大小
-    bool _attrIpv6Only;     // IPV6套接字只开启IPV6功能
-
-    // 属性种类
-    enum AttrCategory
-    {
-        attrNone,           // 无意义
-        attrBlocking,       // 是否阻塞
-        attrBroadcast,      // 是否启用广播
-        attrReUseAddr,      // 是否开启了地址重用
-        attrSendTimeout,    // 发送超时(ms)
-        attrRecvTimeout,    // 接收超时(ms)
-        attrSendBufSize,    // 发送缓冲区大小
-        attrRecvBufSize,    // 接收缓冲区大小
-        attrIpv6Only,       // IPV6套接字只开启IPV6功能
-    };
-    std::vector<AttrCategory> _attrExecSets; // 执行属性设置的操作集
-
-    // socket资源管理
-    int sock;           // socket描述符
-    bool isNewSock;     // 指示是否为新建socket。如果为true，则会在Socket对象析构时自动关闭sock
-
-    Socket_Data() { this->zeroInit(); }
-
-    // 初始化全部成员
-    void zeroInit()
-    {
-        this->addrFamily = Socket::afUnspec;
-        this->sockType = Socket::sockUnknown;
-        this->protocol = Socket::protoUnspec;
-
-        _attrBlocking = true;
-        _attrBroadcast = false;
-        _attrReUseAddr = false;
-        _attrSendTimeout = 0U;
-        _attrRecvTimeout = 0U;
-        _attrSendBufSize = 0;
-        _attrRecvBufSize = 0;
-    #if defined(OS_WIN)
-        _attrIpv6Only = true;   // IPV6套接字只开启IPV6功能
-    #else
-        _attrIpv6Only = false;  // IPV6套接字只开启IPV6功能
-    #endif
-
-        this->sock = (int)INVALID_SOCKET;
-        this->isNewSock = false;
-    }
-
-    // 重置socket资源管理相关变量
-    void reset()
-    {
-        this->sock = (int)INVALID_SOCKET;
-        this->isNewSock = false;
-    }
 };
 
 // class Socket ---------------------------------------------------------------------------
@@ -383,93 +313,86 @@ int const Socket::SdBoth = SHUT_RDWR;
 
 Socket::Socket( int sock, bool isNewSock )
 {
-    _self.create(); //
-
-    _self->sock = sock;
-    _self->isNewSock = isNewSock;
+    this->_membersInit();
+    this->_sock = sock;
+    this->_isNewSock = isNewSock;
 }
 
 Socket::Socket( AddrFamily af, SockType sockType, Protocol proto )
 {
-    _self.create(); //
-
+    this->_membersInit();
     this->setParams( af, sockType, proto );
 }
 
-#ifndef MOVE_SEMANTICS_DISABLED
-Socket::Socket( Socket && other )
-{
-    //_self.create(); // 无需创建成员数据
-
-    _self = std::move(other._self);
-}
-
-Socket & Socket::operator = ( Socket && other )
-{
-    if ( this != &other )
-    {
-        this->close();
-
-        _self = std::move(other._self);
-    }
-    return *this;
-}
-#endif
+// #ifndef MOVE_SEMANTICS_DISABLED
+// Socket::Socket( Socket && other ) : _self( std::move(other._self) )
+// {
+// }
+//
+// Socket & Socket::operator = ( Socket && other )
+// {
+//     if ( this != &other )
+//     {
+//         this->close();
+//
+//         _self = std::move(other._self);
+//     }
+//     return *this;
+// }
+// #endif
 
 Socket::~Socket()
 {
     this->close();
-
-    _self.destroy(); //
 }
 
 Socket::AddrFamily Socket::getAddrFamily() const
 {
-    return _self->addrFamily;
+    return this->_addrFamily;
 }
 
 void Socket::setAddrFamily( AddrFamily af )
 {
-    _self->addrFamily = af;
+    this->_addrFamily = af;
 }
 
 Socket::SockType Socket::getSockType() const
 {
-    return _self->sockType;
+    return this->_sockType;
 }
 
 void Socket::setSockType( SockType sockType )
 {
-    _self->sockType = sockType;
+    this->_sockType = sockType;
 }
 
 Socket::Protocol Socket::getProtocol() const
 {
-    return _self->protocol;
+    return this->_protocol;
 }
 
 void Socket::setProtocol( Protocol proto )
 {
-    _self->protocol = proto;
+    this->_protocol = proto;
 }
 
 void Socket::getParams( AddrFamily * af, SockType * sockType, Protocol * proto )
 {
     if ( af )
-        *af = _self->addrFamily;
+        *af = this->_addrFamily;
 
     if ( sockType )
-        *sockType = _self->sockType;
+        *sockType = this->_sockType;
 
     if ( proto )
-        *proto = _self->protocol;
+        *proto = this->_protocol;
 }
 
 void Socket::setParams( AddrFamily af, SockType sockType, Protocol proto )
 {
-    _self->addrFamily = af;
-    _self->sockType = sockType;
-    _self->protocol = proto;
+    this->_addrFamily = af;
+    this->_sockType = sockType;
+    this->_protocol = proto;
 }
 
 bool Socket::create( AddrFamily af, SockType sockType, Protocol proto )
@@ -483,55 +406,55 @@ bool Socket::create()
 {
     this->close();
 
-    _self->sock = (int)socket( __addrFamilies[_self->addrFamily], __sockTypes[_self->sockType], __protocols[_self->protocol] );
-    _self->isNewSock = true;
+    this->_sock = (int)socket( __addrFamilies[this->_addrFamily], __sockTypes[this->_sockType], __protocols[this->_protocol] );
+    this->_isNewSock = true;
 
-    if ( _self->sock < 0 )
+    if ( this->_sock < 0 )
     {
-        _self->isNewSock = false;
+        this->_isNewSock = false;
     #if defined(SOCKET_EXCEPTION_USE)
         int err = socket_errno;
-        throw SocketError( err, winux::FormatA( "An error occurred while creating the socket(af:%d,type:%d,proto:%d).", __addrFamilies[_self->addrFamily], __sockTypes[_self->sockType], __protocols[_self->protocol] ) );
+        throw SocketError( err, winux::FormatA( "An error occurred while creating the socket(af:%d,type:%d,proto:%d).", __addrFamilies[this->_addrFamily], __sockTypes[this->_sockType], __protocols[this->_protocol] ) );
     #else
         return false;
     #endif
     }
 
     // 延迟设置socket属性
-    for ( Socket_Data::AttrCategory attrFlag : _self->_attrExecSets )
+    for ( AttrCategory attrFlag : this->_attrExecSets )
     {
         switch ( attrFlag )
         {
-        case Socket_Data::attrBlocking:
-            if ( !this->setBlocking(_self->_attrBlocking) )
+        case Socket::attrBlocking:
+            if ( !this->setBlocking(this->_attrBlocking) )
                 return false;
             break;
-        case Socket_Data::attrBroadcast:
-            if ( !this->setBroadcast(_self->_attrBroadcast) )
+        case Socket::attrBroadcast:
+            if ( !this->setBroadcast(this->_attrBroadcast) )
                 return false;
             break;
-        case Socket_Data::attrReUseAddr:
-            if ( !this->setReUseAddr(_self->_attrReUseAddr) )
+        case Socket::attrReUseAddr:
+            if ( !this->setReUseAddr(this->_attrReUseAddr) )
                 return false;
             break;
-        case Socket_Data::attrSendTimeout:
-            if ( !this->setSendTimeout(_self->_attrSendTimeout) )
+        case Socket::attrSendTimeout:
+            if ( !this->setSendTimeout(this->_attrSendTimeout) )
                 return false;
             break;
-        case Socket_Data::attrRecvTimeout:
-            if ( !this->setRecvTimeout(_self->_attrRecvTimeout) )
+        case Socket::attrRecvTimeout:
+            if ( !this->setRecvTimeout(this->_attrRecvTimeout) )
                 return false;
             break;
-        case Socket_Data::attrSendBufSize:
-            if ( !this->setSendBufSize(_self->_attrSendBufSize) )
+        case Socket::attrSendBufSize:
+            if ( !this->setSendBufSize(this->_attrSendBufSize) )
                 return false;
             break;
-        case Socket_Data::attrRecvBufSize:
-            if ( !this->setRecvBufSize(_self->_attrRecvBufSize) )
+        case Socket::attrRecvBufSize:
+            if ( !this->setRecvBufSize(this->_attrRecvBufSize) )
                 return false;
             break;
-        case Socket_Data::attrIpv6Only:
-            if ( !this->setIpv6Only(_self->_attrIpv6Only) )
+        case Socket::attrIpv6Only:
+            if ( !this->setIpv6Only(this->_attrIpv6Only) )
                 return false;
         }
     }
@@ -541,11 +464,11 @@ bool Socket::create()
 
 bool Socket::_tryCreate( AddrFamily af, bool hasAf, SockType sockType, bool hasSockType, Protocol proto, bool hasProto )
 {
-    if ( _self->sock == -1 ) // 如果套接字还没创建，则创建
+    if ( this->_sock == -1 ) // 如果套接字还没创建，则创建
     {
-        if ( hasAf ) _self->addrFamily = af;
-        if ( hasSockType ) _self->sockType = sockType;
-        if ( hasProto ) _self->protocol = proto;
+        if ( hasAf ) this->_addrFamily = af;
+        if ( hasSockType ) this->_sockType = sockType;
+        if ( hasProto ) this->_protocol = proto;
 
         return this->create();
     }
@@ -555,22 +478,22 @@ bool Socket::_tryCreate( AddrFamily af, bool hasAf, SockType sockType, bool hasS
 int Socket::close()
 {
     int rc = 0;
-    if ( _self && _self->isNewSock )
+    if ( this->_isNewSock )
     {
-        rc = closesocket(_self->sock);
-        _self->reset();
+        rc = closesocket(this->_sock);
+        this->_resetManaged();
     }
     return rc;
 }
 
 int Socket::shutdown( int how )
 {
-    return ::shutdown( _self->sock, how );
+    return ::shutdown( this->_sock, how );
 }
 
 int Socket::send( void const * data, size_t size, int msgFlags )
 {
-    int sentBytes = ::send( _self->sock, (char const *)data, (int)size, msgFlags );
+    int sentBytes = ::send( this->_sock, (char const *)data, (int)size, msgFlags );
 
 #if defined(SOCKET_EXCEPTION_USE)
     int err = socket_errno;
@@ -598,10 +521,13 @@ bool Socket::sendUntil( size_t targetSize, void const * data, int msgFlags )
 
 int Socket::sendWaitUntil( size_t targetSize, void const * data, size_t * hadSent, double sec, int * rcWait, FunctionSuccessCallback eachSuccessCallback, void * param, int msgFlags )
 {
+    thread_local io::SelectWrite sel;
     int oneSent = 0;
     while ( *hadSent < targetSize )
     {
-        *rcWait = io::SelectWrite(_self->sock).wait(sec);
+        sel.clear();
+        sel.setWriteFd(this->_sock);
+        *rcWait = sel.wait(sec);
         if ( *rcWait > 0 )
         {
             oneSent = this->send( (winux::byte*)data + *hadSent, targetSize - *hadSent, msgFlags );
@@ -628,13 +554,13 @@ int Socket::sendWaitUntil( size_t targetSize, void const * data, size_t * hadSen
 
 int Socket::recv( void * buf, size_t size, int msgFlags )
 {
-    int recvBytes = ::recv( _self->sock, (char *)buf, (int)size, msgFlags );
+    int recvBytes = ::recv( this->_sock, (char *)buf, (int)size, msgFlags );
 
 #if defined(SOCKET_EXCEPTION_USE)
     int err = socket_errno;
     if ( recvBytes < 0 || recvBytes == 0 && err != 0 )
     {
-        throw SocketError( err, winux::FormatA( "An error occurred while sock(%d) receiving data(buf:%p,size:%u).", _self->sock, buf, size ) );
+        throw SocketError( err, winux::FormatA( "An error occurred while sock(%d) receiving data(buf:%p,size:%u).", this->_sock, buf, size ) );
     }
 #endif
 
@@ -686,12 +612,15 @@ bool Socket::recvUntilTarget( winux::AnsiString const & target, winux::GrowBuffe
 
 int Socket::recvWaitUntilTarget( winux::AnsiString const & target, winux::GrowBuffer * data, winux::GrowBuffer * extraData, size_t * hadRead, size_t * startpos, size_t * pos, double sec, int * rcWait, FunctionSuccessCallback eachSuccessCallback, void * param, int msgFlags )
 {
+    thread_local io::SelectRead sel;
     auto targetNextVal = winux::_Templ_KmpCalcNext<short>( target.c_str(), target.size() );
     int oneRead = 0;
     while ( data->getSize() - *startpos < target.size() || ( *pos = winux::_Templ_KmpMatchEx( data->getBuf<char>(), data->getSize(), target.c_str(), target.size(), *startpos, targetNextVal ) ) == -1 )
     {
         if ( data->getSize() >= target.size() ) *startpos = data->getSize() - target.size() + 1; // 计算下次搜索起始
-        *rcWait = io::SelectRead(_self->sock).wait(sec);
+        sel.clear();
+        sel.setReadFd(this->_sock);
+        *rcWait = sel.wait(sec);
         if ( *rcWait > 0 )
         {
             char buf[4096];
@@ -745,6 +674,7 @@ bool Socket::recvUntilSize( size_t targetSize, winux::GrowBuffer * data, int msg
 
 int Socket::recvWaitUntilSize( size_t targetSize, winux::GrowBuffer * data, size_t * hadRead, double sec, int * rcWait, FunctionSuccessCallback eachSuccessCallback, void * param, int msgFlags )
 {
+    thread_local io::SelectRead sel;
     int oneRead = 0;
     while ( *hadRead < targetSize )
     {
@@ -752,7 +682,9 @@ int Socket::recvWaitUntilSize( size_t targetSize, winux::GrowBuffer * data, size
         size_t remaining = targetSize - *hadRead; // 剩余读取的数据量
         size_t oneWant = remaining > sizeof(tmp) ? sizeof(tmp) : remaining; // 这次想读的数据量
 
-        *rcWait = io::SelectRead(_self->sock).wait(sec);
+        sel.clear();
+        sel.setReadFd(this->_sock);
+        *rcWait = sel.wait(sec);
         if ( *rcWait > 0 )
         {
             oneRead = this->recv( tmp, oneWant, msgFlags );
@@ -787,8 +719,11 @@ winux::Buffer Socket::recvAvail( int msgFlags )
 
 winux::Buffer Socket::recvWaitAvail( double sec, int * rcWait, int msgFlags )
 {
+    thread_local io::SelectRead sel;
+    sel.clear();
+    sel.setReadFd(this->_sock);
     // 等待有可接收的数据
-    *rcWait = io::SelectRead(_self->sock).wait(sec);
+    *rcWait = sel.wait(sec);
     if ( *rcWait > 0 )
     {
         return this->recvAvail(msgFlags);
@@ -805,15 +740,15 @@ winux::Buffer Socket::recvWaitAvail( double sec, int * rcWait, int msgFlags )
 
 int Socket::sendTo( EndPoint const & ep, void const * data, size_t size, int msgFlags )
 {
-    if ( _self->sock == -1 ) // 如果套接字还没创建，则创建
+    if ( this->_sock == -1 ) // 如果套接字还没创建，则创建
     {
-        _self->addrFamily = ep.getAddrFamily();
-        _self->sockType = sockDatagram;
+        this->_addrFamily = ep.getAddrFamily();
+        this->_sockType = sockDatagram;
 
         if ( !this->create() ) return -1;
     }
 
-    int sentBytes = ::sendto( _self->sock, (char const *)data, (int)size, msgFlags, ep.get<sockaddr>(), (int)ep.size() );
+    int sentBytes = ::sendto( this->_sock, (char const *)data, (int)size, msgFlags, ep.get<sockaddr>(), (int)ep.size() );
 
 #if defined(SOCKET_EXCEPTION_USE)
     int err = socket_errno;
@@ -828,16 +763,16 @@ int Socket::sendTo( EndPoint const & ep, void const * data, size_t size, int msg
 
 int Socket::recvFrom( EndPoint * ep, void * buf, size_t size, int msgFlags )
 {
-    if ( _self->sock == -1 ) // 如果套接字还没创建，则创建
+    if ( this->_sock == -1 ) // 如果套接字还没创建，则创建
     {
-        _self->addrFamily = ep->getAddrFamily();
-        _self->sockType = sockDatagram;
+        this->_addrFamily = ep->getAddrFamily();
+        this->_sockType = sockDatagram;
 
         if ( !this->create() ) return -1;
     }
 
     ep->size() = sizeof(sockaddr_in6);
-    int recvBytes = ::recvfrom( _self->sock, (char *)buf, (int)size, msgFlags, ep->get<sockaddr>(), (socklen_t *)&ep->size() );
+    int recvBytes = ::recvfrom( this->_sock, (char *)buf, (int)size, msgFlags, ep->get<sockaddr>(), (socklen_t *)&ep->size() );
 
 #if defined(SOCKET_EXCEPTION_USE)
     int err = socket_errno;
@@ -867,15 +802,15 @@ winux::Buffer Socket::recvFrom( EndPoint * ep, size_t size, int msgFlags )
 
 bool Socket::connect( EndPoint const & ep )
 {
-    if ( _self->sock == -1 ) // 如果套接字还没创建，则创建
+    if ( this->_sock == -1 ) // 如果套接字还没创建，则创建
     {
-        _self->addrFamily = ep.getAddrFamily();
-        _self->sockType = sockStream;
+        this->_addrFamily = ep.getAddrFamily();
+        this->_sockType = sockStream;
 
         if ( !this->create() ) return false;
     }
 
-    int rc = ::connect( _self->sock, (sockaddr*)ep.get(), ep.size() );
+    int rc = ::connect( this->_sock, (sockaddr*)ep.get(), ep.size() );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -890,14 +825,14 @@ bool Socket::connect( EndPoint const & ep )
 
 bool Socket::bind( EndPoint const & ep )
 {
-    if ( _self->sock == -1 ) // 如果套接字还没创建，则创建
+    if ( this->_sock == -1 ) // 如果套接字还没创建，则创建
     {
-        _self->addrFamily = ep.getAddrFamily();
+        this->_addrFamily = ep.getAddrFamily();
 
         if ( !this->create() ) return false;
     }
 
-    int rc = ::bind( _self->sock, (sockaddr*)ep.get(), ep.size() );
+    int rc = ::bind( this->_sock, (sockaddr*)ep.get(), ep.size() );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -912,7 +847,7 @@ bool Socket::bind( EndPoint const & ep )
 
 bool Socket::listen( int backlog )
 {
-    int rc = ::listen( _self->sock, backlog );
+    int rc = ::listen( this->_sock, backlog );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -933,7 +868,7 @@ bool Socket::accept( int * sock, EndPoint * ep )
     if ( ep ) ep->size() = sizeof(addr);
 
     *sock = (int)::accept(
-        _self->sock,
+        this->_sock,
         ( ep ? (sockaddr *)ep->get() : (sockaddr *)&addr ),
         ( ep ? (socklen_t *)&ep->size(): &acceptAddrLen )
     );
@@ -953,22 +888,22 @@ int Socket::getRecvBufSize() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_RCVBUF, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_RCVBUF, (char*)&optval, &len );
     (void)rc;
     return optval;
 }
 
 bool Socket::setRecvBufSize( int optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrRecvBufSize = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrRecvBufSize);
+        this->_attrRecvBufSize = optval;
+        this->_attrExecSets.push_back(Socket::attrRecvBufSize);
         return true;
     }
 
     socklen_t len = sizeof(optval);
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_RCVBUF, (char*)&optval, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_RCVBUF, (char*)&optval, len );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -985,22 +920,22 @@ int Socket::getSendBufSize() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &len );
     (void)rc;
     return optval;
 }
 
 bool Socket::setSendBufSize( int optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrSendBufSize = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrSendBufSize);
+        this->_attrSendBufSize = optval;
+        this->_attrExecSets.push_back(Socket::attrSendBufSize);
         return true;
     }
 
     socklen_t len = sizeof(optval);
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, len );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1018,14 +953,14 @@ winux::uint32 Socket::getRecvTimeout() const
 #if defined(OS_WIN)
     DWORD optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&optval, &len );
     (void)rc;
     return optval;
 #else
     winux::uint32 optval = 0;
     struct timeval tv = { 0 };
     socklen_t len = sizeof(tv);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, &len );
     (void)rc;
     optval += tv.tv_sec * 1000;
     optval += tv.tv_usec / 1000;
@@ -1035,22 +970,22 @@ winux::uint32 Socket::getRecvTimeout() const
 
 bool Socket::setRecvTimeout( winux::uint32 optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrRecvTimeout = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrRecvTimeout);
+        this->_attrRecvTimeout = optval;
+        this->_attrExecSets.push_back(Socket::attrRecvTimeout);
         return true;
     }
 
 #if defined(OS_WIN)
     socklen_t len = sizeof(optval);
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&optval, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&optval, len );
 #else
     struct timeval tv = { 0 };
     socklen_t len = sizeof(tv);
     tv.tv_sec = optval / 1000;
     tv.tv_usec = ( optval % 1000 ) * 1000;
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, len );
 #endif
     if ( rc == SOCKET_ERROR )
     {
@@ -1069,14 +1004,14 @@ winux::uint32 Socket::getSendTimeout() const
 #if defined(OS_WIN)
     DWORD optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&optval, &len );
     (void)rc;
     return optval;
 #else
     winux::uint32 optval = 0;
     struct timeval tv = { 0 };
     socklen_t len = sizeof(tv);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&tv, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&tv, &len );
     (void)rc;
     optval += tv.tv_sec * 1000;
     optval += tv.tv_usec / 1000;
@@ -1086,22 +1021,22 @@ winux::uint32 Socket::getSendTimeout() const
 
 bool Socket::setSendTimeout( winux::uint32 optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrSendTimeout = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrSendTimeout);
+        this->_attrSendTimeout = optval;
+        this->_attrExecSets.push_back(Socket::attrSendTimeout);
         return true;
     }
 
 #if defined(OS_WIN)
     socklen_t len = sizeof(optval);
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&optval, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&optval, len );
 #else
     struct timeval tv = { 0 };
     socklen_t len = sizeof(tv);
     tv.tv_sec = optval / 1000;
     tv.tv_usec = ( optval % 1000 ) * 1000;
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&tv, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&tv, len );
 #endif
     if ( rc == SOCKET_ERROR )
     {
@@ -1119,23 +1054,23 @@ bool Socket::getReUseAddr() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, &len );
     (void)rc;
     return optval != 0;
 }
 
 bool Socket::setReUseAddr( bool optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrReUseAddr = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrReUseAddr);
+        this->_attrReUseAddr = optval;
+        this->_attrExecSets.push_back(Socket::attrReUseAddr);
         return true;
     }
 
     int b = optval;
     socklen_t len = sizeof(b);
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_REUSEADDR, (char*)&b, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&b, len );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1152,23 +1087,23 @@ bool Socket::getBroadcast() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_BROADCAST, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_BROADCAST, (char*)&optval, &len );
     (void)rc;
     return optval != 0;
 }
 
 bool Socket::setBroadcast( bool optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrBroadcast = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrBroadcast);
+        this->_attrBroadcast = optval;
+        this->_attrExecSets.push_back(Socket::attrBroadcast);
         return true;
     }
 
     int b = optval;
     socklen_t len = sizeof(b);
-    int rc = setsockopt( _self->sock, SOL_SOCKET, SO_BROADCAST, (char*)&b, len );
+    int rc = setsockopt( this->_sock, SOL_SOCKET, SO_BROADCAST, (char*)&b, len );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1185,23 +1120,23 @@ bool Socket::getIpv6Only() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&optval, &len );
     (void)rc;
     return optval != 0;
 }
 
 bool Socket::setIpv6Only( bool optval )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrIpv6Only = optval;
-        _self->_attrExecSets.push_back(Socket_Data::attrIpv6Only);
+        this->_attrIpv6Only = optval;
+        this->_attrExecSets.push_back(Socket::attrIpv6Only);
         return true;
     }
 
     int b = optval;
     socklen_t len = sizeof(b);
-    int rc = setsockopt( _self->sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&b, len );
+    int rc = setsockopt( this->_sock, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&b, len );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1218,7 +1153,7 @@ int Socket::getError() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_ERROR, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_ERROR, (char*)&optval, &len );
     (void)rc;
     return optval;
 }
@@ -1227,7 +1162,7 @@ Socket::SockType Socket::getType() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_TYPE, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_TYPE, (char*)&optval, &len );
 
     size_t n = countof(__sockTypes);
     for ( size_t i = 0; i < n; ++i )
@@ -1245,7 +1180,7 @@ bool Socket::isListening() const
 {
     int optval = 0;
     socklen_t len = sizeof(optval);
-    int rc = getsockopt( _self->sock, SOL_SOCKET, SO_ACCEPTCONN, (char*)&optval, &len );
+    int rc = getsockopt( this->_sock, SOL_SOCKET, SO_ACCEPTCONN, (char*)&optval, &len );
     (void)rc;
     return optval != 0;
 }
@@ -1253,23 +1188,23 @@ bool Socket::isListening() const
 int Socket::getAvailable() const
 {
     u_long avail = 0;
-    int rc = ioctlsocket( _self->sock, FIONREAD, &avail );
+    int rc = ioctlsocket( this->_sock, FIONREAD, &avail );
     (void)rc;
     return (int)avail;
 }
 
 bool Socket::setBlocking( bool blocking )
 {
-    if ( _self->sock == -1 )
+    if ( this->_sock == -1 )
     {
-        _self->_attrBlocking = blocking;
-        _self->_attrExecSets.push_back(Socket_Data::attrBlocking);
+        this->_attrBlocking = blocking;
+        this->_attrExecSets.push_back(Socket::attrBlocking);
         return true;
     }
 
 #if defined(OS_WIN)
     u_long mode = (u_long)!blocking;
-    int rc = ioctlsocket( _self->sock, FIONBIO, &mode );
+    int rc = ioctlsocket( this->_sock, FIONBIO, &mode );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1281,7 +1216,7 @@ bool Socket::setBlocking( bool blocking )
     }
 #else
     int opts, rc;
-    opts = fcntl( _self->sock, F_GETFL );
+    opts = fcntl( this->_sock, F_GETFL );
     if ( opts < 0 )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1295,7 +1230,7 @@ bool Socket::setBlocking( bool blocking )
         opts = opts & ~O_NONBLOCK;
     else
         opts = opts | O_NONBLOCK;
-    rc = fcntl( _self->sock, F_SETFL, opts );
+    rc = fcntl( this->_sock, F_SETFL, opts );
     if ( rc < 0 )
     {
     #if defined(SOCKET_EXCEPTION_USE)
@@ -1312,7 +1247,7 @@ bool Socket::setBlocking( bool blocking )
 
 int Socket::get() const
 {
-    return _self->sock;
+    return this->_sock;
 }
 
 int Socket::ErrNo()
@@ -1438,7 +1373,10 @@ std::streamsize SocketStreamIn::waitAvail( double sec )
 {
     std::streamsize avail = _sockBuf->in_avail() + _sockBuf->getSocket()->getAvailable();
     if ( avail > 0 ) return avail;
-    int rc = io::SelectRead( _sockBuf->getSocket() ).wait(sec);
+    thread_local io::SelectRead sel;
+    sel.clear();
+    sel.setReadSock( _sockBuf->getSocket() );
+    int rc = sel.wait(sec);
     if ( rc > 0 )
     {
         return _sockBuf->getSocket()->getAvailable();
@@ -1699,29 +1637,21 @@ inline static winux::String __Ipv6ToString( in6_addr const & addr )
 // class ip::EndPoint ---------------------------------------------------------------------
 EndPoint::EndPoint( Socket::AddrFamily af )
 {
-    _self.create(); //
-
     this->init(af);
 }
 
 EndPoint::EndPoint( winux::Mixed const & ipAndPort )
 {
-    _self.create(); //
-
     this->init(ipAndPort);
 }
 
 EndPoint::EndPoint( winux::String const & ipAddr, winux::ushort port )
 {
-    _self.create(); //
-
     this->init( ipAddr, port );
 }
 
 EndPoint::EndPoint( EndPoint const & other )
 {
-    _self.create(); //
-
     _self = other._self;
 }
 
@@ -1735,9 +1665,8 @@ EndPoint & EndPoint::operator = ( EndPoint const & other )
 }
 
 #ifndef MOVE_SEMANTICS_DISABLED
-EndPoint::EndPoint( EndPoint && other )
+EndPoint::EndPoint( EndPoint && other ) : _self( std::move(other._self) )
 {
-    _self = std::move(other._self);
 }
 
 EndPoint & EndPoint::operator = ( EndPoint && other )
@@ -1752,8 +1681,6 @@ EndPoint & EndPoint::operator = ( EndPoint && other )
 
 EndPoint::~EndPoint()
 {
-
-    _self.destroy(); //
 }
 
 void EndPoint::init( Socket::AddrFamily af )
@@ -2056,8 +1983,11 @@ EIENNET_FUNC_IMPL(int) ConnectAttempt( Socket * sock, EndPoint const & ep, winux
     }
     else
     {
+        thread_local io::SelectWrite sel;
         int err = 0;
-        int r = io::SelectWrite(*sock).wait( timeoutMs / 1000.0 );
+        sel.clear();
+        sel.setWriteSock(*sock);
+        int r = sel.wait( timeoutMs / 1000.0 );
         if ( r > 0 )
         {
             err = sock->getError();
@@ -2087,8 +2017,11 @@ EIENNET_FUNC_IMPL(int) ConnectAttempt( Socket * sock, Resolver const & resolver,
         }
         else
         {
+            thread_local io::SelectWrite sel;
             int err = 0;
-            int r = io::SelectWrite(*sock).wait( perCnnTimeoutMs / 1000.0 );
+            sel.clear();
+            sel.setWriteSock(*sock);
+            int r = sel.wait( perCnnTimeoutMs / 1000.0 );
             if ( r > 0 )
             {
                 err = sock->getError();
@@ -2147,42 +2080,30 @@ struct SelectRead_Data
 // class SelectRead -----------------------------------------------------------------------
 SelectRead::SelectRead()
 {
-    _self.create(); //
-
 }
 
 SelectRead::SelectRead( Socket const & sock )
 {
-    _self.create(); //
-
     this->setReadSock(sock);
 }
 
 SelectRead::SelectRead( Socket const * sock )
 {
-    _self.create(); //
-
     this->setReadSock(sock);
 }
 
 SelectRead::SelectRead( int fd )
 {
-    _self.create(); //
-
     this->setReadFd(fd);
 }
 
 SelectRead::SelectRead( winux::Mixed const & fds )
 {
-    _self.create(); //
-
     this->setReadFds(fds);
 }
 
 SelectRead::~SelectRead()
 {
-
-    _self.destroy(); //
 }
 
 SelectRead & SelectRead::setReadFd( int fd )
@@ -2275,42 +2196,30 @@ struct SelectWrite_Data
 // class SelectWrite ----------------------------------------------------------------------
 SelectWrite::SelectWrite()
 {
-    _self.create(); //
-
 }
 
 SelectWrite::SelectWrite( Socket const & sock )
 {
-    _self.create(); //
-
     this->setWriteSock(sock);
 }
 
 SelectWrite::SelectWrite( Socket const * sock )
 {
-    _self.create(); //
-
     this->setWriteSock(sock);
 }
 
 SelectWrite::SelectWrite( int fd )
 {
-    _self.create(); //
-
     this->setWriteFd(fd);
 }
 
 SelectWrite::SelectWrite( winux::Mixed const & fds )
 {
-    _self.create(); //
-
     this->setWriteFds(fds);
 }
 
 SelectWrite::~SelectWrite()
 {
-
-    _self.destroy(); //
 }
 
 SelectWrite & SelectWrite::setWriteFd( int fd )
@@ -2403,42 +2312,30 @@ struct SelectExcept_Data
 // class SelectExcept ---------------------------------------------------------------------
 SelectExcept::SelectExcept()
 {
-    _self.create(); //
-
 }
 
 SelectExcept::SelectExcept( Socket const & sock )
 {
-    _self.create(); //
-
     this->setExceptSock(sock);
 }
 
 SelectExcept::SelectExcept( Socket const * sock )
 {
-    _self.create(); //
-
     this->setExceptSock(sock);
 }
 
 SelectExcept::SelectExcept( int fd )
 {
-    _self.create(); //
-
     this->setExceptFd(fd);
 }
 
 SelectExcept::SelectExcept( winux::Mixed const & fds )
 {
-    _self.create(); //
-
     this->setExceptFds(fds);
 }
 
 SelectExcept::~SelectExcept()
 {
-
-    _self.destroy(); //
 }
 
 SelectExcept & SelectExcept::setExceptFd( int fd )
@@ -2732,10 +2629,12 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
 
 int Server::run( void * runParam )
 {
+    eiennet::io::Select sel;
     int counter = 0;
     while ( !_stop )
     {
-        eiennet::io::Select sel;
+        sel.clear();
+
         // 监视servSockA
         if ( _servSockAIsListening )
         {
@@ -2761,7 +2660,7 @@ int Server::run( void * runParam )
                 winux::DateTimeL dtl;
                 winux::ColorOutput(
                     winux::fgWhite,
-                    dtl.fromCurrent(),
+                    dtl.current(),
                     ", Total clients:", this->_clients.size(),
                     ", Current tasks:",
                     this->_pool.getTaskCount(),

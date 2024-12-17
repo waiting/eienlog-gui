@@ -2313,7 +2313,7 @@ SZInput & SZInput::operator = ( wchar_t const * pwstr )
 struct Conv_Data
 {
 #if defined(__GNUC__) || defined(HAVE_ICONV)
-    //转换句柄
+    // 转换句柄
     iconv_t _cd;
 #else
     uint _fromCP;
@@ -2541,8 +2541,6 @@ static size_t __StrConvert( uint cp1, char const * str1, size_t size1, uint cp2,
 
 Conv::Conv( AnsiString const & fromCode, AnsiString const & toCode )
 {
-    _self.create(); //
-
 #if defined(__GNUC__) || defined(HAVE_ICONV)
     _self->_cd = iconv_open( toCode.c_str(), fromCode.c_str() );
 
@@ -2567,8 +2565,6 @@ Conv::~Conv()
 #if defined(__GNUC__) || defined(HAVE_ICONV)
     iconv_close(_self->_cd);
 #endif
-
-    _self.destroy(); //
 }
 
 size_t Conv::convert( char const * srcBuf, size_t srcSize, char * * destBuf )

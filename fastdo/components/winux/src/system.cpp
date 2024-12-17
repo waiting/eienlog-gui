@@ -845,8 +845,6 @@ struct MutexLockObj_Data
 // class MutexNative --------------------------------------------------------------------------
 MutexNative::MutexNative()
 {
-    _self.create(); //
-
 #if defined(OS_WIN)
     _self->_mutex = CreateMutex( NULL, FALSE, NULL );
 #else
@@ -861,8 +859,6 @@ MutexNative::~MutexNative()
 #else
     pthread_mutex_destroy(&_self->_mutex);
 #endif
-
-    _self.destroy(); //
 }
 
 bool MutexNative::tryLock()

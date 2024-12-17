@@ -89,8 +89,6 @@ struct ThreadAttr_Data
 // class ThreadAttr -----------------------------------------------------------------------
 ThreadAttr::ThreadAttr( bool isCreate )
 {
-    _self.create(); //
-
     if ( isCreate )
     {
         this->create();
@@ -100,8 +98,6 @@ ThreadAttr::ThreadAttr( bool isCreate )
 ThreadAttr::~ThreadAttr()
 {
     this->destroy();
-
-    _self.destroy(); //
 }
 
 ThreadAttr::ThreadAttr( ThreadAttr && other ) : _self( std::move(other._self) )
@@ -272,20 +268,14 @@ struct ThreadId_Data
 // class ThreadId -------------------------------------------------------------------------
 ThreadId::ThreadId()
 {
-    _self.create(); //
-
 }
 
 ThreadId::~ThreadId()
 {
-
-    _self.destroy(); //
 }
 
 ThreadId::ThreadId( ThreadId const & other )
 {
-    _self.create(); //
-
     _self = other._self;
 }
 
@@ -535,8 +525,6 @@ struct MutexAttr_Data
 // class MutexAttr ------------------------------------------------------------------------
 MutexAttr::MutexAttr( bool isCreate )
 {
-    _self.create(); //
-
     if ( isCreate )
     {
         this->create();
@@ -546,8 +534,6 @@ MutexAttr::MutexAttr( bool isCreate )
 MutexAttr::~MutexAttr()
 {
     this->destroy();
-
-    _self.destroy(); //
 }
 
 MutexAttr::MutexAttr( MutexAttr && other ) : _self( std::move(other._self) )
@@ -656,8 +642,6 @@ struct Mutex_Data
 // class Mutex ----------------------------------------------------------------------------
 Mutex::Mutex( bool isCreate ) : _attr(false)
 {
-    _self.create(); //
-
     if ( isCreate )
     {
         this->create();
@@ -667,8 +651,6 @@ Mutex::Mutex( bool isCreate ) : _attr(false)
 Mutex::~Mutex()
 {
     this->destroy();
-
-    _self.destroy(); //
 }
 
 Mutex::Mutex( Mutex && other ) : _attr( std::move(other._attr) ), _self( std::move(other._self) )
@@ -778,8 +760,6 @@ struct ConditionAttr_Data
 // class Condition ------------------------------------------------------------------------
 ConditionAttr::ConditionAttr( bool isCreate )
 {
-    _self.create(); //
-
     if ( isCreate )
     {
         this->create();
@@ -789,8 +769,6 @@ ConditionAttr::ConditionAttr( bool isCreate )
 ConditionAttr::~ConditionAttr()
 {
     this->destroy();
-
-    _self.destroy(); //
 }
 
 ConditionAttr::ConditionAttr( ConditionAttr && other ) : _self( std::move(other._self) )
@@ -852,8 +830,6 @@ struct Condition_Data
 // class Condition ------------------------------------------------------------------------
 Condition::Condition( bool isCreate ) : _attr(false)
 {
-    _self.create(); //
-
     if ( isCreate )
     {
         this->create();
@@ -863,8 +839,6 @@ Condition::Condition( bool isCreate ) : _attr(false)
 Condition::~Condition()
 {
     this->destroy();
-
-    _self.destroy(); //
 }
 
 Condition::Condition( Condition && other ) : _attr( std::move(other._attr) ), _self( std::move(other._self) )
@@ -972,16 +946,12 @@ struct TlsKey_Data
 // class TlsKey -----------------------------------------------------------------------------
 TlsKey::TlsKey( void (*destructor)( void *pv ) )
 {
-    _self.create(); //
-
     this->create(destructor);
 }
 
 TlsKey::~TlsKey()
 {
     this->destroy();
-
-    _self.destroy(); //
 }
 
 TlsKey::TlsKey( TlsKey && other ) : _self( std::move(other._self) )

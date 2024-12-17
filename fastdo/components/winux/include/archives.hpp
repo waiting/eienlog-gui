@@ -6,7 +6,6 @@
 
 namespace winux
 {
-
 /** \brief 配置文件类 */
 class WINUX_DLL Configure
 {
@@ -122,10 +121,16 @@ public:
     Mixed & expr();
 
 private:
-
     size_t _load( String const & settingsFile, winux::Mixed * collAsVal, winux::Mixed * collAsExpr, StringArray * loadFileChains );
 
-    MembersWrapper<struct ConfigureSettings_Data> _self;
+    String _settingsFile; // 设置文件
+    Mixed _collectionVal; // 存储值
+    Mixed _collectionExpr; // 存储表达式串
+#if defined(OS_WIN)
+    PlainMembers<struct ConfigureSettings_Data, 96> _self;
+#else
+    PlainMembers<struct ConfigureSettings_Data, 136> _self;
+#endif
 };
 
 /** \brief CSV文件写入器 */

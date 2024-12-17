@@ -187,12 +187,15 @@ bool LogReader::readChunk( winux::Packet<LogChunk> * chunk, eiennet::ip::EndPoin
 
 bool LogReader::readRecord( LogRecord * record, time_t waitTimeout, time_t updateTimeout )
 {
+    thread_local eiennet::io::SelectRead sel;
     while ( true )
     {
         time_t curTime = winux::GetUtcTimeMs();
         while ( _sock.getAvailable() < _chunkSize && winux::GetUtcTimeMs() - curTime < (winux::uint64)waitTimeout )
         {
-            eiennet::io::SelectRead(_sock).wait( waitTimeout / 1000.0 );
+            sel.clear();
+            sel.setReadSock(_sock);
+            sel.wait( waitTimeout / 1000.0 );
         }
 
         curTime = winux::GetUtcTimeMs();

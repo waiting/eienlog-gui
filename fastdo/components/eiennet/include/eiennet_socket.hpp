@@ -11,8 +11,9 @@ class EIENNET_DLL SocketLib
 public:
     SocketLib();
     ~SocketLib();
+
 private:
-    winux::MembersWrapper<struct SocketLib_Data> _self;
+    winux::Members<struct SocketLib_Data> _self;
     DISABLE_OBJECT_COPY(SocketLib)
 };
 
@@ -31,7 +32,6 @@ class EndPoint;
 class EIENNET_DLL Socket
 {
 public:
-
     // classes and types ------------------------------------------------------------------
 
     /** \brief 地址族 */
@@ -181,12 +181,12 @@ public:
     /** \brief 构造函数2，指定socket的'地址簇'，'类型'，'协议' */
     Socket( AddrFamily af, SockType sockType, Protocol proto );
 
-#ifndef MOVE_SEMANTICS_DISABLED
-    /** \brief 移动构造函数 */
-    Socket( Socket && other );
-    /** \brief 移动赋值操作 */
-    Socket & operator = ( Socket && other );
-#endif
+// #ifndef MOVE_SEMANTICS_DISABLED
+//     /** \brief 移动构造函数 */
+//     Socket( Socket && other );
+//     /** \brief 移动赋值操作 */
+//     Socket & operator = ( Socket && other );
+// #endif
 
     virtual ~Socket();
 
@@ -498,8 +498,70 @@ public:
     static int ErrNo();
 
 protected:
+    // 延迟创建socket使用参数
+    AddrFamily _addrFamily;  // 地址族
+    SockType _sockType;      // 套接字类型
+    Protocol _protocol;      // 协议
 
-    winux::MembersWrapper<struct Socket_Data> _self;
+    // 延迟设置socket属性
+    winux::uint32 _attrSendTimeout; // 发送超时(ms)
+    winux::uint32 _attrRecvTimeout; // 接收超时(ms)
+    int _attrSendBufSize;   // 发送缓冲区大小
+    int _attrRecvBufSize;   // 接收缓冲区大小
+    bool _attrBlocking;     // 是否阻塞
+    bool _attrBroadcast;    // 是否启用广播
+    bool _attrReUseAddr;    // 是否开启了地址重用
+    bool _attrIpv6Only;     // IPV6套接字只开启IPV6功能
+
+    // 属性种类
+    enum AttrCategory
+    {
+        attrNone,           // 无意义
+        attrBlocking,       // 是否阻塞
+        attrBroadcast,      // 是否启用广播
+        attrReUseAddr,      // 是否开启了地址重用
+        attrSendTimeout,    // 发送超时(ms)
+        attrRecvTimeout,    // 接收超时(ms)
+        attrSendBufSize,    // 发送缓冲区大小
+        attrRecvBufSize,    // 接收缓冲区大小
+        attrIpv6Only,       // IPV6套接字只开启IPV6功能
+    };
+    std::vector<AttrCategory> _attrExecSets; // 执行属性设置的操作集
+
+    // socket资源管理
+    int _sock;           // socket描述符
+    bool _isNewSock;     // 指示是否为新建socket。如果为true，则会在Socket对象析构时自动关闭sock
+
+    // 初始化全部成员
+    void _membersInit()
+    {
+        this->_addrFamily = afUnspec;
+        this->_sockType = sockUnknown;
+        this->_protocol = protoUnspec;
+
+        _attrBlocking = true;
+        _attrBroadcast = false;
+        _attrReUseAddr = false;
+        _attrSendTimeout = 0U;
+        _attrRecvTimeout = 0U;
+        _attrSendBufSize = 0;
+        _attrRecvBufSize = 0;
+    #if defined(OS_WIN)
+        _attrIpv6Only = true;   // IPV6套接字只开启IPV6功能
+    #else
+        _attrIpv6Only = false;  // IPV6套接字只开启IPV6功能
+    #endif
+
+        this->_resetManaged();
+    }
+
+    // 重置socket资源管理相关变量
+    void _resetManaged()
+    {
+        this->_sock = -1;
+        this->_isNewSock = false;
+    }
+
     DISABLE_OBJECT_COPY(Socket)
 };
 
@@ -515,7 +577,7 @@ public:
     /** \brief 以`_Ty*`形式取得内部的`sockaddr_?`结构体指针 */
     template < typename _Ty >
     _Ty * get() const { return reinterpret_cast<_Ty *>( this->get() ); }
-    /** \brief 取得地址的数据大小,一般为内部地址结构体的大小 */
+    /** \brief 取得地址的数据大小，一般为内部地址结构体的大小 */
     virtual winux::uint & size() const = 0;
     /** \brief 把地址转换成一个字符串 */
     virtual winux::String toString() const = 0;
@@ -523,8 +585,6 @@ public:
     virtual EndPoint * clone() const = 0;
     /** \brief 获取地址簇 */
     virtual Socket::AddrFamily getAddrFamily() const = 0;
-
-    DISABLE_OBJECT_COPY(EndPoint)
 };
 
 /** \brief 数据收发场景，存放数据收发过程中的一些变量 */
@@ -685,7 +745,6 @@ public:
 /** \brief IP地址族套接字 */
 namespace ip
 {
-
 /** \brief IP端点对象 */
 class EIENNET_DLL EndPoint : public eiennet::EndPoint
 {
@@ -741,7 +800,7 @@ public:
     winux::ushort getPort() const;
 
 private:
-    winux::MembersWrapper<struct EndPoint_Data> _self;
+    winux::PlainMembers<struct EndPoint_Data, 32> _self;
 };
 
 /** \brief 主机名解析器（可以把域名解析为一个或多个IP端点） */
@@ -875,8 +934,9 @@ public:
      *  若有fd就绪则返回就绪的fd的总数；若超时则返回0；若有错误发生则返回SOCKET_ERROR(-1)。\n
      *  可用`Socket::ErrNo()`查看`select()`调用的错误，可用`Socket::getError()`查看`select()`无错时socket发生的错误。*/
     int wait( double sec = -1 );
+
 protected:
-    winux::MembersWrapper<struct SelectRead_Data> _self;
+    winux::Members<struct SelectRead_Data> _self;
     DISABLE_OBJECT_COPY(SelectRead)
 };
 
@@ -907,7 +967,7 @@ public:
     int wait( double sec = -1 );
 
 protected:
-    winux::MembersWrapper<struct SelectWrite_Data> _self;
+    winux::Members<struct SelectWrite_Data> _self;
     DISABLE_OBJECT_COPY(SelectWrite)
 };
 
@@ -936,8 +996,9 @@ public:
      *  若有fd就绪则返回就绪的fd的总数；若超时则返回0；若有错误发生则返回SOCKET_ERROR(-1)。\n
      *  可用`Socket::ErrNo()`查看`select()`调用的错误，可用`Socket::getError()`查看`select()`无错时socket发生的错误。*/
     int wait( double sec = -1 );
+
 protected:
-    winux::MembersWrapper<struct SelectExcept_Data> _self;
+    winux::Members<struct SelectExcept_Data> _self;
     DISABLE_OBJECT_COPY(SelectExcept)
 };
 
@@ -1188,9 +1249,10 @@ public:
 
     virtual int run()
     {
+        io::Select sel;
         while ( !_stop )
         {
-            io::Select sel;
+            sel.clear();
             sel.setExceptSock(_servSock);
             sel.setReadSock(_servSock);
             int rc = sel.wait(0.01);

@@ -244,7 +244,7 @@ public:
     virtual bool unlock() override;
 
 private:
-    MembersWrapper<struct MutexLockObj_Data> _self;
+    PlainMembers<struct MutexLockObj_Data, 40> _self;
 
     DISABLE_OBJECT_COPY(MutexNative)
 };
