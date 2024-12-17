@@ -12,4 +12,3 @@ struct NewLogListenWindowModal : public WindowModal
 
     LogWindowsManager * _manager;
 };
-

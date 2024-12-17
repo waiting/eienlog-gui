@@ -10,6 +10,7 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
     // 创建线程读取LOGs
     this->th.attachNew( new std::thread( [this] () {
         eienlog::LogReader reader( winux::UnicodeConverter(this->lparams.addr).toUnicode(), this->lparams.port );
+        time_t lastLogRecordTime = winux::GetUtcTime(); // 最后获取日志记录时间
         if ( reader.errNo() ) this->show = false;
         while ( this->show )
         {
@@ -18,9 +19,10 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
             {
                 std::lock_guard<std::mutex> lk(this->mtx);
 
+                lastLogRecordTime = winux::GetUtcTime();
                 LogTextRecord tr;
                 tr.flag.value = record.flag;
-                tr.utcTime = winux::DateTimeL( winux::DateTimeL::MilliSec(record.utcTime) ).toString<char>();
+                tr.utcTime = winux::DateTimeL::FromMilliSec(record.utcTime).toString<char>();
                 tr.contentSize = record.data.getSize();
 
                 // 如果非二进制，才进行编码转换
@@ -114,6 +116,15 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                         }
                     }
                     PlaySound( MAKEINTRESOURCE(idSe), GetModuleHandle(nullptr), SND_RESOURCE | SND_ASYNC );
+                }
+            }
+            else // if ( reader.readRecord( &record, this->lparams.waitTimeout, this->lparams.updateTimeout ) )
+            {
+                time_t tt = winux::GetUtcTime();
+                if ( tt - lastLogRecordTime > 2 ) // 大于2秒没有日志
+                {
+                    PlaySound( nullptr, nullptr, 0 );
+                    lastLogRecordTime = tt;
                 }
             }
         }
