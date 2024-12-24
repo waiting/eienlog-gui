@@ -181,19 +181,16 @@ private:
     DISABLE_OBJECT_COPY(ConsoleOuputMutexScopeGuard)
 };
 
-inline static void OutputV()
+template < typename _ChTy >
+inline static void OutputV( std::basic_ostream<_ChTy> & out )
 {
 }
 
-template < typename _Ty, typename... _ArgType >
-inline static void OutputV( _Ty&& a, _ArgType&& ... arg )
+template < typename _ChTy, typename _Ty, typename... _ArgType >
+inline static void OutputV( std::basic_ostream<_ChTy> & out, _Ty&& a, _ArgType&& ... arg )
 {
-#if defined(_UNICODE) || defined(UNICODE)
-    std::wcout << a;
-#else
-    std::cout << a;
-#endif
-    OutputV( std::forward<_ArgType>(arg)... );
+    out << std::forward<_Ty>(a);
+    OutputV<_ChTy>( out, std::forward<_ArgType>(arg)... );
 }
 
 template < typename... _ArgType >
@@ -201,7 +198,11 @@ inline static void ColorOutputLine( winux::ConsoleAttr const & ca, _ArgType&& ..
 {
     ConsoleOuputMutexScopeGuard guard;
     ca.modify();
-    OutputV( std::forward<_ArgType>(arg)... );
+#if defined(_UNICODE) || defined(UNICODE)
+    OutputV( std::wcout, std::forward<_ArgType>(arg)... );
+#else
+    OutputV( std::cout, std::forward<_ArgType>(arg)... );
+#endif
     ca.resume();
 #if defined(_UNICODE) || defined(UNICODE)
     std::wcout << std::endl;
@@ -215,7 +216,11 @@ inline static void ColorOutput( winux::ConsoleAttr const & ca, _ArgType&& ... ar
 {
     ConsoleOuputMutexScopeGuard guard;
     ca.modify();
-    OutputV( std::forward<_ArgType>(arg)... );
+#if defined(_UNICODE) || defined(UNICODE)
+    OutputV( std::wcout, std::forward<_ArgType>(arg)... );
+#else
+    OutputV( std::cout, std::forward<_ArgType>(arg)... );
+#endif
     ca.resume();
 }
 

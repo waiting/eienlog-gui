@@ -35,6 +35,7 @@
 
 #include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
+#include "eienlog.hpp"
 
 namespace eiennet
 {
@@ -1392,10 +1393,10 @@ std::streamsize SocketStreamIn::waitAvail( double sec )
 }
 
 
-// namespace ip ---------------------------------------------------------------------------
+// namespace ip -------------------------------------------------------------------------------
 namespace ip
 {
-// struct EndPoint_Data -------------------------------------------------------------------
+// struct EndPoint_Data -----------------------------------------------------------------------
 struct EndPoint_Data
 {
     UnionAddr addr;
@@ -1407,7 +1408,7 @@ struct EndPoint_Data
     }
 };
 
-// EndPoint_Data related methods ----------------------------------------------------------
+// EndPoint_Data related methods --------------------------------------------------------------
 inline static void __ParseIpv4( winux::String const & ipStr, winux::String const & portStr, sockaddr_in * addr )
 {
     addr->sin_family = __addrFamilies[Socket::afInet];
@@ -1468,83 +1469,85 @@ inline static void __ParseIpv6( winux::String const & ipStr, winux::String const
         addr->sin6_port = htont( (winux::ushort)winux::StrToUInt64( portStr, 10 ) );
 }
 
-// 优先从ep中解析端口号，如果没有则依照port指定
-inline static void __ParseEndPoint( winux::String const & ep, winux::ushort port, EndPoint_Data * pEpData )
+inline static Socket::AddrFamily __ParseEpStr( winux::String const & str, winux::String * ipStr, winux::String * portStr )
 {
-    winux::String epStr = winux::StrTrim(ep);
+    winux::String epStr = winux::StrTrim(str);
 
     if ( epStr.empty() ) // is IPv4
     {
-        pEpData->len = sizeof(pEpData->addr.addrInet);
-
-        __ParseIpv4( epStr, $T(""), &pEpData->addr.addrInet );
-        pEpData->addr.addrInet.sin_port = htont(port);
+        *ipStr = epStr;
+        *portStr = $T("");
+        return Socket::afInet;
     }
     else if ( epStr.find('.') != winux::String::npos ) // is IPv4
     {
-        pEpData->len = sizeof(pEpData->addr.addrInet);
-
-        winux::String ipv4Str;
-        winux::String portStr;
-
         size_t pos = winux::String::npos;
         if ( ( pos = epStr.find(':') ) != winux::String::npos ) // has port
         {
-            ipv4Str = epStr.substr( 0, pos );
-            portStr = epStr.substr( pos + 1 );
-            __ParseIpv4( ipv4Str, portStr, &pEpData->addr.addrInet );
+            *ipStr = epStr.substr( 0, pos );
+            *portStr = epStr.substr( pos + 1 );
         }
         else
         {
-            ipv4Str = epStr;
-            __ParseIpv4( ipv4Str, portStr, &pEpData->addr.addrInet );
-            pEpData->addr.addrInet.sin_port = htont(port);
+            *ipStr = epStr;
+            *portStr = $T("");
         }
+        return Socket::afInet;
     }
     else if ( epStr[0] == ':' && epStr.find( ':', 1 ) == winux::String::npos ) // is IPv4
     {
-        pEpData->len = sizeof(pEpData->addr.addrInet);
-
-        __ParseIpv4( $T(""), epStr.substr(1), &pEpData->addr.addrInet );
+        *ipStr = $T("");
+        *portStr = epStr.substr(1);
+        return Socket::afInet;
     }
     else // is IPv6
     {
-        pEpData->len = sizeof(pEpData->addr.addrInet6);
-
-        winux::String ipv6Str;
-        winux::String portStr;
-
         if ( epStr[0] == '[' )
         {
             size_t pos = winux::String::npos;
             if ( ( pos = epStr.find(']') ) != winux::String::npos ) // has ']'
             {
-                ipv6Str = epStr.substr( 1, pos - 1 ); // between '[' and ']'
-
+                *ipStr = epStr.substr( 1, pos - 1 ); // between '[' and ']'
                 if ( ( pos = epStr.find( ':', pos + 1 ) ) != winux::String::npos ) // has port
                 {
-                    portStr = epStr.substr( pos + 1 ); // skip ':'
-                    __ParseIpv6( ipv6Str, portStr, &pEpData->addr.addrInet6 );
+                    *portStr = epStr.substr( pos + 1 ); // skip ':'
                 }
                 else
                 {
-                    __ParseIpv6( ipv6Str, portStr, &pEpData->addr.addrInet6 );
-                    pEpData->addr.addrInet6.sin6_port = htont(port);
+                    *portStr = $T("");
                 }
             }
             else
             {
-                ipv6Str = epStr.substr(1); // skip '['
-                __ParseIpv6( ipv6Str, portStr, &pEpData->addr.addrInet6 );
-                pEpData->addr.addrInet6.sin6_port = htont(port);
+                *ipStr = epStr.substr(1); // skip '['
+                *portStr = $T("");
             }
         }
         else
         {
-            ipv6Str = epStr;
-            __ParseIpv6( ipv6Str, portStr, &pEpData->addr.addrInet6 );
-            pEpData->addr.addrInet6.sin6_port = htont(port);
+            *ipStr = epStr;
+            *portStr = $T("");
         }
+        return Socket::afInet6;
+    }
+}
+
+// 优先从ep中解析端口号，如果没有则依照port指定
+inline static void __ParseEndPoint( winux::String const & epStr, winux::ushort port, EndPoint_Data * pEpData )
+{
+    winux::String ipStr, portStr;
+    switch ( __ParseEpStr( epStr, &ipStr, &portStr ) )
+    {
+    case Socket::afInet:
+        pEpData->len = sizeof(pEpData->addr.addrInet);
+        __ParseIpv4( ipStr, portStr, &pEpData->addr.addrInet );
+        if ( portStr.empty() ) pEpData->addr.addrInet.sin_port = htont(port);
+        break;
+    case Socket::afInet6:
+        pEpData->len = sizeof(pEpData->addr.addrInet6);
+        __ParseIpv6( ipStr, portStr, &pEpData->addr.addrInet6 );
+        if ( portStr.empty() ) pEpData->addr.addrInet6.sin6_port = htont(port);
+        break;
     }
 }
 
@@ -1634,7 +1637,7 @@ inline static winux::String __Ipv6ToString( in6_addr const & addr )
     return ip;
 }
 
-// class ip::EndPoint ---------------------------------------------------------------------
+// class ip::EndPoint -------------------------------------------------------------------------
 EndPoint::EndPoint( Socket::AddrFamily af )
 {
     this->init(af);
@@ -1839,7 +1842,7 @@ winux::ushort EndPoint::getPort() const
     return ntoht(0);
 }
 
-// class Resolver -------------------------------------------------------------------------
+// class Resolver -----------------------------------------------------------------------------
 void __ParseResolver( winux::String const & rvrStr, winux::String * hostname, winux::ushort * port )
 {
     winux::String str = winux::StrTrim(rvrStr);
@@ -2436,7 +2439,7 @@ int Select::wait( double sec )
 
 } // namespace io
 
-// class ClientCtx ------------------------------------------------------------------------
+// class ClientCtx ----------------------------------------------------------------------------
 ClientCtx::ClientCtx( Server * server, winux::uint64 clientId, winux::String const & clientEpStr, winux::SharedPointer<eiennet::ip::tcp::Socket> clientSockPtr ) :
     server(server),
     clientId(clientId),
@@ -2473,12 +2476,12 @@ Server::Server() :
     _isAutoReadData(true),
     _serverWait(0.002),
     _verboseInterval(0.01),
-    _verbose(true)
+    _verbose(votConsole)
 {
 
 }
 
-Server::Server( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, bool verbose ) :
+Server::Server( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, VerboseOutputType verbose ) :
     _mtxServer(true),
     _cumulativeClientId(0),
     _stop(false),
@@ -2503,7 +2506,7 @@ Server::~Server()
 // 需要如下设置才可以监听与IPv4相同的端口
 
 // 启动IPv4、IPv6两个Sockets
-void __StartupSockets( ip::EndPoint const & ep, int backlog, bool verbose, ip::EndPoint * pEp2, ip::tcp::Socket * sockA, ip::tcp::Socket * sockB )
+void __StartupSockets( ip::EndPoint const & ep, int backlog, VerboseOutputType verbose, ip::EndPoint * pEp2, ip::tcp::Socket * sockA, ip::tcp::Socket * sockB )
 {
     // 创建另一个EP
     ip::EndPoint & ep2 = *pEp2;
@@ -2543,33 +2546,53 @@ void __StartupSockets( ip::EndPoint const & ep, int backlog, bool verbose, ip::E
     // 同时监听2个端点
     if ( !( sockA->bind(ep) && sockA->listen(backlog) ) )
     {
-        if ( verbose )
+        int err = Socket::ErrNo();
+        switch ( verbose )
         {
-            int err = Socket::ErrNo();
+        case votConsole:
             winux::ColorOutputLine(
                 winux::fgRed,
                 "Socket#1 startup failed",
                 ", ep=", ep.toString(),
                 ", err=", err
             );
+            break;
+        case votLogViewer:
+            eienlog::LogColorOutput(
+                eienlog::lfcRed, nullptr,
+                "Socket#1 startup failed",
+                ", ep=", ep.toString(),
+                ", err=", err
+            );
+            break;
         }
     }
     if ( !( sockB->bind(ep2) && sockB->listen(backlog) ) )
     {
-        if ( verbose )
+        int err2 = Socket::ErrNo();
+        switch ( verbose )
         {
-            int err2 = Socket::ErrNo();
+        case votConsole:
             winux::ColorOutputLine(
                 winux::fgRed,
                 "Socket#2 startup failed",
                 ", ep2=", ep2.toString(),
                 ", err2=", err2
             );
+            break;
+        case votLogViewer:
+            eienlog::LogColorOutput(
+                eienlog::lfcRed, nullptr,
+                "Socket#2 startup failed",
+                ", ep2=", ep2.toString(),
+                ", err2=", err2
+            );
+            break;
         }
     }
 }
 
-bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, bool verbose )
+bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, VerboseOutputType verbose )
 {
     _pool.startup(threadCount);
 
@@ -2589,39 +2612,41 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
     _serverWait = serverWait;
     _verboseInterval = verboseInterval;
     _verbose = verbose;
-
-    if ( this->_verbose )
+    if ( _verbose == votLogViewer )
     {
-        if ( _stop )
-        {
-            winux::ColorOutputLine(
-                winux::fgRed,
-                "Server startup failed",
-                ", ep=", ep.toString(),
-                ", ep2=", ep2.toString(),
-                ", threads=", threadCount,
-                ", backlog=", backlog,
-                ", serverWait=", serverWait,
-                ", verboseInterval=", verboseInterval,
-                ", verbose=", verbose,
-                ""
-            );
-        }
-        else
-        {
-            winux::ColorOutputLine(
-                winux::fgGreen,
-                "Server startup success",
-                ", ep=", ep.toString(),
-                ", ep2=", ep2.toString(),
-                ", threads=", threadCount,
-                ", backlog=", backlog,
-                ", serverWait=", serverWait,
-                ", verboseInterval=", verboseInterval,
-                ", verbose=", verbose,
-                ""
-            );
-        }
+        eienlog::EnableLog();
+    }
+
+    switch ( this->_verbose )
+    {
+    case votConsole:
+        winux::ColorOutputLine(
+            _stop ? winux::fgRed : winux::fgGreen,
+            _stop ? "Server startup failed" : "Server startup success",
+            ", ep=", ep.toString(),
+            ", ep2=", ep2.toString(),
+            ", threads=", threadCount,
+            ", backlog=", backlog,
+            ", serverWait=", serverWait,
+            ", verboseInterval=", verboseInterval,
+            ", verbose=", verbose,
+            ""
+        );
+        break;
+    case votLogViewer:
+        eienlog::LogColorOutput(
+            _stop ? eienlog::lfcRed : eienlog::lfcGreen, nullptr,
+            _stop ? "Server startup failed" : "Server startup success",
+            ", ep=", ep.toString(),
+            ", ep2=", ep2.toString(),
+            ", threads=", threadCount,
+            ", backlog=", backlog,
+            ", serverWait=", serverWait,
+            ", verboseInterval=", verboseInterval,
+            ", verbose=", verbose,
+            ""
+        );
+        break;
     }
 
     return !_stop;
@@ -2657,10 +2682,9 @@ int Server::run( void * runParam )
             counter2 = counter2 ? counter2 : 1;
             if ( this->_verbose && ++counter % counter2 == 0 )
             {
-                winux::DateTimeL dtl;
                 winux::ColorOutput(
                     winux::fgWhite,
-                    dtl.current(),
+                    winux::DateTimeL::Current(),
                     ", Total clients:", this->_clients.size(),
                     ", Current tasks:",
                     this->_pool.getTaskCount(),

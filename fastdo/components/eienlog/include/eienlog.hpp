@@ -278,6 +278,13 @@ EIENLOG_FUNC_DECL(size_t) LogColor( winux::String const & str, winux::Mixed cons
  *  \return 发送的封包数量 */
 EIENLOG_FUNC_DECL(size_t) LogBinColor( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull );
 
+template < typename... _ArgType >
+inline static void LogColorOutput( winux::Mixed const & fgColor, winux::Mixed const & bgColor, _ArgType&& ... arg )
+{
+    std::basic_ostringstream<winux::tchar> sout;
+    winux::OutputV( sout, std::forward<_ArgType>(arg)... );
+    LogColor( sout.str(), fgColor, bgColor );
+}
 
 //#define __LOG__
 #ifdef __LOG__

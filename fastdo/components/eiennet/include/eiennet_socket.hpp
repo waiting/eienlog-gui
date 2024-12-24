@@ -336,11 +336,13 @@ public:
 
     /** \brief 接收数据，直到收到指定大小的数据。data返回接收到的数据。
      *
+     *  如果data==nullptr，则丢弃数据。
      *  如果收到指定大小的数据成功返回true，否则返回false（可能是连接关闭或出错了）。 */
     bool recvUntilSize( size_t targetSize, winux::GrowBuffer * data, int msgFlags = MsgDefault );
 
     /** \brief 接收数据，直到收到指定大小的数据或者超时。
      *
+     *  如果data==nullptr，则丢弃数据。
      *  *hadRead表示已读的数据请初始设为0；data返回接收到的数据；sec表示超时值，sec<0则一直等待。\n
      *  *rcWait接收selec()的返回代码：*rcWait>0:表示有数据到达；*rcWait==0:表示超时；*rcWait<0:表示select()出错。\n
      *  只有当*rcWait>0时才会接收数据，数据可能是0大小，表示连接关闭信号。\n
@@ -1039,8 +1041,15 @@ public:
 
 } // namespace io
 
-///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
 class Server;
+/** \brief 冗余信息输出类型 */
+enum VerboseOutputType
+{
+    votNone, //!< 不输出冗余信息
+    votConsole, //!< 在控制台输出
+    votLogViewer //!< 在日志查看器输出
+};
 
 /** \brief 基础客户场景类 */
 class EIENNET_DLL ClientCtx
@@ -1085,8 +1094,8 @@ public:
      *  \param backlog listen(backlog)
      *  \param serverWait 服务器IO等待时间
      *  \param verboseInterval verbose信息刷新间隔
-     *  \param verbose 是否显示提示信息 */
-    Server( bool autoReadData, ip::EndPoint const & ep, int threadCount = 4, int backlog = 0, double serverWait = 0.002, double verboseInterval = 0.01, bool verbose = true );
+     *  \param verbose 输出提示信息方式 */
+    Server( bool autoReadData, ip::EndPoint const & ep, int threadCount = 4, int backlog = 0, double serverWait = 0.002, double verboseInterval = 0.01, VerboseOutputType verbose = votConsole );
 
     virtual ~Server();
 
@@ -1098,8 +1107,8 @@ public:
      *  \param backlog listen(backlog)
      *  \param serverWait 服务器IO等待时间
      *  \param verboseInterval verbose信息刷新间隔
-     *  \param verbose 是否显示提示信息 */
-    bool startup( bool autoReadData, ip::EndPoint const & ep, int threadCount = 4, int backlog = 0, double serverWait = 0.002, double verboseInterval = 0.01, bool verbose = true );
+     *  \param verbose 输出提示信息方式 */
+    bool startup( bool autoReadData, ip::EndPoint const & ep, int threadCount = 4, int backlog = 0, double serverWait = 0.002, double verboseInterval = 0.01, VerboseOutputType verbose = votConsole );
 
     /** \brief 运行 */
     virtual int run( void * runParam );
@@ -1181,7 +1190,7 @@ protected:
 
     double _serverWait;                 //!< 服务器IO等待时间间隔（秒）
     double _verboseInterval;            //!< Verbose信息刷新间隔（秒）
-    bool _verbose;                      //!< 显示提示信息
+    VerboseOutputType _verbose;         //!< 提示信息输出方式
 
     friend class ClientCtx;
 

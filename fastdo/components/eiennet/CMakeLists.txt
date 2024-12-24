@@ -6,18 +6,24 @@ file(
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "include/*.*"
 )
+file(
+    GLOB eienlog_HEADERS
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    "../eienlog/include/*.*"
+)
 
 # Sources
 aux_source_directory(src eiennet_SRCS)
+aux_source_directory(../eienlog/src eienlog_SRCS)
 
 # Targets
-add_library(eiennet SHARED ${eiennet_HEADERS} ${eiennet_SRCS})
-target_include_directories(eiennet PUBLIC include)
+add_library(eiennet SHARED ${eiennet_HEADERS} ${eiennet_SRCS} ${eienlog_HEADERS} ${eienlog_SRCS})
+target_include_directories(eiennet PUBLIC include PRIVATE ../eienlog/include)
 target_compile_definitions(eiennet PUBLIC EIENNET_DLL_USE PRIVATE EIENNET_DLL_EXPORTS CURL_STATICLIB)
 target_link_libraries(eiennet PRIVATE winux)
 
-add_library(eiennet_a STATIC ${eiennet_HEADERS} ${eiennet_SRCS})
-target_include_directories(eiennet_a PUBLIC include)
+add_library(eiennet_a STATIC ${eiennet_HEADERS} ${eiennet_SRCS} ${eienlog_HEADERS} ${eienlog_SRCS})
+target_include_directories(eiennet_a PUBLIC include PRIVATE ../eienlog/include)
 target_link_libraries(eiennet_a PRIVATE winux_a)
 
 # Public headers

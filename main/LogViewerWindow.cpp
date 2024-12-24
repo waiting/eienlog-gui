@@ -150,6 +150,10 @@ void LogViewerWindow::renderComponents()
                     ImGui::PushID(row * columns);
                     if ( ImGui::BeginPopupContextItem() )
                     {
+                        if ( !isCtrlDown )
+                        {
+                            this->selected.clear();
+                        }
                         this->selected[row] = true;
                         this->clickRowPrev = row;
 
