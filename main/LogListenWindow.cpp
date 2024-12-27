@@ -93,11 +93,11 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                     {
                         winux::ushort fgColor = tr.flag.fgColor;
                         float r = ( fgColor & 31 ) / 31.0f, g = ( ( fgColor >> 5 ) & 31 ) / 31.0f, b = ( ( fgColor >> 10 ) & 31 ) / 31.0f;
-                        if ( r >= g + b ) // 红色系
+                        if ( r > g + b ) // 红色系
                         {
                             idSe = IDR_WAVE_LOG_SE02;
                         }
-                        else if ( g >= r + b ) // 绿色系
+                        else if ( g > r + b ) // 绿色系
                         {
                             idSe = IDR_WAVE_LOG_SE01;
                         }
@@ -106,11 +106,11 @@ LogListenWindow::LogListenWindow( LogWindowsManager * manager, App::ListenParams
                     {
                         winux::ushort bgColor = tr.flag.bgColor;
                         float r = ( bgColor & 15 ) / 15.0f, g = ( ( bgColor >> 4 ) & 15 ) / 15.0f, b = ( ( bgColor >> 8 ) & 15 ) / 15.0f;
-                        if ( r >= g + b ) // 红色系
+                        if ( r > g + b ) // 红色系
                         {
                             idSe = IDR_WAVE_LOG_SE02;
                         }
-                        else if ( g >= r + b ) // 绿色系
+                        else if ( g > r + b ) // 绿色系
                         {
                             idSe = IDR_WAVE_LOG_SE01;
                         }

@@ -1095,7 +1095,16 @@ public:
      *  \param serverWait 服务器IO等待时间
      *  \param verboseInterval verbose信息刷新间隔
      *  \param verbose 输出提示信息方式 */
-    Server( bool autoReadData, ip::EndPoint const & ep, int threadCount = 4, int backlog = 0, double serverWait = 0.002, double verboseInterval = 0.01, VerboseOutputType verbose = votConsole );
+    Server(
+        bool autoReadData,
+        ip::EndPoint const & ep,
+        int threadCount = 4,
+        int backlog = 0,
+        double serverWait = 0.002,
+        double verboseInterval = 0.01,
+        VerboseOutputType verbose = votConsole,
+        winux::String const & logViewer = $T("127.0.0.1:22345")
+    );
 
     virtual ~Server();
 
@@ -1108,7 +1117,16 @@ public:
      *  \param serverWait 服务器IO等待时间
      *  \param verboseInterval verbose信息刷新间隔
      *  \param verbose 输出提示信息方式 */
-    bool startup( bool autoReadData, ip::EndPoint const & ep, int threadCount = 4, int backlog = 0, double serverWait = 0.002, double verboseInterval = 0.01, VerboseOutputType verbose = votConsole );
+    bool startup(
+        bool autoReadData,
+        ip::EndPoint const & ep,
+        int threadCount = 4,
+        int backlog = 0,
+        double serverWait = 0.002,
+        double verboseInterval = 0.01,
+        VerboseOutputType verbose = votConsole,
+        winux::String const & logViewer = $T("127.0.0.1:22345")
+    );
 
     /** \brief 运行 */
     virtual int run( void * runParam );
@@ -1191,6 +1209,7 @@ protected:
     double _serverWait;                 //!< 服务器IO等待时间间隔（秒）
     double _verboseInterval;            //!< Verbose信息刷新间隔（秒）
     VerboseOutputType _verbose;         //!< 提示信息输出方式
+    winux::String _logViewer;           //!< 日志查看器主机
 
     friend class ClientCtx;
 
