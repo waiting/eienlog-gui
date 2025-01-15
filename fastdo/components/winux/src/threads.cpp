@@ -4,7 +4,7 @@
 
 namespace winux
 {
-// struct Schedule ========================================================================
+// struct Schedule ============================================================================
 int Schedule::Yield( void )
 {
     return sched_yield();
@@ -75,18 +75,18 @@ SchedulePolicy Schedule::GetScheduler( pid_t pid )
     return (SchedulePolicy)rc;
 }
 
-// struct ThreadAttr_Data =================================================================
+// struct ThreadAttr_Data =====================================================================
 struct ThreadAttr_Data
 {
-    pthread_attr_t * pThreadAttr; //!< 是否实际创建了线程属性。当等于NULL时，表示仅仅创建了ThreadAttr马甲对象，并未创建线程属性。
-    pthread_attr_t threadAttr; //!< Pthread线程属性不透明对象
+    pthread_attr_t * pThreadAttr;   //!< 是否实际创建了线程属性。当等于NULL时，表示仅仅创建了ThreadAttr马甲对象，并未创建线程属性
+    pthread_attr_t threadAttr;  //!< Pthread线程属性不透明对象
 
     ThreadAttr_Data() : pThreadAttr(NULL)
     {
     }
 };
 
-// class ThreadAttr -----------------------------------------------------------------------
+// class ThreadAttr ---------------------------------------------------------------------------
 ThreadAttr::ThreadAttr( bool isCreate )
 {
     if ( isCreate )
@@ -253,11 +253,11 @@ SchedulePolicy ThreadAttr::getSchedPolicy() const
     return (SchedulePolicy)policy;
 }
 
-// struct ThreadId_Data ===================================================================
+// struct ThreadId_Data =======================================================================
 struct ThreadId_Data
 {
-    pthread_t * pThread; //!< 是否实际创建了线程。当等于NULL时，表示仅仅创建了Thread马甲对象，并未创建线程。
-    pthread_t thread; //!< Pthread线程不透明对象
+    pthread_t * pThread;    //!< 是否实际创建了线程。当等于NULL时，表示仅仅创建了Thread马甲对象，并未创建线程
+    pthread_t thread;   //!< Pthread线程不透明对象
 
     ThreadId_Data() : pThread(NULL)
     {
@@ -265,7 +265,7 @@ struct ThreadId_Data
 
 };
 
-// class ThreadId -------------------------------------------------------------------------
+// class ThreadId -----------------------------------------------------------------------------
 ThreadId::ThreadId()
 {
 }
@@ -309,7 +309,7 @@ bool ThreadId::operator == ( ThreadId const & other ) const
     return  r != 0;
 }
 
-// class Thread static methods ------------------------------------------------------------
+// class Thread static methods ----------------------------------------------------------------
 ThreadId Thread::Self()
 {
     ThreadId tid;
@@ -374,7 +374,7 @@ void * Thread::_ThreadDefaultFunc( void * param )
     return exitVal;
 }
 
-// class Thread ---------------------------------------------------------------------------
+// class Thread -------------------------------------------------------------------------------
 Thread::~Thread()
 {
 
@@ -511,7 +511,7 @@ void Thread::run()
     }
 }
 
-// struct MutexAttr_Data ==================================================================
+// struct MutexAttr_Data ======================================================================
 struct MutexAttr_Data
 {
     pthread_mutexattr_t * pMutexAttr;
@@ -522,7 +522,7 @@ struct MutexAttr_Data
     }
 };
 
-// class MutexAttr ------------------------------------------------------------------------
+// class MutexAttr ----------------------------------------------------------------------------
 MutexAttr::MutexAttr( bool isCreate )
 {
     if ( isCreate )
@@ -628,7 +628,7 @@ MutexAttr::MutexType MutexAttr::getType() const
     return type;
 }
 
-// struct Mutex_Data ======================================================================
+// struct Mutex_Data ==========================================================================
 struct Mutex_Data
 {
     pthread_mutex_t * pMutex;
@@ -639,7 +639,7 @@ struct Mutex_Data
     }
 };
 
-// class Mutex ----------------------------------------------------------------------------
+// class Mutex --------------------------------------------------------------------------------
 Mutex::Mutex( bool isCreate ) : _attr(false)
 {
     if ( isCreate )
@@ -728,7 +728,7 @@ MutexAttr & Mutex::attr()
     return _attr;
 }
 
-// class RecursiveMutex -------------------------------------------------------------------
+// class RecursiveMutex -----------------------------------------------------------------------
 RecursiveMutex::RecursiveMutex( bool isCreate ) : Mutex(false)
 {
     if ( isCreate )
@@ -745,7 +745,7 @@ int RecursiveMutex::create()
     return rc;
 }
 
-// ConditionAttr_Data =====================================================================
+// ConditionAttr_Data =========================================================================
 struct ConditionAttr_Data
 {
     pthread_condattr_t * pCondAttr;
@@ -757,7 +757,7 @@ struct ConditionAttr_Data
 
 };
 
-// class Condition ------------------------------------------------------------------------
+// class Condition ----------------------------------------------------------------------------
 ConditionAttr::ConditionAttr( bool isCreate )
 {
     if ( isCreate )
@@ -816,7 +816,7 @@ ConditionAttr::operator bool() const
     return _self->pCondAttr != NULL;
 }
 
-// struct Condition_Data ==================================================================
+// struct Condition_Data ======================================================================
 struct Condition_Data
 {
     pthread_cond_t * pCond;
@@ -827,7 +827,7 @@ struct Condition_Data
     }
 };
 
-// class Condition ------------------------------------------------------------------------
+// class Condition ----------------------------------------------------------------------------
 Condition::Condition( bool isCreate ) : _attr(false)
 {
     if ( isCreate )
@@ -933,7 +933,7 @@ ConditionAttr & Condition::attr()
     return _attr;
 }
 
-// struct TlsKey_Data =====================================================================
+// struct TlsKey_Data =========================================================================
 struct TlsKey_Data
 {
     pthread_key_t _key;
@@ -943,7 +943,7 @@ struct TlsKey_Data
     }
 };
 
-// class TlsKey -----------------------------------------------------------------------------
+// class TlsKey -------------------------------------------------------------------------------
 TlsKey::TlsKey( void (*destructor)( void *pv ) )
 {
     this->create(destructor);
@@ -996,7 +996,7 @@ void * TlsKey::get() const
     return reinterpret_cast<void*>(_self->_key);
 }
 
-// class TlsVar -----------------------------------------------------------------------------
+// class TlsVar -------------------------------------------------------------------------------
 TlsVar::TlsVar( TlsKey & tlsKey ) : _tlsKey(&tlsKey)
 {
 }
@@ -1033,7 +1033,7 @@ void TlsVar::set( void * v )
     pthread_setspecific( _tlsKey->_self->_key, v );
 }
 
-// class ThreadGroup ----------------------------------------------------------------------
+// class ThreadGroup --------------------------------------------------------------------------
 // 线程组重定义了线程处理函数
 void * ThreadGroup::_ThreadGroupDefaultFunc( void * param )
 {
@@ -1091,4 +1091,5 @@ bool ThreadGroup::wait( double sec )
     }, _mtxGroup, sec );
 }
 
-}
+
+} // namespace winux

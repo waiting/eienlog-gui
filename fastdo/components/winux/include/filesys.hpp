@@ -389,13 +389,9 @@ public:
     /** \brief 构造函数2
      *
      *  \param[in] buf 数据缓冲区对象
-     *  \param[in] isPeek 是否为窥探模式 */
+     *  \param[in] isPeek 是否为窥探模式
+     *  \attention `buf`是窥探模式或`isPeek`为true，`MemoryFile`都会作为窥探模式 */
     MemoryFile( Buffer const & buf, bool isPeek = false );
-    /** \brief 构造函数3
-     *
-     *  \param[in] content 内容
-     *  \param[in] isPeek 是否为窥探模式 */
-    MemoryFile( AnsiString const & content, bool isPeek = false );
 
     /** \brief 字符串内容（不会进行编码转换）以内存文件的方式读写
      *

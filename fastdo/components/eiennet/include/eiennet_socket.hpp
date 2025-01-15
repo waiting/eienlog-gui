@@ -592,12 +592,12 @@ public:
 /** \brief 数据收发场景，存放数据收发过程中的一些变量 */
 struct DataRecvSendCtx
 {
-    enum {
+    enum
+    {
         RetryCount = 10 //!< 默认重试次数
     };
 
     winux::GrowBuffer data;         //!< 数据
-    winux::GrowBuffer extraData;    //!< 额外收到的数据
     size_t startpos;                //!< 起始位置
     size_t pos;                     //!< 找到位置
     size_t hadBytes;                //!< 已接收/发送数据量
@@ -609,11 +609,10 @@ struct DataRecvSendCtx
         this->resetStatus();
     }
 
-    /** \brief 重置数据和额外数据为空 */
+    /** \brief 重置数据为空 */
     void resetData()
     {
         this->data.free();
-        this->extraData.free();
     }
 
     /** \brief 重置状态 */
@@ -639,9 +638,9 @@ struct DataRecvSendCtx
     bool find( winux::AnsiString const & target, std::vector<_IndexType> const & targetNextVal )
     {
         // 如果接收到的数据小于标记长度 或者 搜不到标记 则退出
-        if ( this->data.getSize() - this->startpos < target.size() || ( this->pos = winux::_Templ_KmpMatchEx( this->data.getBuf<char>(), this->data.getSize(), target.c_str(), target.size(), this->startpos, targetNextVal ) ) == winux::npos )
+        if ( this->data.size() - this->startpos < target.size() || ( this->pos = winux::_Templ_KmpMatchEx( this->data.get<char>(), this->data.size(), target.c_str(), target.size(), this->startpos, targetNextVal ) ) == winux::npos )
         {
-            if ( this->data.getSize() >= target.size() ) this->startpos = this->data.getSize() - target.size() + 1; // 计算下次搜索起始
+            if ( this->data.size() >= target.size() ) this->startpos = this->data.size() - target.size() + 1; // 计算下次搜索起始
             return false;
         }
         else
@@ -650,24 +649,28 @@ struct DataRecvSendCtx
         }
     }
 
-    /** \brief 在find()到目标内容后，调整`data`大小。把多余的数据放入`extraData`，然后返回`data`内容，并把`extraData`移到`data`，最后重置状态。
+    /** \brief 在`find()`到目标内容后，从`data`中取出指定大小的数据，并保留其余数据，最后重置状态。
      *
-     *  \param actualDataSize 指定实际数据大小 */
-    winux::Buffer adjust( size_t actualDataSize )
+     *  \param extractDataSize 指定取出数据大小
+     *  \param limitSpaceSize 限制空闲大小，超过这个大小的`data`空闲空间将会收缩 */
+    winux::Buffer extract( size_t extractDataSize, size_t limitSpaceSize = 1024 )
     {
-        this->extraData._setSize(0);
-        // 额外收到的数据
-        this->extraData.append( this->data.getBuf<char>() + actualDataSize, this->data.getSize() - actualDataSize );
-        this->data._setSize(actualDataSize);
+        winux::Buffer extractData( this->data.get(), extractDataSize, false );
+        size_t remainingSize = this->data.size() - extractDataSize;
+        // 移动数据
+        memmove( this->data.getAt(0), this->data.getAt(extractDataSize), remainingSize );
+        // 空闲太大，进行收缩
+        if ( extractDataSize > limitSpaceSize )
+        {
+            this->data.realloc( remainingSize > limitSpaceSize ? remainingSize : limitSpaceSize );
+        }
+        // 设置剩余数据大小
+        this->data._setSize(remainingSize);
 
-        winux::Buffer actualData(this->data);
-
-        // 额外的数据移入主数据中
-        this->data = std::move(extraData);
         // 重置数据收发场景
         this->resetStatus();
 
-        return actualData;
+        return extractData;
     }
 };
 
@@ -917,13 +920,11 @@ class EIENNET_DLL SelectRead
 public:
     SelectRead();
     SelectRead( Socket const & sock );
-    SelectRead( Socket const * sock );
     SelectRead( int fd );
     SelectRead( winux::Mixed const & fds );
     ~SelectRead();
 
     SelectRead & setReadSock( Socket const & sock ) { return setReadFd( sock.get() ); }
-    SelectRead & setReadSock( Socket const * sock ) { return setReadFd( sock->get() ); }
     SelectRead & setReadFd( int fd );
     SelectRead & delReadFd( int fd );
     SelectRead & setReadFds( winux::Mixed const & fds );
@@ -948,13 +949,11 @@ class EIENNET_DLL SelectWrite
 public:
     SelectWrite();
     SelectWrite( Socket const & sock );
-    SelectWrite( Socket const * sock );
     SelectWrite( int fd );
     SelectWrite( winux::Mixed const & fds );
     ~SelectWrite();
 
     SelectWrite & setWriteSock( Socket const & sock ) { return setWriteFd( sock.get() ); }
-    SelectWrite & setWriteSock( Socket const * sock ) { return setWriteFd( sock->get() ); }
     SelectWrite & setWriteFd( int fd );
     SelectWrite & delWriteFd( int fd );
     SelectWrite & setWriteFds( winux::Mixed const & fds );
@@ -979,13 +978,11 @@ class EIENNET_DLL SelectExcept
 public:
     SelectExcept();
     SelectExcept( Socket const & sock );
-    SelectExcept( Socket const * sock );
     SelectExcept( int fd );
     SelectExcept( winux::Mixed const & fds );
     ~SelectExcept();
 
     SelectExcept & setExceptSock( Socket const & sock ) { return setExceptFd( sock.get() ); }
-    SelectExcept & setExceptSock( Socket const * sock ) { return setExceptFd( sock->get() ); }
     SelectExcept & setExceptFd( int fd );
     SelectExcept & delExceptFd( int fd );
     SelectExcept & setExceptFds( winux::Mixed const & fds );
@@ -1043,13 +1040,6 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 class Server;
-/** \brief 冗余信息输出类型 */
-enum VerboseOutputType
-{
-    votNone, //!< 不输出冗余信息
-    votConsole, //!< 在控制台输出
-    votLogViewer //!< 在日志查看器输出
-};
 
 /** \brief 基础客户场景类 */
 class EIENNET_DLL ClientCtx
@@ -1067,8 +1057,8 @@ public:
     winux::String clientEpStr;  //!< 客户终端字符串
     winux::SharedPointer<ip::tcp::Socket> clientSockPtr; //!< 客户套接字
 
+    winux::uint8 processingEvents;  //!< 等待处理或正在处理中的事件，保证同一个客户连接仅投递一个事件到线程池中
     bool canRemove;             //!< 是否标记为可以移除
-    bool processingEvent;       //!< 是否事件处理中，保证同一个客户连接仅投递一个事件到线程池中
 
 private:
     DISABLE_OBJECT_COPY(ClientCtx)
@@ -1102,7 +1092,7 @@ public:
         int backlog = 0,
         double serverWait = 0.002,
         double verboseInterval = 0.01,
-        VerboseOutputType verbose = votConsole,
+        int verbose = 1,
         winux::String const & logViewer = $T("127.0.0.1:22345")
     );
 
@@ -1124,7 +1114,7 @@ public:
         int backlog = 0,
         double serverWait = 0.002,
         double verboseInterval = 0.01,
-        VerboseOutputType verbose = votConsole,
+        int verbose = 1,
         winux::String const & logViewer = $T("127.0.0.1:22345")
     );
 
@@ -1151,11 +1141,11 @@ protected:
     {
         auto routine = MakeSimple( NewRunable( fn, std::forward<_ArgType>(arg)... ) );
         // 标记为处理事件中
-        clientCtxPtr->processingEvent = true;
+        clientCtxPtr->processingEvents++;
         this->_pool.task( [routine, clientCtxPtr] () {
             routine->invoke();
             // 事件处理完毕，可再次select()事件
-            clientCtxPtr->processingEvent = false;
+            clientCtxPtr->processingEvents--;
         } ).post();
     }
 
@@ -1208,7 +1198,7 @@ protected:
 
     double _serverWait;                 //!< 服务器IO等待时间间隔（秒）
     double _verboseInterval;            //!< Verbose信息刷新间隔（秒）
-    VerboseOutputType _verbose;         //!< 提示信息输出方式
+    int _verbose;                       //!< 提示信息输出方式
     winux::String _logViewer;           //!< 日志查看器主机
 
     friend class ClientCtx;
@@ -1216,154 +1206,8 @@ protected:
     DISABLE_OBJECT_COPY(Server)
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////
-
-/** \brief 旧版本实现 */
-namespace old_v1
-{
-/** \brief 客户场景类基础 */
-class ClientCtx
-{
-public:
-    ClientCtx( winux::uint64 clientId, winux::String clientEpStr, winux::SharedPointer<ip::tcp::Socket> clientSockPtr ) :
-        clientId(clientId),
-        clientEpStr(clientEpStr),
-        clientSockPtr(clientSockPtr)
-    {
-    }
-
-    virtual ~ClientCtx()
-    {
-    }
-
-    winux::uint64 clientId;
-    winux::String clientEpStr;
-    winux::SharedPointer<ip::tcp::Socket> clientSockPtr; // 客户连接
-
-private:
-    DISABLE_OBJECT_COPY(ClientCtx)
-};
-
-/** \brief 服务器类基础
- *
- *  直接使用时，需要给定事件处理；继承时需要override相应的事件虚函数。\n
- *  事件：
- *  onStartup() - 业务逻辑启动 */
-template < class _ClientCtxClass >
-class Server
-{
-public:
-    using ClientCtxSharedPointer = winux::SharedPointer<_ClientCtxClass>;
-    using StartupHandlerFunction = std::function< void( ClientCtxSharedPointer clientCtxPtr ) >;
-
-    /** \brief 构造函数1
-     *
-     *  \param ep 服务监听的EndPoint
-     *  \param threadCount 线程池线程数量
-     *  \param backlog listen(backlog) */
-    Server( ip::EndPoint const & ep, int threadCount = 4, int backlog = 0 ) :
-        _cumulativeClientId(0),
-        _stop(false),
-        _pool(threadCount),
-        _mtxServer(true)
-    {
-        _servSock.setReUseAddr(true);
-        _stop = !( _servSock.eiennet::Socket::bind(ep) && _servSock.listen(backlog) );
-    }
-
-    virtual ~Server()
-    {
-    }
-
-    virtual int run()
-    {
-        io::Select sel;
-        while ( !_stop )
-        {
-            sel.clear();
-            sel.setExceptSock(_servSock);
-            sel.setReadSock(_servSock);
-            int rc = sel.wait(0.01);
-            if ( rc > 0 )
-            {
-                if ( sel.hasReadSock(_servSock) )
-                {
-                    ip::EndPoint clientEp;
-                    auto clientSockPtr = _servSock.accept(&clientEp);
-                    if ( clientSockPtr )
-                    {
-                        auto & clientCtxPtr = this->_addClient( clientEp, clientSockPtr );
-
-                        // 进入该客户的业务逻辑
-                        this->onStartup(clientCtxPtr);
-                    }
-                }
-                else if ( sel.hasExceptSock(_servSock) )
-                {
-                    _stop = true;
-                }
-            }
-        }
-
-        _pool.whenEmptyStopAndWait();
-        return 0;
-    }
-
-    /** \brief 是否停止服务运行 */
-    void stop( bool b = true ) { static_cast<volatile bool &>(_stop) = b; }
-
-    size_t getClientsCount() const
-    {
-        winux::ScopeGuard guard( const_cast<winux::Mutex &>(_mtxServer) );
-        return _clients.size();
-    }
-
-    void onStartupHandler( StartupHandlerFunction handler )
-    {
-        _startupHandler = handler;
-    }
-
-    void removeClient( winux::uint64 clientId )
-    {
-        winux::ScopeGuard guard(_mtxServer);
-        _clients.erase(clientId);
-    }
-
-protected:
-    ClientCtxSharedPointer & _addClient( ip::EndPoint const & clientEp, winux::SharedPointer<ip::tcp::Socket> clientSockPtr )
-    {
-        ClientCtxSharedPointer * client;
-        {
-            winux::ScopeGuard guard(_mtxServer);
-            ++_cumulativeClientId;
-            client = &_clients[_cumulativeClientId];
-        }
-        client->attachNew( new _ClientCtxClass( _cumulativeClientId, clientEp.toString(), clientSockPtr ) );
-        return *client;
-    }
-
-    winux::uint64 _cumulativeClientId; // 客户唯一标识
-    bool _stop; // 是否停止
-    winux::ThreadPool _pool; // 线程池
-    winux::Mutex _mtxServer; // 互斥量保护服务器共享数据
-    ip::tcp::Socket _servSock; // 服务器监听套接字
-    std::map< winux::uint64, ClientCtxSharedPointer > _clients; // 客户表
-
-    // 一个客户的业务逻辑开启
-    virtual void onStartup( ClientCtxSharedPointer clientCtxPtr )
-    {
-        if ( this->_startupHandler ) this->_startupHandler(clientCtxPtr);
-    }
-    StartupHandlerFunction _startupHandler; // onStartup()事件处理
-
-private:
-    DISABLE_OBJECT_COPY(Server)
-};
-
-} // namespace old_v1
 
 } // namespace eiennet
-
 
 
 #endif // __SOCKET_HPP__

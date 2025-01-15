@@ -69,7 +69,7 @@ void WindowInterface::unregisterWndClass()
 
 bool WindowInterface::createWindow( LPCWSTR wndTitleName )
 {
-    this->hWnd = ::CreateWindowExW( 0, wc.lpszClassName, wndTitleName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, wc.hInstance, nullptr );
+    this->hWnd = ::CreateWindowExW( WS_EX_TRANSPARENT, wc.lpszClassName, wndTitleName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, wc.hInstance, nullptr );
     bool ok = this->hWnd != nullptr;
     return ok;
 }

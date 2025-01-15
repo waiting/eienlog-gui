@@ -109,8 +109,34 @@ union LogFlag
     };
     winux::uint32 value;
 
-    LogFlag( winux::uint32 value = 0 ) : value(value)
+    LogFlag() : value(0)
     {
+    }
+
+    explicit LogFlag( winux::uint8 logEncoding ) : value(0)
+    {
+        this->logEncoding = logEncoding;
+        this->binary = false;
+    }
+
+    LogFlag( bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding, bool isBinary )
+    {
+        this->fgColorUse = useFgColor;
+        this->fgColor = fgColor;
+        this->bgColorUse = useBgColor;
+        this->bgColor = bgColor;
+        this->logEncoding = logEncoding;
+        this->binary = isBinary;
+    }
+
+    LogFlag( winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding = leUtf8, bool isBinary = false )
+    {
+        this->fgColorUse = !fgColor.isNull();
+        this->fgColor = fgColor;
+        this->bgColorUse = !bgColor.isNull();
+        this->bgColor = bgColor;
+        this->logEncoding = logEncoding;
+        this->binary = isBinary;
     }
 };
 
@@ -151,47 +177,57 @@ public:
      *  \param chunkSize 分块封包大小 */
     LogWriter( winux::String const & addr, winux::ushort port, winux::uint16 chunkSize = LOG_CHUNK_SIZE );
 
-    /** \brief 发送日志 */
-    size_t logEx( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding, bool isBinary );
+    /** \brief 发送日志（不转换编码）
+     *
+     *  \param data 数据
+     *  \return size_t 发送的封包数量 */
+    size_t logEx( winux::Buffer const & data, LogFlag flag );
 
-    /** \brief 发送字符串日志 */
-    size_t log( winux::String const & str, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding );
+    /** \brief 发送日志（不转换编码）
+     *
+     *  \param data 数据
+     *  \param fgColor 前景色，若`winux::mxNull`则忽略
+     *  \param bgColor 背景色，若`winux::mxNull`则忽略
+     *  \param logEncoding 指定日志编码
+     *  \param isBinary 是否二进制
+     *  \return size_t 发送的封包数量 */
+    size_t logEx( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8, bool isBinary = false );
 
-    /** \brief 发送二进制日志 */
-    size_t logBin( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor )
-    {
-        return this->logEx( data, useFgColor, fgColor, useBgColor, bgColor, 0, true );
-    }
-
-    /** \brief 发送字符串日志
+    /** \brief 发送字符串日志（会转换编码）
      *
      *  \param str 字符串内容
+     *  \return size_t 发送的封包数量 */
+    size_t log( winux::String const & str, LogFlag flag );
+
+    /** \brief 发送字符串日志（会转换编码）
+     *
+     *  \param str 字符串内容
+     *  \param fgColor 前景色，若`winux::mxNull`则忽略
+     *  \param bgColor 背景色，若`winux::mxNull`则忽略
      *  \param logEncoding 指定转换成目标编码发送
      *  \return size_t 发送的封包数量 */
-    size_t log( winux::String const & str, winux::uint8 logEncoding = leUtf8 )
-    {
-        return this->log( str, false, 0, false, 0, logEncoding );
-    }
+    size_t log( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8 );
 
     /** \brief 发送二进制日志
      *
      *  \param data 二进制数据
      *  \return size_t 发送的封包数量 */
-    size_t logBin( winux::Buffer const & data )
+    size_t logBin( winux::Buffer const & data, LogFlag flag )
     {
-        return this->logBin( data, false, 0, false, 0 );
+        flag.logEncoding = 0;
+        flag.binary = true;
+        return this->logEx( data, flag );
     }
 
-    /** \brief 发送字符串日志，可指定颜色 */
-    size_t logColor( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8 )
+    /** \brief 发送二进制日志
+     *
+     *  \param data 二进制数据
+     *  \param fgColor 前景色，若`winux::mxNull`则忽略
+     *  \param bgColor 背景色，若`winux::mxNull`则忽略
+     *  \return size_t 发送的封包数量 */
+    size_t logBin( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull )
     {
-        return this->log( str, !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor, logEncoding );
-    }
-
-    /** \brief 发送二进制日志，可指定颜色 */
-    size_t logBinColor( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull )
-    {
-        return this->logBin( data, !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor );
+        return this->logEx( data, LogFlag( !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor, 0, true ) );
     }
 
     int errNo() const { return _errno; }
@@ -258,32 +294,71 @@ EIENLOG_FUNC_DECL(void) WriteLog( winux::String const & str );
 /** \brief 写二进制日志 */
 EIENLOG_FUNC_DECL(void) WriteLogBin( void const * data, size_t size );
 
-/** \brief 写字符串日志
+/** \brief 发送日志（不转换编码）
  *
- *  \return 发送的封包数量 */
-EIENLOG_FUNC_DECL(size_t) Log( winux::String const & str, winux::uint8 logEncoding = leUtf8 );
+ *  \param data 数据
+ *  \return size_t 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogEx( winux::Buffer const & data, LogFlag flag );
 
-/** \brief 写二进制日志
+/** \brief 发送日志（不转换编码）
  *
- *  \return 发送的封包数量 */
-EIENLOG_FUNC_DECL(size_t) LogBin( winux::Buffer const & data );
+ *  \param data 数据
+ *  \param fgColor 前景色，若`winux::mxNull`则忽略
+ *  \param bgColor 背景色，若`winux::mxNull`则忽略
+ *  \param logEncoding 指定日志编码
+ *  \param isBinary 是否二进制
+ *  \return size_t 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogEx( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8, bool isBinary = false );
 
-/** \brief 写字符串日志。可设置颜色参数
+/** \brief 发送字符串日志（会转换编码）
  *
+ *  \param str 字符串内容
  *  \return 发送的封包数量 */
-EIENLOG_FUNC_DECL(size_t) LogColor( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8 );
+EIENLOG_FUNC_DECL(size_t) Log( winux::String const & str, LogFlag flag );
 
-/** \brief 写二进制日志。可设置颜色参数
+/** \brief 发送字符串日志（会转换编码）
  *
+ *  \param str 字符串内容
+ *  \param fgColor 前景色，若`winux::mxNull`则忽略
+ *  \param bgColor 背景色，若`winux::mxNull`则忽略
+ *  \param logEncoding 指定转换成目标编码发送
  *  \return 发送的封包数量 */
-EIENLOG_FUNC_DECL(size_t) LogBinColor( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull );
+EIENLOG_FUNC_DECL(size_t) Log( winux::String const & str, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull, winux::uint8 logEncoding = leUtf8 );
 
+/** \brief 发送二进制日志
+ *
+ *  \param data 二进制数据
+ *  \return 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogBin( winux::Buffer const & data, LogFlag flag );
+
+/** \brief 发送二进制日志
+ *
+ *  \param data 二进制数据
+ *  \param fgColor 前景色，若`winux::mxNull`则忽略
+ *  \param bgColor 背景色，若`winux::mxNull`则忽略
+ *  \return 发送的封包数量 */
+EIENLOG_FUNC_DECL(size_t) LogBin( winux::Buffer const & data, winux::Mixed const & fgColor = winux::mxNull, winux::Mixed const & bgColor = winux::mxNull );
+
+/** \brief 发送日志（不转换编码）
+ *
+ *  \return size_t 发送的封包数量 */
 template < typename... _ArgType >
-inline static void LogColorOutput( winux::Mixed const & fgColor, winux::Mixed const & bgColor, _ArgType&& ... arg )
+inline static size_t LogExOutput( LogFlag flag, _ArgType&& ... arg )
 {
     std::basic_ostringstream<winux::tchar> sout;
     winux::OutputV( sout, std::forward<_ArgType>(arg)... );
-    LogColor( sout.str(), fgColor, bgColor );
+    return LogEx( sout.str(), flag );
+}
+
+/** \brief 发送字符串日志（会转换编码）
+ *
+ *  \return 发送的封包数量 */
+template < typename... _ArgType >
+inline static size_t LogOutput( LogFlag flag, _ArgType&& ... arg )
+{
+    std::basic_ostringstream<winux::tchar> sout;
+    winux::OutputV( sout, std::forward<_ArgType>(arg)... );
+    return Log( sout.str(), flag );
 }
 
 //#define __LOG__
@@ -294,6 +369,74 @@ inline static void LogColorOutput( winux::Mixed const & fgColor, winux::Mixed co
 #define LOG(s)
 #define LOG_BIN(d,s)
 #endif
+
+/** \brief 冗余信息输出类型 */
+enum VerboseOutputType
+{
+    votNone, //!< 不输出冗余信息
+    votConsole, //!< 在控制台输出
+    votLogViewer //!< 在日志查看器输出
+};
+
+/** \brief 冗余信息顔色屬性 */
+enum VerboseColorAttrFlags
+{
+    vcaFgBlack = 0x00,
+    vcaFgNavy = 0x01,
+    vcaFgAtrovirens = 0x02,
+    vcaFgTeal = 0x03,
+    vcaFgMaroon = 0x04,
+    vcaFgPurple = 0x05,
+    vcaFgOlive = 0x06,
+    vcaFgSilver = 0x07,
+    vcaFgGray = 0x08,
+    vcaFgBlue = 0x09,
+    vcaFgGreen = 0x0a,
+    vcaFgAqua = 0x0b,
+    vcaFgRed = 0x0c,
+    vcaFgFuchsia = 0x0d,
+    vcaFgYellow = 0x0e,
+    vcaFgWhite = 0x0f,
+
+    vcaBgBlack = 0x00,
+    vcaBgNavy = 0x10,
+    vcaBgAtrovirens = 0x20,
+    vcaBgTeal = 0x30,
+    vcaBgMaroon = 0x40,
+    vcaBgPurple = 0x50,
+    vcaBgOlive = 0x60,
+    vcaBgSilver = 0x70,
+    vcaBgGray = 0x80,
+    vcaBgBlue = 0x90,
+    vcaBgGreen = 0xa0,
+    vcaBgAqua = 0xb0,
+    vcaBgRed = 0xc0,
+    vcaBgFuchsia = 0xd0,
+    vcaBgYellow = 0xe0,
+    vcaBgWhite = 0xf0,
+
+    vcaFgIgnore = 0x0800,
+    vcaBgIgnore = 0x8000,
+    vcaIgnore = 0x8800
+};
+
+EIENLOG_FUNC_DECL(winux::ushort) GetCcaFlagsFromVcaFlags( winux::ushort vcaFlags );
+EIENLOG_FUNC_DECL(LogFlag) GetLogFlagFromVcaFlags( winux::ushort vcaFlags );
+
+/** \brief 冗余信息输出 */
+template < typename... _ArgType >
+inline static void VerboseOutput( int verbose, winux::ushort vcaFlags, _ArgType&& ... arg )
+{
+    switch ( verbose )
+    {
+    case votConsole:
+        winux::ColorOutputLine( GetCcaFlagsFromVcaFlags(vcaFlags), std::forward<_ArgType>(arg)... );
+        break;
+    case votLogViewer:
+        eienlog::LogOutput( GetLogFlagFromVcaFlags(vcaFlags), std::forward<_ArgType>(arg)... );
+        break;
+    }
+}
 
 
 } // namespace eienlog

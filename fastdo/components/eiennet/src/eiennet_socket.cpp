@@ -1376,7 +1376,7 @@ std::streamsize SocketStreamIn::waitAvail( double sec )
     if ( avail > 0 ) return avail;
     thread_local io::SelectRead sel;
     sel.clear();
-    sel.setReadSock( _sockBuf->getSocket() );
+    sel.setReadSock( *_sockBuf->getSocket() );
     int rc = sel.wait(sec);
     if ( rc > 0 )
     {
@@ -2090,11 +2090,6 @@ SelectRead::SelectRead( Socket const & sock )
     this->setReadSock(sock);
 }
 
-SelectRead::SelectRead( Socket const * sock )
-{
-    this->setReadSock(sock);
-}
-
 SelectRead::SelectRead( int fd )
 {
     this->setReadFd(fd);
@@ -2206,11 +2201,6 @@ SelectWrite::SelectWrite( Socket const & sock )
     this->setWriteSock(sock);
 }
 
-SelectWrite::SelectWrite( Socket const * sock )
-{
-    this->setWriteSock(sock);
-}
-
 SelectWrite::SelectWrite( int fd )
 {
     this->setWriteFd(fd);
@@ -2318,11 +2308,6 @@ SelectExcept::SelectExcept()
 }
 
 SelectExcept::SelectExcept( Socket const & sock )
-{
-    this->setExceptSock(sock);
-}
-
-SelectExcept::SelectExcept( Socket const * sock )
 {
     this->setExceptSock(sock);
 }
@@ -2445,26 +2430,15 @@ ClientCtx::ClientCtx( Server * server, winux::uint64 clientId, winux::String con
     clientId(clientId),
     clientEpStr(clientEpStr),
     clientSockPtr(clientSockPtr),
-    canRemove(false),
-    processingEvent(false)
+    processingEvents(0),
+    canRemove(false)
 {
 
 }
 
 ClientCtx::~ClientCtx()
 {
-    if ( this->server )
-    {
-        switch ( this->server->_verbose )
-        {
-        case votConsole:
-            winux::ColorOutputLine( winux::fgBlue, this->getStamp(), " destruct" );
-            break;
-        case votLogViewer:
-            eienlog::LogColorOutput( eienlog::lfcBlue, nullptr, this->getStamp(), " destruct" );
-            break;
-        }
-    }
+    if ( this->server && this->server->_verbose ) eienlog::VerboseOutput( this->server->_verbose, eienlog::vcaFgBlue | eienlog::vcaBgIgnore, this->getStamp(), " destruct" );
 }
 
 winux::String ClientCtx::getStamp() const
@@ -2484,12 +2458,12 @@ Server::Server() :
     _isAutoReadData(true),
     _serverWait(0.002),
     _verboseInterval(0.01),
-    _verbose(votConsole)
+    _verbose(eienlog::votConsole)
 {
 
 }
 
-Server::Server( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, VerboseOutputType verbose, winux::String const & logViewer ) :
+Server::Server( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, int verbose, winux::String const & logViewer ) :
     _mtxServer(true),
     _cumulativeClientId(0),
     _stop(false),
@@ -2515,7 +2489,7 @@ Server::~Server()
 // 需要如下设置才可以监听与IPv4相同的端口
 
 // 启动IPv4、IPv6两个Sockets
-void __StartupSockets( ip::EndPoint const & ep, int backlog, VerboseOutputType verbose, ip::EndPoint * pEp2, ip::tcp::Socket * sockA, ip::tcp::Socket * sockB )
+void __StartupSockets( ip::EndPoint const & ep, int backlog, eienlog::VerboseOutputType verbose, ip::EndPoint * pEp2, ip::tcp::Socket * sockA, ip::tcp::Socket * sockB )
 {
     // 创建另一个EP
     ip::EndPoint & ep2 = *pEp2;
@@ -2553,55 +2527,31 @@ void __StartupSockets( ip::EndPoint const & ep, int backlog, VerboseOutputType v
     sockB->setReUseAddr(true);
 
     // 同时监听2个端点
-    if ( !( sockA->bind(ep) && sockA->listen(backlog) ) )
+    if ( !( sockA->bind(ep) && sockA->listen(backlog) ) && verbose )
     {
         int err = Socket::ErrNo();
-        switch ( verbose )
-        {
-        case votConsole:
-            winux::ColorOutputLine(
-                winux::fgRed,
-                "Socket#1 startup failed",
-                ", ep=", ep.toString(),
-                ", err=", err
-            );
-            break;
-        case votLogViewer:
-            eienlog::LogColorOutput(
-                eienlog::lfcRed, nullptr,
-                "Socket#1 startup failed",
-                ", ep=", ep.toString(),
-                ", err=", err
-            );
-            break;
-        }
+        eienlog::VerboseOutput(
+            verbose,
+            eienlog::vcaFgRed | eienlog::vcaBgIgnore,
+            "Socket#1 startup failed",
+            ", ep=", ep.toString(),
+            ", err=", err
+        );
     }
-    if ( !( sockB->bind(ep2) && sockB->listen(backlog) ) )
+    if ( !( sockB->bind(ep2) && sockB->listen(backlog) ) && verbose )
     {
         int err2 = Socket::ErrNo();
-        switch ( verbose )
-        {
-        case votConsole:
-            winux::ColorOutputLine(
-                winux::fgRed,
-                "Socket#2 startup failed",
-                ", ep2=", ep2.toString(),
-                ", err2=", err2
-            );
-            break;
-        case votLogViewer:
-            eienlog::LogColorOutput(
-                eienlog::lfcRed, nullptr,
-                "Socket#2 startup failed",
-                ", ep2=", ep2.toString(),
-                ", err2=", err2
-            );
-            break;
-        }
+        eienlog::VerboseOutput(
+            verbose,
+            eienlog::vcaFgRed | eienlog::vcaBgIgnore,
+            "Socket#2 startup failed",
+            ", ep2=", ep2.toString(),
+            ", err2=", err2
+        );
     }
 }
 
-bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, VerboseOutputType verbose, winux::String const & logViewer )
+bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, int verbose, winux::String const & logViewer )
 {
     _pool.startup(threadCount);
 
@@ -2609,7 +2559,7 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
 
     // 启动套接字监听
     ip::EndPoint ep2;
-    __StartupSockets( ep, backlog, verbose, &ep2, &_servSockA, &_servSockB );
+    __StartupSockets( ep, backlog, (eienlog::VerboseOutputType)verbose, &ep2, &_servSockA, &_servSockB );
 
     // 两个都不处于监听中
     _servSockAIsListening = _servSockA.isListening();
@@ -2623,43 +2573,25 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
     _verbose = verbose;
     _logViewer = logViewer;
 
-    if ( _verbose == votLogViewer )
+    if ( !_logViewer.empty() )
     {
         ip::EndPoint ep(_logViewer);
         eienlog::EnableLog( ep.getIp(), ep.getPort() );
     }
 
-    switch ( this->_verbose )
-    {
-    case votConsole:
-        winux::ColorOutputLine(
-            _stop ? winux::fgRed : winux::fgGreen,
-            _stop ? "Server startup failed" : "Server startup success",
-            ", ep=", ep.toString(),
-            ", ep2=", ep2.toString(),
-            ", threads=", threadCount,
-            ", backlog=", backlog,
-            ", serverWait=", serverWait,
-            ", verboseInterval=", verboseInterval,
-            ", verbose=", verbose,
-            ", logViewer=", logViewer
-        );
-        break;
-    case votLogViewer:
-        eienlog::LogColorOutput(
-            _stop ? eienlog::lfcRed : eienlog::lfcGreen, nullptr,
-            _stop ? "Server startup failed" : "Server startup success",
-            ", ep=", ep.toString(),
-            ", ep2=", ep2.toString(),
-            ", threads=", threadCount,
-            ", backlog=", backlog,
-            ", serverWait=", serverWait,
-            ", verboseInterval=", verboseInterval,
-            ", verbose=", verbose,
-            ", logViewer=", logViewer
-        );
-        break;
-    }
+    if ( this->_verbose ) eienlog::VerboseOutput(
+        this->_verbose,
+        _stop ? ( eienlog::vcaFgRed | eienlog::vcaBgIgnore ) : ( eienlog::vcaFgGreen | eienlog::vcaBgIgnore ),
+        _stop ? "Server startup failed" : "Server startup success",
+        ", ep=", ep.toString(),
+        ", ep2=", ep2.toString(),
+        ", threads=", threadCount,
+        ", backlog=", backlog,
+        ", serverWait=", serverWait,
+        ", verboseInterval=", verboseInterval,
+        ", verbose=", verbose,
+        ", logViewer=", logViewer
+    );
 
     return !_stop;
 }
@@ -2692,7 +2624,7 @@ int Server::run( void * runParam )
             // 输出一些服务器状态信息
             size_t counter2 = static_cast<size_t>( this->_verboseInterval / this->_serverWait );
             counter2 = counter2 ? counter2 : 1;
-            if ( this->_verbose && ++counter % counter2 == 0 )
+            if ( ++counter % counter2 == 0 )
             {
                 winux::ColorOutput(
                     winux::fgWhite,
@@ -2709,18 +2641,11 @@ int Server::run( void * runParam )
             {
                 if ( it->second->canRemove ) // 删除标记为可删除的客户
                 {
-                    switch ( this->_verbose )
-                    {
-                    case votConsole:
-                        winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), " remove" );
-                        break;
-                    case votLogViewer:
-                        eienlog::LogColorOutput( eienlog::lfcMaroon, nullptr, it->second->getStamp(), " remove" );
-                        break;
-                    }
+                    if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, it->second->getStamp(), " remove" );
+
                     it = this->_clients.erase(it);
                 }
-                else if ( it->second->processingEvent ) // 跳过有事件在处理中的客户
+                else if ( it->second->processingEvents > 0 ) // 跳过有事件在处理中的客户
                 {
                     it++;
                 }
@@ -2737,15 +2662,7 @@ int Server::run( void * runParam )
         int rc = sel.wait(this->_serverWait); // 返回就绪的套接字数
         if ( rc > 0 )
         {
-            switch ( this->_verbose )
-            {
-            case votConsole:
-                winux::ColorOutputLine( winux::fgGreen, "io.Select() model get the number of ready sockets:", rc );
-                break;
-            case votLogViewer:
-                eienlog::LogColorOutput( eienlog::lfcGreen, nullptr, "io.Select() model get the number of ready sockets:", rc );
-                break;
-            }
+            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgGreen | eienlog::vcaBgIgnore, "io.Select() model get the number of ready sockets:", rc );
 
             // 处理servSockA事件
             if ( _servSockAIsListening )
@@ -2761,15 +2678,7 @@ int Server::run( void * runParam )
                         winux::SharedPointer<ClientCtx> * pClientCtxPtr = nullptr;
                         if ( this->_addClient( clientEp, clientSockPtr, &pClientCtxPtr ) )
                         {
-                            switch ( this->_verbose )
-                            {
-                            case votConsole:
-                                winux::ColorOutputLine( winux::fgFuchsia, (*pClientCtxPtr)->getStamp(), " new client join the server" );
-                                break;
-                            case votLogViewer:
-                                eienlog::LogColorOutput( eienlog::lfcFuchsia, nullptr, (*pClientCtxPtr)->getStamp(), " new client join the server" );
-                                break;
-                            }
+                            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgFuchsia | eienlog::vcaBgIgnore, (*pClientCtxPtr)->getStamp(), " new client join the server" );
                         }
                     }
 
@@ -2798,15 +2707,7 @@ int Server::run( void * runParam )
                         winux::SharedPointer<ClientCtx> * pClientCtxPtr = nullptr;
                         if ( this->_addClient( clientEp, clientSockPtr, &pClientCtxPtr ) )
                         {
-                            switch ( this->_verbose )
-                            {
-                            case votConsole:
-                                winux::ColorOutputLine( winux::fgFuchsia, (*pClientCtxPtr)->getStamp(), " new client join the server" );
-                                break;
-                            case votLogViewer:
-                                eienlog::LogColorOutput( eienlog::lfcFuchsia, nullptr, (*pClientCtxPtr)->getStamp(), " new client join the server" );
-                                break;
-                            }
+                            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgFuchsia | eienlog::vcaBgIgnore, (*pClientCtxPtr)->getStamp(), " new client join the server" );
                         }
                     }
 
@@ -2838,30 +2739,14 @@ int Server::run( void * runParam )
                             {
                                 // 收数据
                                 winux::Buffer data = it->second->clientSockPtr->recv(readableSize);
-                                switch ( this->_verbose )
-                                {
-                                case votConsole:
-                                    winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), " data arrived(bytes:", data.getSize(), ")" );
-                                    break;
-                                case votLogViewer:
-                                    eienlog::LogColorOutput( eienlog::lfcWhite, nullptr, it->second->getStamp(), " data arrived(bytes:", data.getSize(), ")" );
-                                    break;
-                                }
+                                if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgWhite | eienlog::vcaBgIgnore, it->second->getStamp(), " data arrived(bytes:", data.getSize(), ")" );
 
                                 // 投递数据到达事件到线程池处理
                                 this->_postTask( it->second, &Server::onClientDataArrived, this, it->second, std::move(data) );
                             }
                             else
                             {
-                                switch ( this->_verbose )
-                                {
-                                case votConsole:
-                                    winux::ColorOutputLine( winux::fgWhite, it->second->getStamp(), " data notify(bytes:", readableSize, ")" );
-                                    break;
-                                case votLogViewer:
-                                    eienlog::LogColorOutput( eienlog::lfcWhite, nullptr, it->second->getStamp(), " data notify(bytes:", readableSize, ")" );
-                                    break;
-                                }
+                                if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgWhite | eienlog::vcaBgIgnore, it->second->getStamp(), " data notify(bytes:", readableSize, ")" );
 
                                 // 投递数据到达事件到线程池处理
                                 this->_postTask( it->second, &Server::onClientDataNotify, this, it->second, readableSize );
@@ -2869,15 +2754,7 @@ int Server::run( void * runParam )
                         }
                         else // readableSize <= 0
                         {
-                            switch ( this->_verbose )
-                            {
-                            case votConsole:
-                                winux::ColorOutputLine( winux::fgRed, it->second->getStamp(), " data arrived(bytes:", readableSize, "), the connection may be closed" );
-                                break;
-                            case votLogViewer:
-                                eienlog::LogColorOutput( eienlog::lfcRed, nullptr, it->second->getStamp(), " data arrived(bytes:", readableSize, "), the connection may be closed" );
-                                break;
-                            }
+                            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgRed | eienlog::vcaBgIgnore, it->second->getStamp(), " data arrived(bytes:", readableSize, "), the connection may be closed" );
 
                             it->second->canRemove = true;
                         }
@@ -2886,15 +2763,7 @@ int Server::run( void * runParam )
                     }
                     else if ( sel.hasExceptSock(*it->second->clientSockPtr.get()) ) // 该套接字有错误
                     {
-                        switch ( this->_verbose )
-                        {
-                        case votConsole:
-                            winux::ColorOutputLine( winux::fgMaroon, it->second->getStamp(), " error, mark it as removable" );
-                            break;
-                        case votLogViewer:
-                            eienlog::LogColorOutput( eienlog::lfcMaroon, nullptr, it->second->getStamp(), " error, mark it as removable" );
-                            break;
-                        }
+                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, it->second->getStamp(), " error, mark it as removable" );
 
                         it->second->canRemove = true;
 

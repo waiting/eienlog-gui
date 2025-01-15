@@ -1,6 +1,8 @@
 ﻿#include "App.h"
 #include "MainWindow.h"
 
+#include <dwmapi.h>
+
 inline static winux::String __CalcAppConfigPath()
 {
     winux::String exeFileName;
@@ -128,9 +130,15 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     // 加载JSON配置文件
     this->loadConfig();
 
+    ImGui_ImplWin32_EnableDpiAwareness();
+
     // Create application window
     if ( !wi.registerWndClass( L"EienLog Viewer Class", hInstance ) ) return false;
     if ( !wi.createWindow(L"EienLog日志查看器") ) return false;
+
+    //SetLayeredWindowAttributes(wi.hWnd, 0, 255, LWA_ALPHA);
+    //const MARGINS margin = { -1, 0, 0, 0 };
+    //DwmExtendFrameIntoClientArea(wi.hWnd, &margin);
 
     // Initialize Direct3D
     if ( !gi.create(wi) ) return false;
@@ -329,6 +337,7 @@ int App::run()
 
         // Rendering
         ImGui::EndFrame();
+
         gi.pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
         gi.pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
         gi.pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);

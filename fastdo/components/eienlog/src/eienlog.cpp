@@ -92,16 +92,8 @@ LogWriter::LogWriter( winux::String const & addr, winux::ushort port, winux::uin
         _errno = eiennet::Socket::ErrNo();
 }
 
-size_t LogWriter::logEx( winux::Buffer const & data, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding, bool isBinary )
+size_t LogWriter::logEx( winux::Buffer const & data, LogFlag flag )
 {
-    LogFlag flag;
-    flag.fgColorUse = useFgColor;
-    flag.fgColor = fgColor;
-    flag.bgColorUse = useBgColor;
-    flag.bgColor = bgColor;
-    flag.logEncoding = logEncoding;
-    flag.binary = isBinary;
-
     auto chunkPacks = _BuildChunks( data, winux::GetUtcTimeMs(), flag.value, _chunkSize );
     for ( auto && chunkPack : chunkPacks )
     {
@@ -110,9 +102,15 @@ size_t LogWriter::logEx( winux::Buffer const & data, bool useFgColor, winux::uin
     return chunkPacks.size();
 }
 
-size_t LogWriter::log( winux::String const & str, bool useFgColor, winux::uint16 fgColor, bool useBgColor, winux::uint16 bgColor, winux::uint8 logEncoding )
+size_t LogWriter::logEx( winux::Buffer const & data, winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding, bool isBinary )
 {
-    switch ( logEncoding )
+    return this->logEx( data, LogFlag( fgColor, bgColor, logEncoding, isBinary ) );
+}
+
+size_t LogWriter::log( winux::String const & str, LogFlag flag )
+{
+    flag.binary = false;
+    switch ( flag.logEncoding )
     {
     case leUtf8:
         {
@@ -121,7 +119,7 @@ size_t LogWriter::log( winux::String const & str, bool useFgColor, winux::uint16
         #else
             winux::AnsiString mbs = LOCAL_TO_UTF8(str);
         #endif
-            return this->logEx( winux::Buffer( mbs.c_str(), mbs.length(), true ), useFgColor, fgColor, useBgColor, bgColor, logEncoding, false );
+            return this->logEx( winux::Buffer( mbs.c_str(), mbs.length(), true ), flag );
         }
         break;
     case leUtf16Le:
@@ -135,7 +133,7 @@ size_t LogWriter::log( winux::String const & str, bool useFgColor, winux::uint16
             {
                 if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
             }
-            return this->logEx( winux::Buffer( ustr.c_str(), ustr.length(), true ), useFgColor, fgColor, useBgColor, bgColor, logEncoding, false );
+            return this->logEx( winux::Buffer( ustr.c_str(), ustr.length(), true ), flag );
         }
         break;
     case leUtf16Be:
@@ -149,20 +147,25 @@ size_t LogWriter::log( winux::String const & str, bool useFgColor, winux::uint16
             {
                 if ( ustr.length() > 0 ) winux::InvertByteOrderArray( &ustr[0], ustr.length() );
             }
-            return this->logEx( winux::Buffer( ustr.c_str(), ustr.length(), true ), useFgColor, fgColor, useBgColor, bgColor, logEncoding, false );
+            return this->logEx( winux::Buffer( ustr.c_str(), ustr.length(), true ), flag );
         }
         break;
     default: // leLocal
         {
         #if defined(_UNICODE) || defined(UNICODE)
             winux::AnsiString mbs = winux::UnicodeToLocal(str);
-            return this->logEx( winux::Buffer( mbs.c_str(), mbs.length(), true ), useFgColor, fgColor, useBgColor, bgColor, logEncoding, false );
+            return this->logEx( winux::Buffer( mbs.c_str(), mbs.length(), true ), flag );
         #else
-            return this->logEx( winux::Buffer( str.c_str(), str.length(), true ), useFgColor, fgColor, useBgColor, bgColor, logEncoding, false );
+            return this->logEx( winux::Buffer( str.c_str(), str.length(), true ), flag );
         #endif
         }
         break;
     }
+}
+
+size_t LogWriter::log( winux::String const & str, winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding )
+{
+    return this->log( str, LogFlag( !fgColor.isNull(), fgColor, !bgColor.isNull(), bgColor, logEncoding, false ) );
 }
 
 // class LogReader ----------------------------------------------------------------------------
@@ -295,7 +298,7 @@ EIENLOG_FUNC_IMPL(void) WriteLog( winux::String const & str )
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        __logWriter->log( winux::Format( $T("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, $T("\t\r\n") ), eienlog::leUtf8 );
+        __logWriter->log( winux::Format( $T("[pid:%d, tid:%d] - "), winux::GetPid(), winux::GetTid() ) + winux::AddSlashes( str, $T("\t\r\n") ), winux::mxNull, winux::mxNull, eienlog::leUtf8 );
     }
 }
 
@@ -308,44 +311,152 @@ EIENLOG_FUNC_IMPL(void) WriteLogBin( void const * data, size_t size )
     }
 }
 
-EIENLOG_FUNC_IMPL(size_t) Log( winux::String const & str, winux::uint8 logEncoding )
+EIENLOG_FUNC_IMPL(size_t) LogEx( winux::Buffer const & data, LogFlag flag )
 {
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        return __logWriter->log( str, logEncoding );
+        return __logWriter->logEx( data, flag );
     }
     return 0;
 }
 
-EIENLOG_FUNC_IMPL(size_t) LogBin( winux::Buffer const & data )
+EIENLOG_FUNC_IMPL(size_t) LogEx( winux::Buffer const & data, winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding, bool isBinary )
 {
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        return __logWriter->logBin(data);
+        return __logWriter->logEx( data, fgColor, bgColor, logEncoding, isBinary );
     }
     return 0;
 }
 
-EIENLOG_FUNC_IMPL(size_t) LogColor( winux::String const & str, winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding )
+EIENLOG_FUNC_IMPL(size_t) Log( winux::String const & str, LogFlag flag )
 {
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        return __logWriter->logColor( str, fgColor, bgColor, logEncoding );
+        return __logWriter->log( str, flag );
     }
     return 0;
 }
 
-EIENLOG_FUNC_IMPL(size_t) LogBinColor( winux::Buffer const & data, winux::Mixed const & fgColor, winux::Mixed const & bgColor )
+EIENLOG_FUNC_IMPL(size_t) Log( winux::String const & str, winux::Mixed const & fgColor, winux::Mixed const & bgColor, winux::uint8 logEncoding )
 {
     if ( __logWriter != nullptr )
     {
         winux::ScopeGuard guard(__mtxLogWriter);
-        return __logWriter->logBinColor( data, fgColor, bgColor );
+        return __logWriter->log( str, fgColor, bgColor, logEncoding );
     }
     return 0;
+}
+
+EIENLOG_FUNC_IMPL(size_t) LogBin( winux::Buffer const & data, LogFlag flag )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        return __logWriter->logBin( data, flag );
+    }
+    return 0;
+}
+
+EIENLOG_FUNC_IMPL(size_t) LogBin( winux::Buffer const & data, winux::Mixed const & fgColor, winux::Mixed const & bgColor )
+{
+    if ( __logWriter != nullptr )
+    {
+        winux::ScopeGuard guard(__mtxLogWriter);
+        return __logWriter->logBin( data, fgColor, bgColor );
+    }
+    return 0;
+}
+
+winux::ushort __ccaFgColor[] = {
+    winux::fgBlack,
+    winux::fgNavy,
+    winux::fgAtrovirens,
+    winux::fgTeal,
+    winux::fgMaroon,
+    winux::fgPurple,
+    winux::fgOlive,
+    winux::fgSilver,
+    winux::fgGray,
+    winux::fgBlue,
+    winux::fgGreen,
+    winux::fgAqua,
+    winux::fgRed,
+    winux::fgFuchsia,
+    winux::fgYellow,
+    winux::fgWhite,
+};
+winux::ushort __ccaBgColor[] = {
+    winux::bgBlack,
+    winux::bgNavy,
+    winux::bgAtrovirens,
+    winux::bgTeal,
+    winux::bgMaroon,
+    winux::bgPurple,
+    winux::bgOlive,
+    winux::bgSilver,
+    winux::bgGray,
+    winux::bgBlue,
+    winux::bgGreen,
+    winux::bgAqua,
+    winux::bgRed,
+    winux::bgFuchsia,
+    winux::bgYellow,
+    winux::bgWhite,
+};
+
+winux::ushort __lfcFgColor[] = {
+    lfcBlack,
+    lfcNavy,
+    lfcAtrovirens,
+    lfcTeal,
+    lfcMaroon,
+    lfcPurple,
+    lfcOlive,
+    lfcSilver,
+    lfcGray,
+    lfcBlue,
+    lfcGreen,
+    lfcAqua,
+    lfcRed,
+    lfcFuchsia,
+    lfcYellow,
+    lfcWhite,
+};
+winux::ushort __lbcBgColor[] = {
+    lbcBlack,
+    lbcNavy,
+    lbcAtrovirens,
+    lbcTeal,
+    lbcMaroon,
+    lbcPurple,
+    lbcOlive,
+    lbcSilver,
+    lbcGray,
+    lbcBlue,
+    lbcGreen,
+    lbcAqua,
+    lbcRed,
+    lbcFuchsia,
+    lbcYellow,
+    lbcWhite,
+};
+
+EIENLOG_FUNC_IMPL(winux::ushort) GetCcaFlagsFromVcaFlags( winux::ushort vcaFlags )
+{
+    winux::byte fg = ( vcaFlags & 0x0F );
+    winux::byte bg = ( ( vcaFlags >> 4 ) & 0x0F );
+    return ( vcaFlags & 0xFF00 ) | __ccaBgColor[bg] | __ccaFgColor[fg];
+}
+
+EIENLOG_FUNC_IMPL(LogFlag) GetLogFlagFromVcaFlags( winux::ushort vcaFlags )
+{
+    winux::byte fg = ( vcaFlags & 0x0F );
+    winux::byte bg = ( ( vcaFlags >> 4 ) & 0x0F );
+    return LogFlag( ( vcaFlags & vcaFgIgnore ) != vcaFgIgnore, __lfcFgColor[fg], ( vcaFlags & vcaBgIgnore ) != vcaBgIgnore, __lbcBgColor[bg], leUtf8, false );
 }
 
 

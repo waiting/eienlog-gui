@@ -1642,12 +1642,6 @@ MemoryFile::MemoryFile( Buffer const & buf, bool isPeek ) : _p(nullptr)
     _p = _buf.begin();
 }
 
-MemoryFile::MemoryFile( AnsiString const & content, bool isPeek ) : _p(nullptr)
-{
-    _buf.setBuf( content.c_str(), content.size(), isPeek );
-    _p = _buf.begin();
-}
-
 bool MemoryFile::open( String const & content, String const & mode )
 {
     _buf.setBuf( content.c_str(), sizeof(String::value_type) * content.size(), mode.find('r') != String::npos );
