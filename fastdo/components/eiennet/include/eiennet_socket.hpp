@@ -28,11 +28,11 @@ class EndPoint;
 
 /** \brief 套接字基础类
  *
- *  若是新对象，套接字会延迟创建。只有当带`EndPoint`参数的方法被调用时才会实际创建套接字。相应的方法有：`bind()`、`connect()`、`sendTo()`、`recvFrom()`。 */
+ *  若是新对象，套接字会延迟创建。只有当带`EndPoint`参数的方法被调用时才会实际创建套接字。相应的方法有：`bind()`、`connect()`、`sendTo()`。 */
 class EIENNET_DLL Socket
 {
 public:
-    // classes and types ------------------------------------------------------------------
+    // classes and types ----------------------------------------------------------------------
 
     /** \brief 地址族 */
     enum AddrFamily {
@@ -127,7 +127,7 @@ public:
     };
 
 public:
-    // static members ---------------------------------------------------------------------
+    // static members -------------------------------------------------------------------------
     // send/recv's message flags
     static int const MsgDefault;
 #if defined(_MSC_VER) || defined(WIN32)
@@ -170,7 +170,7 @@ public:
 
     typedef std::function< void ( size_t hadBytes, void * param ) > FunctionSuccessCallback;
 public:
-    // constructor/destructor -------------------------------------------------------------
+    // constructor/destructor -----------------------------------------------------------------
 
     /** \brief 构造函数1，包装现有socket描述符
      *
@@ -191,7 +191,7 @@ public:
     virtual ~Socket();
 
 public:
-    // methods ----------------------------------------------------------------------------
+    // methods --------------------------------------------------------------------------------
     /** \brief 获取Socket的create()参数：'地址簇' */
     AddrFamily getAddrFamily() const;
     /** \brief 指定Socket的create()参数：'地址簇' */
@@ -387,7 +387,7 @@ public:
      *  3、recv()发生错误，此时(bool)Buffer==false */
     winux::Buffer recvWaitAvail( double sec, int * rcWait, int msgFlags = MsgDefault );
 
-    /** \brief 无连接模式发送数据到指定端点。返回已发送大小，出错返回-1。 */
+    /** \brief 无连接模式发送数据到指定端点。返回已发送大小，出错返回-1。若套接字尚未创建则创建套接字 */
     int sendTo( EndPoint const & ep, void const * data, size_t size, int msgFlags = MsgDefault );
     /** \brief 无连接模式发送数据到指定端点。返回已发送大小，出错返回-1。 */
     int sendTo( EndPoint const & ep, winux::AnsiString const & data, int msgFlags = MsgDefault ) { return this->sendTo( ep, data.c_str(), data.size(), msgFlags ); }
@@ -407,7 +407,7 @@ public:
      *  3、recv()发生错误，此时(bool)Buffer==false */
     winux::Buffer recvFrom( EndPoint * ep, size_t size, int msgFlags = MsgDefault );
 
-    /** \brief 连接服务器 */
+    /** \brief 连接服务器。若套接字尚未创建则创建套接字 */
     bool connect( EndPoint const & ep );
 
     /** \brief 绑定地址。若套接字尚未创建则创建套接字 */
@@ -418,7 +418,7 @@ public:
 
     /** \brief 接受一个客户连接
      *
-     *  成功则*sock输出Socket句柄，调用者负责close() */
+     *  成功则*sock输出Socket句柄，调用者负责`close()` */
     bool accept( int * sock, EndPoint * ep = NULL );
 
     /** \brief 接受一个客户连接 */
@@ -428,7 +428,10 @@ public:
         return this->accept( &sock, ep ) ? winux::SharedPointer<Socket>( new Socket( sock, true ) ) : winux::SharedPointer<Socket>();
     }
 
-    // socket's options -------------------------------------------------------------------
+    /** \brief 获取已绑定的`EndPoint` */
+    bool getBoundEp( EndPoint * ep ) const;
+
+    // socket's options -----------------------------------------------------------------------
 
     /** \brief 获取接收缓冲区大小 */
     int getRecvBufSize() const;
@@ -478,7 +481,7 @@ public:
      *  默认从getsockopt(SO_ACCEPTCONN)读取 */
     bool isListening() const;
 
-    // ioctls -----------------------------------------------------------------------------
+    // ioctls ---------------------------------------------------------------------------------
 
     /** \brief 获取可不阻塞接收的数据量 */
     int getAvailable() const;
@@ -486,7 +489,7 @@ public:
     /** \brief 设置socket阻塞模式，true为阻塞，false为非阻塞。 */
     bool setBlocking( bool blocking );
 
-    // attributes -------------------------------------------------------------------------
+    // attributes -----------------------------------------------------------------------------
 
     /** \brief Windows:socket句柄，或Linux:socket描述符 */
     int get() const;
@@ -494,7 +497,7 @@ public:
     /** \brief 判断Socket是否有效 */
     operator bool() const { return this->get() > -1; }
 
-    // static -----------------------------------------------------------------------------
+    // static ---------------------------------------------------------------------------------
 
     /** \brief 从errno获取错误码 */
     static int ErrNo();
@@ -590,46 +593,42 @@ public:
 };
 
 /** \brief 数据收发场景，存放数据收发过程中的一些变量 */
-struct DataRecvSendCtx
+struct EIENNET_DLL DataRecvSendCtx
 {
     enum
     {
         RetryCount = 10 //!< 默认重试次数
     };
 
-    winux::GrowBuffer data;         //!< 数据
-    size_t startpos;                //!< 起始位置
-    size_t pos;                     //!< 找到位置
-    size_t hadBytes;                //!< 已接收/发送数据量
-    size_t targetBytes;             //!< 目标数据量
-    size_t retryCount;              //!< 已重试次数
+    winux::GrowBuffer data; //!< 数据
+    size_t startpos;        //!< 起始位置
+    size_t pos;             //!< 找到位置
+    size_t hadBytes;        //!< 已接收/发送数据量
+    size_t targetBytes;     //!< 目标数据量
+    size_t retryCount;      //!< 已重试次数
 
-    DataRecvSendCtx()
-    {
-        this->resetStatus();
-    }
+    DataRecvSendCtx();
+
+    DataRecvSendCtx(
+        winux::Buffer const & data,
+        size_t hadBytes = 0,
+        size_t targetBytes = 0
+    );
+
+    DataRecvSendCtx(
+        winux::Buffer && data,
+        size_t hadBytes = 0,
+        size_t targetBytes = 0
+    );
 
     /** \brief 重置数据为空 */
-    void resetData()
-    {
-        this->data.free();
-    }
+    void resetData();
 
     /** \brief 重置状态 */
-    void resetStatus()
-    {
-        this->startpos = 0;
-        this->pos = winux::npos;
-        this->hadBytes = 0;
-        this->targetBytes = 0;
-        this->retryCount = 0;
-    }
+    void resetStatus();
 
     /** \brief 添加数据到data */
-    void append( winux::Buffer const & data )
-    {
-        this->data.append(data);
-    }
+    void append( winux::Buffer const & data );
 
     /** \brief 在`data`里查找`target`内容。`startpos`指定起始位置，`pos`接收搜索到的位置。
      *
@@ -653,28 +652,10 @@ struct DataRecvSendCtx
      *
      *  \param extractDataSize 指定取出数据大小
      *  \param limitSpaceSize 限制空闲大小，超过这个大小的`data`空闲空间将会收缩 */
-    winux::Buffer extract( size_t extractDataSize, size_t limitSpaceSize = 1024 )
-    {
-        winux::Buffer extractData( this->data.get(), extractDataSize, false );
-        size_t remainingSize = this->data.size() - extractDataSize;
-        // 移动数据
-        memmove( this->data.getAt(0), this->data.getAt(extractDataSize), remainingSize );
-        // 空闲太大，进行收缩
-        if ( extractDataSize > limitSpaceSize )
-        {
-            this->data.realloc( remainingSize > limitSpaceSize ? remainingSize : limitSpaceSize );
-        }
-        // 设置剩余数据大小
-        this->data._setSize(remainingSize);
-
-        // 重置数据收发场景
-        this->resetStatus();
-
-        return extractData;
-    }
+    winux::Buffer extract( size_t extractDataSize, size_t limitSpaceSize = 1024 );
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
 /** \brief 套接字流缓冲区 */
 class EIENNET_DLL SocketStreamBuf : public std::streambuf
 {
@@ -689,17 +670,17 @@ public:
     virtual ~SocketStreamBuf();
 
     Socket * getSocket() const { return _sock; }
-    // input buffer begin -----------------------------------------------------------------------
+    // input buffer begin ---------------------------------------------------------------------
 protected:
     virtual int_type underflow();
     // input buffer end -----------------------------------------------------------------------
 
-    // output buffer begin -----------------------------------------------------------------------
+    // output buffer begin --------------------------------------------------------------------
 protected:
     virtual int_type overflow( int_type c );
     virtual int sync();
     int _flush();
-    // output buffer end -----------------------------------------------------------------------
+    // output buffer end ----------------------------------------------------------------------
 
 
 private:
@@ -746,7 +727,7 @@ public:
     std::streamsize waitAvail( double sec );
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
 /** \brief IP地址族套接字 */
 namespace ip
 {
@@ -754,6 +735,9 @@ namespace ip
 class EIENNET_DLL EndPoint : public eiennet::EndPoint
 {
 public:
+    /** \brief 从已绑定地址的套接字上获取绑定的`EndPoint` */
+    static EndPoint FromBound( Socket const * sock );
+
     /** \brief 默认构造函数 */
     EndPoint( Socket::AddrFamily af = Socket::afUnspec );
     /** \brief 构造函数1，ipAndPort可以是下面几种类型："IPv4:port"、"[IPv6]:port"、[ "IP", port ]、{ "IP" : port }。 */
@@ -830,11 +814,14 @@ public:
     /** \brief 获取端口号 */
     winux::ushort getPort() const { return _port; }
 
-    EndPointArray::value_type const & operator [] ( int i ) const { return _epArr[i]; }
-    EndPointArray::value_type & operator [] ( int i ) { return _epArr[i]; }
+    EndPointArray::value_type const & operator [] ( size_t i ) const { return _epArr[i]; }
+    EndPointArray::value_type & operator [] ( size_t i ) { return _epArr[i]; }
 
-    EndPointArray & getArr() { return _epArr; }
-    EndPointArray const & getArr() const { return _epArr; }
+    EndPointArray::value_type const & at( size_t i ) const { return _epArr[i]; }
+    EndPointArray::value_type & at( size_t i ) { return _epArr[i]; }
+
+    EndPointArray & epArr() { return _epArr; }
+    EndPointArray const & epArr() const { return _epArr; }
 
     /** \brief 转换成"hostname:port"的字符串形式 */
     virtual winux::String toString() const;
@@ -908,7 +895,7 @@ public:
 
 } // namespace ip
 
-///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
 
 /** \brief IO模型 */
 namespace io
@@ -1052,12 +1039,20 @@ public:
     /** \brief 客户端戳 */
     winux::String getStamp() const;
 
+    /** \brief 投递发送数据 */
+    void postSend( winux::Buffer const & data );
+
+    /** \brief 投递发送数据 */
+    void postSend( winux::Buffer && data );
+
     Server * server;            //!< 服务器
     winux::uint64 clientId;     //!< 客户Id
     winux::String clientEpStr;  //!< 客户终端字符串
     winux::SharedPointer<ip::tcp::Socket> clientSockPtr; //!< 客户套接字
 
-    winux::uint8 processingEvents;  //!< 等待处理或正在处理中的事件，保证同一个客户连接仅投递一个事件到线程池中
+    winux::SafeQueue<DataRecvSendCtx> pendingSend;    //!< 待发送队列
+
+    winux::uint16 processingEvents;  //!< 等待处理或正在处理中的事件，保证同一个客户连接仅投递一个事件到线程池中
     bool canRemove;             //!< 是否标记为可以移除
 
 private:
@@ -1170,6 +1165,17 @@ protected:
         ( winux::SharedPointer<ClientCtx> clientCtxPtr, winux::Buffer & data ),
         ( clientCtxPtr, data )
     )
+
+    // 客户数据发送
+    /** \brief 客户数据发送
+     *
+     *  \param clientCtxPtr 客户场景
+     *  \param data 数据 */
+    DEFINE_CUSTOM_EVENT_RETURN_EX(
+        void,
+        ClientDataSend,
+        ( winux::SharedPointer<ClientCtx> clientCtxPtr )
+    );
 
     // 当创建客户连接对象
     /** \brief 创建客户连接对象

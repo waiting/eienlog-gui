@@ -221,7 +221,7 @@ static constexpr int __protocols[] = {
 
 #endif
 
-// union UnionAddr ------------------------------------------------------------------------
+// union UnionAddr ----------------------------------------------------------------------------
 union UnionAddr
 {
     sockaddr_in6 addrInet6;    // IPv6的socket地址结构.
@@ -229,7 +229,7 @@ union UnionAddr
     sockaddr addr;             // socket地址结构.
 };
 
-// struct SocketLib_Data ------------------------------------------------------------------
+// struct SocketLib_Data ----------------------------------------------------------------------
 struct SocketLib_Data
 {
 #if defined(OS_WIN)
@@ -239,7 +239,7 @@ struct SocketLib_Data
 #endif
 };
 
-// class SocketLib ------------------------------------------------------------------------
+// class SocketLib ----------------------------------------------------------------------------
 SocketLib::SocketLib()
 {
 #if defined(OS_WIN)
@@ -260,12 +260,12 @@ SocketLib::~SocketLib()
 #endif
 }
 
-// struct Socket_Data ---------------------------------------------------------------------
+// struct Socket_Data -------------------------------------------------------------------------
 struct Socket_Data
 {
 };
 
-// class Socket ---------------------------------------------------------------------------
+// class Socket -------------------------------------------------------------------------------
 int const Socket::MsgDefault = 0;
 
 #if defined(OS_WIN)
@@ -764,15 +764,6 @@ int Socket::sendTo( EndPoint const & ep, void const * data, size_t size, int msg
 
 int Socket::recvFrom( EndPoint * ep, void * buf, size_t size, int msgFlags )
 {
-    if ( this->_sock == -1 ) // 如果套接字还没创建，则创建
-    {
-        this->_addrFamily = ep->getAddrFamily();
-        this->_sockType = sockDatagram;
-
-        if ( !this->create() ) return -1;
-    }
-
-    ep->size() = sizeof(sockaddr_in6);
     int recvBytes = ::recvfrom( this->_sock, (char *)buf, (int)size, msgFlags, ep->get<sockaddr>(), (socklen_t *)&ep->size() );
 
 #if defined(SOCKET_EXCEPTION_USE)
@@ -883,6 +874,11 @@ bool Socket::accept( int * sock, EndPoint * ep )
     #endif
     }
     return true;
+}
+
+bool Socket::getBoundEp( EndPoint * ep ) const
+{
+    return getsockname( this->_sock, ep->get<sockaddr>(), (socklen_t *)&ep->size() ) == 0;
 }
 
 int Socket::getRecvBufSize() const
@@ -1256,7 +1252,66 @@ int Socket::ErrNo()
     return socket_errno;
 }
 
-// class SocketStreamBuf ------------------------------------------------------------------
+// struct DataRecvSendCtx ---------------------------------------------------------------------
+DataRecvSendCtx::DataRecvSendCtx()
+{
+    this->resetStatus();
+}
+
+DataRecvSendCtx::DataRecvSendCtx( winux::Buffer const & data, size_t hadBytes, size_t targetBytes ) : data(data)
+{
+    this->resetStatus();
+    this->hadBytes = hadBytes;
+    this->targetBytes = targetBytes;
+}
+
+DataRecvSendCtx::DataRecvSendCtx( winux::Buffer && data, size_t hadBytes, size_t targetBytes ) : data( std::move(data) )
+{
+    this->resetStatus();
+    this->hadBytes = hadBytes;
+    this->targetBytes = targetBytes;
+}
+
+void DataRecvSendCtx::resetData()
+{
+    this->data.free();
+}
+
+void DataRecvSendCtx::resetStatus()
+{
+    this->startpos = 0;
+    this->pos = winux::npos;
+    this->hadBytes = 0;
+    this->targetBytes = 0;
+    this->retryCount = 0;
+}
+
+void DataRecvSendCtx::append( winux::Buffer const & data )
+{
+    this->data.append(data);
+}
+
+winux::Buffer DataRecvSendCtx::extract( size_t extractDataSize, size_t limitSpaceSize )
+{
+    winux::Buffer extractData( this->data.get(), extractDataSize, false );
+    size_t remainingSize = this->data.size() - extractDataSize;
+    // 移动数据
+    memmove( this->data.getAt(0), this->data.getAt(extractDataSize), remainingSize );
+    // 空闲太大，进行收缩
+    if ( extractDataSize > limitSpaceSize )
+    {
+        this->data.realloc( remainingSize > limitSpaceSize ? remainingSize : limitSpaceSize );
+    }
+    // 设置剩余数据大小
+    this->data._setSize(remainingSize);
+
+    // 重置数据收发场景
+    this->resetStatus();
+
+    return extractData;
+}
+
+// class SocketStreamBuf ----------------------------------------------------------------------
 SocketStreamBuf::SocketStreamBuf(
     eiennet::Socket * sock,
     std::ios_base::openmode mode /*= std::ios_base::in | std::ios_base::out*/,
@@ -1532,7 +1587,7 @@ inline static Socket::AddrFamily __ParseEpStr( winux::String const & str, winux:
     }
 }
 
-// 优先从ep中解析端口号，如果没有则依照port指定
+// 优先从epStr中解析端口号，如果没有则依照port指定
 inline static void __ParseEndPoint( winux::String const & epStr, winux::ushort port, EndPoint_Data * pEpData )
 {
     winux::String ipStr, portStr;
@@ -1637,6 +1692,14 @@ inline static winux::String __Ipv6ToString( in6_addr const & addr )
     return ip;
 }
 
+// class ip::EndPoint static member functions -------------------------------------------------
+EndPoint EndPoint::FromBound( Socket const * sock )
+{
+    EndPoint ep;
+    getsockname( sock->get(), ep.get<sockaddr>(), (socklen_t *)&ep.size() );
+    return ep;
+}
+
 // class ip::EndPoint -------------------------------------------------------------------------
 EndPoint::EndPoint( Socket::AddrFamily af )
 {
@@ -1700,7 +1763,7 @@ void EndPoint::init( Socket::AddrFamily af )
         break;
     default:
         _self->addr.addrInet.sin_family = __addrFamilies[af];
-        _self->len = 0;
+        _self->len = sizeof(_self->addr);
         break;
     }
 }
@@ -2448,6 +2511,17 @@ winux::String ClientCtx::getStamp() const
     return stamp;
 }
 
+void ClientCtx::postSend( winux::Buffer const & data )
+{
+    this->pendingSend.push( DataRecvSendCtx( data, 0, data.size() ) );
+}
+
+void ClientCtx::postSend( winux::Buffer && data )
+{
+    size_t size = data.size();
+    this->pendingSend.push( DataRecvSendCtx( std::move(data), 0, size ) );
+}
+
 // class Server -------------------------------------------------------------------------------
 Server::Server() :
     _mtxServer(true),
@@ -2651,7 +2725,12 @@ int Server::run( void * runParam )
                 }
                 else
                 {
+                    // 监视数据接收
                     sel.setReadSock(*it->second->clientSockPtr.get());
+                    // 若未决发送队列不空则监视数据写入
+                    if ( it->second->pendingSend.size() > 0 )
+                        sel.setWriteSock(*it->second->clientSockPtr.get());
+                    // 监视套接字出错
                     sel.setExceptSock(*it->second->clientSockPtr.get());
 
                     it++;
@@ -2667,7 +2746,14 @@ int Server::run( void * runParam )
             // 处理servSockA事件
             if ( _servSockAIsListening )
             {
-                if ( sel.hasReadSock(_servSockA) )
+                if ( sel.hasExceptSock(_servSockA) )
+                {
+                    winux::ScopeGuard guard(this->_mtxServer);
+                    _stop = true;
+
+                    rc--;
+                }
+                else if ( sel.hasReadSock(_servSockA) )
                 {
                     // 有一个客户连接到来
                     eiennet::ip::EndPoint clientEp;
@@ -2684,19 +2770,19 @@ int Server::run( void * runParam )
 
                     rc--;
                 }
-                else if ( sel.hasExceptSock(_servSockA) )
+            }
+
+            // 处理servSockB事件
+            if ( _servSockBIsListening )
+            {
+                if ( sel.hasExceptSock(_servSockB) )
                 {
                     winux::ScopeGuard guard(this->_mtxServer);
                     _stop = true;
 
                     rc--;
                 }
-            }
-
-            // 处理servSockB事件
-            if ( _servSockBIsListening )
-            {
-                if ( sel.hasReadSock(_servSockB) )
+                else if ( sel.hasReadSock(_servSockB) )
                 {
                     // 有一个客户连接到来
                     eiennet::ip::EndPoint clientEp;
@@ -2713,13 +2799,6 @@ int Server::run( void * runParam )
 
                     rc--;
                 }
-                else if ( sel.hasExceptSock(_servSockB) )
-                {
-                    winux::ScopeGuard guard(this->_mtxServer);
-                    _stop = true;
-
-                    rc--;
-                }
             }
 
             // 分发客户连接的相关IO事件
@@ -2729,7 +2808,24 @@ int Server::run( void * runParam )
 
                 for ( auto it = this->_clients.begin(); it != this->_clients.end(); )
                 {
-                    if ( sel.hasReadSock(*it->second->clientSockPtr.get()) ) // 该套接字有数据可读
+                    if ( sel.hasExceptSock(*it->second->clientSockPtr.get()) ) // 该套接字有错误
+                    {
+                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, it->second->getStamp(), " error, mark it as removable" );
+
+                        it->second->canRemove = true;
+
+                        rc--;
+                    }
+                    else if ( sel.hasWriteSock(*it->second->clientSockPtr.get()) ) // 该套接字可写数据
+                    {
+                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgIgnore | eienlog::vcaBgIgnore, it->second->getStamp(), " sendable" );
+
+                        // 投递数据发送事件到线程池处理
+                        this->_postTask( it->second, &Server::onClientDataSend, this, it->second );
+
+                        rc--;
+                    }
+                    else if ( sel.hasReadSock(*it->second->clientSockPtr.get()) ) // 该套接字有数据可读
                     {
                         size_t readableSize = it->second->clientSockPtr->getAvailable();
 
@@ -2758,14 +2854,6 @@ int Server::run( void * runParam )
 
                             it->second->canRemove = true;
                         }
-
-                        rc--;
-                    }
-                    else if ( sel.hasExceptSock(*it->second->clientSockPtr.get()) ) // 该套接字有错误
-                    {
-                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, it->second->getStamp(), " error, mark it as removable" );
-
-                        it->second->canRemove = true;
 
                         rc--;
                     }
@@ -2831,6 +2919,33 @@ bool Server::_addClient( ip::EndPoint const & clientEp, winux::SharedPointer<ip:
     {
         delete clientCtx;
         return false;
+    }
+}
+
+void Server::onClientDataSend( winux::SharedPointer<ClientCtx> clientCtxPtr )
+{
+    auto & ctx = clientCtxPtr->pendingSend.front();
+    if ( ctx.hadBytes < ctx.targetBytes )
+    {
+        // 发送数据
+        int rc = clientCtxPtr->clientSockPtr->send( ctx.data.getAt(ctx.hadBytes), ctx.targetBytes - ctx.hadBytes );
+        if ( rc >= 0 )
+        {
+            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgIgnore | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), winux::FormatA( " data send(%u bytes / %u bytes)", ctx.hadBytes, ctx.targetBytes ) );
+            ctx.hadBytes += rc;
+        }
+        else
+        {
+            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgRed | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), winux::FormatA( " error, data send(%u bytes / %u bytes)", ctx.hadBytes, ctx.targetBytes ) );
+            // 出错，删除
+            clientCtxPtr->canRemove = true;
+        }
+    }
+
+    if ( ctx.hadBytes == ctx.targetBytes )
+    {
+        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgAtrovirens | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " send queue pop" );
+        clientCtxPtr->pendingSend.pop();
     }
 }
 

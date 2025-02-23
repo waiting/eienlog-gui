@@ -4,7 +4,7 @@
 
 namespace eiennet
 {
-// class IoService --------------------------------------------------------------------------
+// class IoService ----------------------------------------------------------------------------
 IoService::IoService( int threadCount, double serverWait ) : _mtx(true), _cdt(true), _serverWait(0.002), _threadCount(4), _stop(false)
 {
     this->init( threadCount, serverWait );
@@ -122,6 +122,7 @@ int IoService::run()
 {
     io::Select sel;
     this->_pool.startup(_threadCount);
+    size_t counter = 0;
     while ( !_stop )
     {
         // Hook1
@@ -133,6 +134,21 @@ int IoService::run()
         {
             // 监听相应的事件操作
             winux::ScopeGuard guard(_mtx);
+            // 输出一些服务器状态信息
+            size_t counter2 = static_cast<size_t>( 0.01 / this->_serverWait );
+            counter2 = counter2 ? counter2 : 1;
+            if ( ++counter % counter2 == 0 )
+            {
+                winux::ColorOutput(
+                    winux::fgWhite,
+                    winux::DateTimeL::Current(),
+                    ", Total socks:", this->_ioMaps.size(),
+                    ", Current tasks:", this->_pool.getTaskCount(),
+                    winux::String( 20, ' ' ),
+                    "\r"
+                );
+            }
+
             if ( hasRequest = _cdt.waitUntil( [this] () { return _ioMaps.size() > 0; }, _mtx, _serverWait ) )
             {
                 for ( auto & pr : _ioMaps )
@@ -176,6 +192,11 @@ int IoService::run()
             int rc = sel.wait(_serverWait);
             // Hook2
             this->onRunAfterWait(rc);
+            if ( rc < 0 )
+            {
+                winux::ColorOutputLine( winux::fgRed, "select err:", Socket::ErrNo() );
+            }
+            else
             {
                 winux::ScopeGuard guard(_mtx);
                 for ( auto itMaps = _ioMaps.begin(); itMaps != _ioMaps.end(); )
@@ -206,13 +227,13 @@ int IoService::run()
                         // 是否超时
                         auto diff = winux::GetUtcTimeMs() - pr.second->startTime;
                         bool isTimeout = diff > pr.second->timeoutMs;
-                        if ( isTimeout )
+                        if ( isTimeout ) // 超时了
                         {
                             switch ( pr.first )
                             {
                             case ioAccept:
                                 {
-                                    IoAcceptCtx * ctx = static_cast<IoAcceptCtx*>( pr.second.get() );
+                                    IoAcceptCtx * ctx = static_cast<IoAcceptCtx *>( pr.second.get() );
                                     // 利用线程池处理这个回调
                                     if ( ctx->cbTimeout )
                                     {
@@ -226,7 +247,7 @@ int IoService::run()
                                 break;
                             case ioConnect:
                                 {
-                                    IoConnectCtx * ctx = static_cast<IoConnectCtx*>( pr.second.get() );
+                                    IoConnectCtx * ctx = static_cast<IoConnectCtx *>( pr.second.get() );
                                     ctx->costTimeMs += diff;
                                     // 利用线程池处理这个回调
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
@@ -236,7 +257,7 @@ int IoService::run()
                                 break;
                             case ioRecv:
                                 {
-                                    IoRecvCtx * ctx = static_cast<IoRecvCtx*>( pr.second.get() );
+                                    IoRecvCtx * ctx = static_cast<IoRecvCtx *>( pr.second.get() );
                                     // 利用线程池处理这个回调
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
@@ -245,7 +266,7 @@ int IoService::run()
                                 break;
                             case ioSend:
                                 {
-                                    IoSendCtx * ctx = static_cast<IoSendCtx*>( pr.second.get() );
+                                    IoSendCtx * ctx = static_cast<IoSendCtx *>( pr.second.get() );
                                     ctx->costTimeMs += diff;
                                     // 利用线程池处理这个回调
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
@@ -255,7 +276,7 @@ int IoService::run()
                                 break;
                             case ioRecvFrom:
                                 {
-                                    IoRecvFromCtx * ctx = static_cast<IoRecvFromCtx*>( pr.second.get() );
+                                    IoRecvFromCtx * ctx = static_cast<IoRecvFromCtx *>( pr.second.get() );
                                     // 利用线程池处理这个回调
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
@@ -264,7 +285,7 @@ int IoService::run()
                                 break;
                             case ioSendTo:
                                 {
-                                    IoSendToCtx * ctx = static_cast<IoSendToCtx*>( pr.second.get() );
+                                    IoSendToCtx * ctx = static_cast<IoSendToCtx *>( pr.second.get() );
                                     ctx->costTimeMs += diff;
                                     // 利用线程池处理这个回调
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
@@ -274,7 +295,7 @@ int IoService::run()
                                 break;
                             } // switch()
                         }
-                        else // isTimeout == false
+                        else // 没有超时 isTimeout == false
                         {
                             if ( rc > 0 )
                             {
@@ -283,7 +304,7 @@ int IoService::run()
                                 case ioAccept:
                                     if ( sel.hasReadSock(*sock.get()) )
                                     {
-                                        IoAcceptCtx * ctx = static_cast<IoAcceptCtx*>( pr.second.get() );
+                                        IoAcceptCtx * ctx = static_cast<IoAcceptCtx *>( pr.second.get() );
                                         // 接受客户连接
                                         auto clientSock = sock->accept(&ctx->ep);
                                         // 利用线程池处理这个回调
@@ -302,7 +323,7 @@ int IoService::run()
                                 case ioConnect:
                                     if ( sel.hasWriteSock(*sock.get()) )
                                     {
-                                        IoConnectCtx * ctx = static_cast<IoConnectCtx*>( pr.second.get() );
+                                        IoConnectCtx * ctx = static_cast<IoConnectCtx *>( pr.second.get() );
                                         ctx->costTimeMs = diff;
                                         // 利用线程池处理这个回调
                                         if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->costTimeMs ).post();
@@ -315,7 +336,7 @@ int IoService::run()
                                 case ioRecv:
                                     if ( sel.hasReadSock(*sock.get()) )
                                     {
-                                        IoRecvCtx * ctx = static_cast<IoRecvCtx*>( pr.second.get() );
+                                        IoRecvCtx * ctx = static_cast<IoRecvCtx *>( pr.second.get() );
 
                                         size_t wantBytes = 0;
                                         if ( ctx->targetBytes > 0 )
@@ -329,10 +350,10 @@ int IoService::run()
 
                                         winux::Buffer data = sock->recv(wantBytes);
                                         if ( data ) ctx->data.append(data);
-                                        ctx->hadBytes += data.getSize();
-                                        ctx->cnnAvail = data && data.getSize();
+                                        ctx->hadBytes += data.size();
+                                        ctx->cnnAvail = data && data.size();
 
-                                        if ( ctx->hadBytes >= ctx->targetBytes || data.getSize() == 0 )
+                                        if ( ctx->hadBytes >= ctx->targetBytes || data.size() == 0 )
                                         {
                                             // 利用线程池处理这个回调
                                             if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, std::move(ctx->data), ctx->cnnAvail ).post();
@@ -350,14 +371,14 @@ int IoService::run()
                                 case ioSend:
                                     if ( sel.hasWriteSock(*sock.get()) )
                                     {
-                                        IoSendCtx * ctx = static_cast<IoSendCtx*>( pr.second.get() );
+                                        IoSendCtx * ctx = static_cast<IoSendCtx *>( pr.second.get() );
                                         ctx->cnnAvail = true;
                                         ctx->costTimeMs += diff;
 
-                                        if ( ctx->hadBytes < ctx->data.getSize() )
+                                        if ( ctx->hadBytes < ctx->data.size() )
                                         {
-                                            size_t wantBytes = ctx->data.getSize() - ctx->hadBytes;
-                                            int sendBytes = sock->send( ctx->data.getBuf<winux::byte>() + ctx->hadBytes, wantBytes );
+                                            size_t wantBytes = ctx->data.size() - ctx->hadBytes;
+                                            int sendBytes = sock->send( ctx->data.get<winux::byte>() + ctx->hadBytes, wantBytes );
                                             if ( sendBytes > 0 )
                                             {
                                                 ctx->hadBytes += sendBytes;
@@ -368,10 +389,10 @@ int IoService::run()
                                             }
                                         }
 
-                                        if ( ctx->hadBytes == ctx->data.getSize() || !ctx->cnnAvail )
+                                        if ( ctx->hadBytes == ctx->data.size() || !ctx->cnnAvail )
                                         {
                                             // 利用线程池处理这个回调
-                                            if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->costTimeMs, ctx->cnnAvail ).post();
+                                            if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail ).post();
                                             // 已处理，删除这个请求
                                             it = ioMap.erase(it);
                                         }
@@ -386,7 +407,7 @@ int IoService::run()
                                 case ioRecvFrom:
                                     if ( sel.hasReadSock(*sock.get()) )
                                     {
-                                        IoRecvFromCtx * ctx = static_cast<IoRecvFromCtx*>( pr.second.get() );
+                                        IoRecvFromCtx * ctx = static_cast<IoRecvFromCtx *>( pr.second.get() );
 
                                         size_t wantBytes = 0;
                                         if ( ctx->targetBytes > 0 )
@@ -400,9 +421,9 @@ int IoService::run()
 
                                         winux::Buffer data = sock->recvFrom( &ctx->epFrom, wantBytes );
                                         if ( data ) ctx->data.append(data);
-                                        ctx->hadBytes += data.getSize();
+                                        ctx->hadBytes += data.size();
 
-                                        if ( ctx->hadBytes >= ctx->targetBytes || data.getSize() == 0 )
+                                        if ( ctx->hadBytes >= ctx->targetBytes || data.size() == 0 )
                                         {
                                             // 利用线程池处理这个回调
                                             if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, std::move(ctx->data), std::move(ctx->epFrom) ).post();
@@ -420,14 +441,14 @@ int IoService::run()
                                 case ioSendTo:
                                     if ( sel.hasWriteSock(*sock.get()) )
                                     {
-                                        IoSendToCtx * ctx = static_cast<IoSendToCtx*>( pr.second.get() );
+                                        IoSendToCtx * ctx = static_cast<IoSendToCtx *>( pr.second.get() );
                                         bool fail = false;
                                         ctx->costTimeMs += diff;
 
-                                        if ( ctx->hadBytes < ctx->data.getSize() )
+                                        if ( ctx->hadBytes < ctx->data.size() )
                                         {
-                                            size_t wantBytes = ctx->data.getSize() - ctx->hadBytes;
-                                            int sendBytes = sock->sendTo( *ctx->ep.get(), ctx->data.getBuf<winux::byte>() + ctx->hadBytes, wantBytes );
+                                            size_t wantBytes = ctx->data.size() - ctx->hadBytes;
+                                            int sendBytes = sock->sendTo( *ctx->ep.get(), ctx->data.get<winux::byte>() + ctx->hadBytes, wantBytes );
                                             if ( sendBytes > 0 )
                                             {
                                                 ctx->hadBytes += sendBytes;
@@ -438,10 +459,10 @@ int IoService::run()
                                             }
                                         }
 
-                                        if ( ctx->hadBytes == ctx->data.getSize() || fail )
+                                        if ( ctx->hadBytes == ctx->data.size() || fail )
                                         {
                                             // 利用线程池处理这个回调
-                                            if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->costTimeMs ).post();
+                                            if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->hadBytes, ctx->costTimeMs ).post();
                                             // 已处理，删除这个请求
                                             it = ioMap.erase(it);
                                         }
@@ -471,8 +492,8 @@ int IoService::run()
                     if ( ioMap.empty() ) itMaps = _ioMaps.erase(itMaps);
 
                     // 如果已经是end则不能再++it
-                    if ( itMaps != this->_ioMaps.end() ) ++itMaps;
-                }
+                    if ( itMaps != _ioMaps.end() ) ++itMaps;
+                } // for ( auto itMaps = _ioMaps.begin(); itMaps != _ioMaps.end(); )
             }
         }
     }
@@ -480,7 +501,7 @@ int IoService::run()
     return 0;
 }
 
-// class AsyncSocket ------------------------------------------------------------------------
+// class AsyncSocket --------------------------------------------------------------------------
 void AsyncSocket::acceptAsync( IoAcceptCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFunction cbTimeout )
 {
     _ioServ->postAccept( this->sharedFromThis(), cbOk, timeoutMs, cbTimeout );
@@ -510,6 +531,18 @@ void AsyncSocket::sendToAsync( EndPoint const & ep, void const * data, size_t si
 {
     if ( !this->_tryCreate( ep.getAddrFamily(), true, sockDatagram, true, protoUnspec, false ) ) return;
     _ioServ->postSendTo( this->sharedFromThis(), ep, data, size, cbOk, timeoutMs, cbTimeout );
+}
+
+AsyncSocket * AsyncSocket::onCreateClient( IoService & ioServ, int sock, bool isNewSock )
+{
+    if ( this->_CreateClientHandler )
+    {
+        return this->_CreateClientHandler( ioServ, sock, isNewSock );
+    }
+    else
+    {
+        return new AsyncSocket( ioServ, sock, isNewSock );
+    }
 }
 
 

@@ -2,9 +2,7 @@
 
 namespace eiennet
 {
-class AsyncSocket;
-
-// IO类型
+/** \brief IO类型 */
 enum IoType
 {
     ioAccept,
@@ -15,7 +13,7 @@ enum IoType
     ioSendTo,
 };
 
-// IO场景基类
+/** \brief IO场景基类 */
 struct IoCtx
 {
     winux::uint64 startTime; //!< 请求开启的时间
@@ -30,7 +28,9 @@ struct IoCtx
     }
 };
 
-// 接受场景
+class AsyncSocket;
+
+/** \brief 接受场景 */
 struct IoAcceptCtx : IoCtx
 {
     using OkFunction = std::function< bool ( winux::SharedPointer<AsyncSocket> servSock, winux::SharedPointer<AsyncSocket> clientSock, ip::EndPoint const & ep ) >;
@@ -44,7 +44,7 @@ struct IoAcceptCtx : IoCtx
     IoAcceptCtx() { }
 };
 
-// 连接场景
+/** \brief 连接场景 */
 struct IoConnectCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::uint64 costTimeMs ) >;
@@ -58,7 +58,7 @@ struct IoConnectCtx : IoCtx
     IoConnectCtx() : costTimeMs(0) { }
 };
 
-// 数据接收场景
+/** \brief 数据接收场景 */
 struct IoRecvCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::Buffer & data, bool cnnAvail ) >;
@@ -75,10 +75,10 @@ struct IoRecvCtx : IoCtx
     IoRecvCtx() : hadBytes(0), targetBytes(0), cnnAvail(false) { }
 };
 
-// 数据发送场景
+/** \brief 数据发送场景 */
 struct IoSendCtx : IoCtx
 {
-    using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::uint64 costTimeMs, bool cnnAvail ) >;
+    using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, size_t hadBytes, winux::uint64 costTimeMs, bool cnnAvail ) >;
     using TimeoutFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, IoSendCtx * ctx ) >;
 
     OkFunction cbOk; //!< 成功回调函数
@@ -87,12 +87,12 @@ struct IoSendCtx : IoCtx
     size_t hadBytes;    //!< 已发送数据量
     winux::uint64 costTimeMs; //!< 总花费时间
     winux::Buffer data; //!< 待发送的数据
-    bool cnnAvail;
+    bool cnnAvail; //!< 连接是否有效
 
     IoSendCtx() : hadBytes(0), costTimeMs(0), cnnAvail(false) { }
 };
 
-// 无连接，数据接收场景
+/** \brief 无连接，数据接收场景 */
 struct IoRecvFromCtx : IoCtx
 {
     using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::Buffer & data, EndPoint const & ep ) >;
@@ -109,10 +109,10 @@ struct IoRecvFromCtx : IoCtx
     IoRecvFromCtx() : hadBytes(0), targetBytes(0) { }
 };
 
-// 无连接，数据发送场景
+/** \brief 无连接，数据发送场景 */
 struct IoSendToCtx : IoCtx
 {
-    using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, winux::uint64 costTimeMs ) >;
+    using OkFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, size_t hadBytes, winux::uint64 costTimeMs ) >;
     using TimeoutFunction = std::function< void ( winux::SharedPointer<AsyncSocket> sock, IoSendToCtx * ctx ) >;
 
     OkFunction cbOk; //!< 成功回调函数
@@ -164,8 +164,13 @@ public:
     /** \brief 移除指定sock的所有IO监听 */
     void removeSock( winux::SharedPointer<AsyncSocket> sock );
 
+    /** \brief 暴露线程池 */
     winux::ThreadPool & getPool() { return _pool; }
+
+    /** \brief 暴露客户映射表 { client_sock: { io_type: io_ctx, ... }, ... } */
     IoMapMap & getIoMaps() { return _ioMaps; }
+
+    /** \brief 暴露互斥量 */
     winux::Mutex & getMutex() { return _mtx; }
 
 
@@ -173,15 +178,15 @@ protected:
     /** \brief 投递IO请求 */
     void _post( winux::SharedPointer<AsyncSocket> sock, IoType type, winux::SharedPointer<IoCtx> ctx );
 
-    // IO请求加入Select轮询数组前
+    /** \brief IO请求加入Select轮询数组前 */
     DEFINE_CUSTOM_EVENT( RunBeforeJoin, (), () )
-    // 完成Select.wait()后
+    /** \brief 完成Select.wait()后 */
     DEFINE_CUSTOM_EVENT( RunAfterWait, ( int rc ), (rc) )
 
 private:
     winux::ThreadPool _pool;
     IoMapMap _ioMaps;
-    winux::RecursiveMutex _mtx;
+    winux::RecursiveMutex _mtx; //!< 互斥量，保护竞态数据
     winux::Condition _cdt;
     double _serverWait;         //!< 服务器IO等待时间间隔（秒）
     int _threadCount;
@@ -221,7 +226,7 @@ public:
     winux::SharedPointer<AsyncSocket> accept( EndPoint * ep = nullptr )
     {
         int sock;
-        return this->Socket::accept( &sock, ep ) ? winux::SharedPointer<AsyncSocket>( new AsyncSocket( *_ioServ, sock, true ) ) : winux::SharedPointer<AsyncSocket>();
+        return this->Socket::accept( &sock, ep ) ? winux::SharedPointer<AsyncSocket>( this->onCreateClient( *_ioServ, sock, true ) ) : winux::SharedPointer<AsyncSocket>();
     }
 
     /** \brief 设置套接字关联数据 */
@@ -272,7 +277,10 @@ public:
      *  \param sock 出错的Socket */
     DEFINE_CUSTOM_EVENT( Error, ( winux::SharedPointer<AsyncSocket> sock ), (sock) )
 
-private:
+    /** \brief 创建客户连接 */
+    DEFINE_CUSTOM_EVENT_RETURN_EX( AsyncSocket *, CreateClient, ( IoService & ioServ, int sock, bool isNewSock ) );
+
+protected:
     IoService * _ioServ;
     void * _data;
 

@@ -13,7 +13,7 @@
 
 namespace winux
 {
-// 特殊平台变量 -------------------------------------------------------------
+// 特殊平台变量 ---------------------------------------------------------------------------------
 String const DirSep_WIN = $T("\\"); //!< Windows目录分割符
 String const LineSep_WIN = $T("\r\n"); //!< Windows行分割符
 String const PathEnvSep_WIN = $T(";"); //!< Windows PATH环境变量路径分割符
