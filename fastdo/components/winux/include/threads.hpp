@@ -526,7 +526,6 @@ private:
 class WINUX_DLL ThreadGroup
 {
 public:
-
     /** \brief 构造函数1 默认 */
     ThreadGroup() : _mtxGroup(true), _cdtGroup(true)
     {
@@ -585,14 +584,14 @@ public:
     }
 
     /** \brief 创建一定数量指定的派生类线程 */
-    template < class _ThreadCls >
-    ThreadGroup & create( size_t count )
+    template < class _ThreadCls, typename... _ArgType >
+    ThreadGroup & create( size_t count, _ArgType&&... arg )
     {
         this->destroy();
 
         for ( size_t i = 0; i < count; i++ )
         {
-            Thread * p = new _ThreadCls();
+            Thread * p = new _ThreadCls( std::forward<_ArgType>(arg)... );
             p->_group = this;
             _threads.emplace_back(p);
         }
@@ -606,6 +605,15 @@ public:
      *
      *  返回false表示超时，返回true表示运行线程全部正常退出 */
     bool wait( double sec = -1 );
+
+    /** \brief 线程数量 */
+    size_t count() const { return _threads.size(); }
+
+    /** \brief 取得指定线程 */
+    SimplePointer<Thread> & threadAt( size_t i ) { return _threads[i]; }
+
+    /** \brief 取得指定线程 */
+    SimplePointer<Thread> const & threadAt( size_t i ) const { return _threads[i]; }
 
 private:
     static void * _ThreadGroupDefaultFunc( void * param );

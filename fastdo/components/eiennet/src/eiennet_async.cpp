@@ -1,5 +1,6 @@
 ﻿#include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
+#include "eiennet_io.hpp"
 #include "eiennet_async.hpp"
 
 namespace eiennet
@@ -22,70 +23,9 @@ bool IoService::init( int threadCount, double serverWait )
     return true;
 }
 
-void IoService::stop( bool b )
+void IoService::stop()
 {
-    static_cast<volatile bool &>(_stop) = b;
-}
-
-void IoService::postAccept( winux::SharedPointer<AsyncSocket> sock, IoAcceptCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFunction cbTimeout )
-{
-    auto ctx = winux::MakeShared(new IoAcceptCtx);
-    ctx->timeoutMs = timeoutMs;
-    ctx->cbOk = cbOk;
-    ctx->cbTimeout = cbTimeout;
-    this->_post( sock, ioAccept, ctx );
-}
-
-void IoService::postConnect( winux::SharedPointer<AsyncSocket> sock, EndPoint const & ep, IoConnectCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoConnectCtx::TimeoutFunction cbTimeout )
-{
-    sock->connect(ep);
-
-    auto ctx = winux::MakeShared(new IoConnectCtx);
-    ctx->timeoutMs = timeoutMs;
-    ctx->cbOk = cbOk;
-    ctx->cbTimeout = cbTimeout;
-    this->_post( sock, ioConnect, ctx );
-}
-
-void IoService::postRecv( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFunction cbTimeout )
-{
-    auto ctx = winux::MakeShared(new IoRecvCtx);
-    ctx->timeoutMs = timeoutMs;
-    ctx->cbOk = cbOk;
-    ctx->cbTimeout = cbTimeout;
-    ctx->targetBytes = targetSize;
-    this->_post( sock, ioRecv, ctx );
-}
-
-void IoService::postSend( winux::SharedPointer<AsyncSocket> sock, void const * data, size_t size, IoSendCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoSendCtx::TimeoutFunction cbTimeout )
-{
-    auto ctx = winux::MakeShared(new IoSendCtx);
-    ctx->timeoutMs = timeoutMs;
-    ctx->cbOk = cbOk;
-    ctx->cbTimeout = cbTimeout;
-    ctx->data.setBuf( data, size, false );
-    this->_post( sock, ioSend, ctx );
-}
-
-void IoService::postRecvFrom( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvFromCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvFromCtx::TimeoutFunction cbTimeout )
-{
-    auto ctx = winux::MakeShared(new IoRecvFromCtx);
-    ctx->timeoutMs = timeoutMs;
-    ctx->cbOk = cbOk;
-    ctx->cbTimeout = cbTimeout;
-    ctx->targetBytes = targetSize;
-    this->_post( sock, ioRecvFrom, ctx );
-}
-
-void IoService::postSendTo( winux::SharedPointer<AsyncSocket> sock, EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoSendToCtx::TimeoutFunction cbTimeout )
-{
-    auto ctx = winux::MakeShared(new IoSendToCtx);
-    ctx->timeoutMs = timeoutMs;
-    ctx->cbOk = cbOk;
-    ctx->cbTimeout = cbTimeout;
-    ctx->data.setBuf( data, size, false );
-    ctx->ep.attachNew( ep.clone() );
-    this->_post( sock, ioSendTo, ctx );
+    static_cast<volatile bool &>(_stop) = true;
 }
 
 void IoService::_post( winux::SharedPointer<AsyncSocket> sock, IoType type, winux::SharedPointer<IoCtx> ctx )
@@ -122,6 +62,7 @@ int IoService::run()
 {
     io::Select sel;
     this->_pool.startup(_threadCount);
+    this->_stop = false;
     size_t counter = 0;
     while ( !_stop )
     {
@@ -504,33 +445,66 @@ int IoService::run()
 // class AsyncSocket --------------------------------------------------------------------------
 void AsyncSocket::acceptAsync( IoAcceptCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFunction cbTimeout )
 {
-    _ioServ->postAccept( this->sharedFromThis(), cbOk, timeoutMs, cbTimeout );
+    auto ctx = winux::MakeShared(new IoAcceptCtx);
+    ctx->timeoutMs = timeoutMs;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+    _ioServ->_post( this->sharedFromThis(), ioAccept, ctx );
 }
 
 void AsyncSocket::connectAsync( EndPoint const & ep, IoConnectCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoConnectCtx::TimeoutFunction cbTimeout )
 {
-    _ioServ->postConnect( this->sharedFromThis(), ep, cbOk, timeoutMs, cbTimeout );
+    auto sock = this->sharedFromThis();
+    sock->connect(ep);
+
+    auto ctx = winux::MakeShared(new IoConnectCtx);
+    ctx->timeoutMs = timeoutMs;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+    _ioServ->_post( sock, ioConnect, ctx );
 }
 
 void AsyncSocket::recvUntilSizeAsync( size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFunction cbTimeout )
 {
-    _ioServ->postRecv( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout );
+    auto ctx = winux::MakeShared(new IoRecvCtx);
+    ctx->timeoutMs = timeoutMs;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+    ctx->targetBytes = targetSize;
+    _ioServ->_post( this->sharedFromThis(), ioRecv, ctx );
 }
 
 void AsyncSocket::sendAsync( void const * data, size_t size, IoSendCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoSendCtx::TimeoutFunction cbTimeout )
 {
-    _ioServ->postSend( this->sharedFromThis(), data, size, cbOk, timeoutMs, cbTimeout );
+    auto ctx = winux::MakeShared(new IoSendCtx);
+    ctx->timeoutMs = timeoutMs;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+    ctx->data.setBuf( data, size, false );
+    _ioServ->_post( this->sharedFromThis(), ioSend, ctx );
 }
 
 void AsyncSocket::recvFromUntilSizeAsync( size_t targetSize, IoRecvFromCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoRecvFromCtx::TimeoutFunction cbTimeout )
 {
-    _ioServ->postRecvFrom( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout );
+    auto ctx = winux::MakeShared(new IoRecvFromCtx);
+    ctx->timeoutMs = timeoutMs;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+    ctx->targetBytes = targetSize;
+    _ioServ->_post( this->sharedFromThis(), ioRecvFrom, ctx );
 }
 
 void AsyncSocket::sendToAsync( EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFunction cbOk, winux::uint64 timeoutMs, IoSendToCtx::TimeoutFunction cbTimeout )
 {
     if ( !this->_tryCreate( ep.getAddrFamily(), true, sockDatagram, true, protoUnspec, false ) ) return;
-    _ioServ->postSendTo( this->sharedFromThis(), ep, data, size, cbOk, timeoutMs, cbTimeout );
+
+    auto ctx = winux::MakeShared(new IoSendToCtx);
+    ctx->timeoutMs = timeoutMs;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+    ctx->data.setBuf( data, size, false );
+    ctx->ep.attachNew( ep.clone() );
+    _ioServ->_post( this->sharedFromThis(), ioSendTo, ctx );
 }
 
 AsyncSocket * AsyncSocket::onCreateClient( IoService & ioServ, int sock, bool isNewSock )

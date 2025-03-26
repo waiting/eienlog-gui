@@ -16,7 +16,6 @@
     #include <math.h>
 #endif
 
-
 namespace eienlog
 {
 // 根据数据创建一系列分块
@@ -190,7 +189,7 @@ bool LogReader::readChunk( winux::Packet<LogChunk> * chunk, eiennet::ip::EndPoin
 
 bool LogReader::readRecord( LogRecord * record, time_t waitTimeout, time_t updateTimeout )
 {
-    thread_local eiennet::io::SelectRead sel;
+    thread_local io::SelectRead sel;
     while ( true )
     {
         time_t curTime = winux::GetUtcTimeMs();

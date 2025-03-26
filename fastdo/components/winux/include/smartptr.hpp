@@ -509,6 +509,9 @@ protected:
     virtual void _deleteThis() = 0;
 
 public:
+    /** \brief 显式删除`SharedHandle#detach()`出来的`SharedDeleterContext`对象 */
+    void delThis() { this->_deleteThis(); }
+
     /** \brief 如果引用计数不是0，则增加引用计数。成功则返回true。
      *
      *  用于`WeakHandle`创建`SharedHandle`时检测所持资源的计数是否不为0，即还有效。*/

@@ -146,14 +146,7 @@ public:
     bool init( int threadCount = 4, double serverWait = 0.002 );
 
     /** \brief 停止监听服务 */
-    void stop( bool b = true );
-
-    void postAccept( winux::SharedPointer<AsyncSocket> sock, IoAcceptCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoAcceptCtx::TimeoutFunction cbTimeout = nullptr );
-    void postConnect( winux::SharedPointer<AsyncSocket> sock, EndPoint const & ep, IoConnectCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoConnectCtx::TimeoutFunction cbTimeout = nullptr );
-    void postRecv( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::TimeoutFunction cbTimeout = nullptr );
-    void postSend( winux::SharedPointer<AsyncSocket> sock, void const * data, size_t size, IoSendCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoSendCtx::TimeoutFunction cbTimeout = nullptr );
-    void postRecvFrom( winux::SharedPointer<AsyncSocket> sock, size_t targetSize, IoRecvFromCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoRecvFromCtx::TimeoutFunction cbTimeout = nullptr );
-    void postSendTo( winux::SharedPointer<AsyncSocket> sock, EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFunction cbOk, winux::uint64 timeoutMs = -1, IoSendToCtx::TimeoutFunction cbTimeout = nullptr );
+    void stop();
 
     /** \brief 运行 */
     int run();
