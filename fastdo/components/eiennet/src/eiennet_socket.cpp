@@ -1701,6 +1701,11 @@ EndPoint EndPoint::FromBound( Socket const * sock )
 }
 
 // class ip::EndPoint -------------------------------------------------------------------------
+EndPoint::EndPoint( void const * sockaddr, size_t len )
+{
+    this->init( sockaddr, len );
+}
+
 EndPoint::EndPoint( Socket::AddrFamily af )
 {
     this->init(af);
@@ -1709,6 +1714,11 @@ EndPoint::EndPoint( Socket::AddrFamily af )
 EndPoint::EndPoint( winux::Mixed const & ipAndPort )
 {
     this->init(ipAndPort);
+}
+
+EndPoint::EndPoint( char const * ipAddr, winux::ushort port )
+{
+    this->init( winux::String(ipAddr), port );
 }
 
 EndPoint::EndPoint( winux::String const & ipAddr, winux::ushort port )
@@ -1747,6 +1757,11 @@ EndPoint & EndPoint::operator = ( EndPoint && other )
 
 EndPoint::~EndPoint()
 {
+}
+
+void EndPoint::init( void const * sockaddr, size_t len )
+{
+    memcpy( &_self->addr, sockaddr, sizeof(_self->addr) < len ? sizeof(_self->addr) : len );
 }
 
 void EndPoint::init( Socket::AddrFamily af )

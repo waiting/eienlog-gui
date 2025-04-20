@@ -738,11 +738,17 @@ public:
     /** \brief 从已绑定地址的套接字上获取绑定的`EndPoint` */
     static EndPoint FromBound( Socket const * sock );
 
-    /** \brief 默认构造函数 */
+    /** \brief 构造函数0，通过`sockaddr`构建EP */
+    EndPoint( void const * sockaddr, size_t len );
+    /** \brief 构造函数1，通过地址族构建EP */
     EndPoint( Socket::AddrFamily af = Socket::afUnspec );
-    /** \brief 构造函数1，ipAndPort可以是下面几种类型："IPv4:port"、"[IPv6]:port"、[ "IP", port ]、{ "IP" : port }。 */
+    /** \brief 构造函数2，ipAndPort可以是下面几种类型："IPv4:port"、"[IPv6]:port"、[ "IP", port ]、{ "IP" : port }。 */
     EndPoint( winux::Mixed const & ipAndPort );
-    /** \brief 构造函数2，分别指定IP地址和端口号
+    /** \brief 构造函数3，分别指定IP地址和端口号
+     *
+     *  addr为""则视为IPv4(0.0.0.0)，为"[]"则视为IPv6(0:0:0:0:0:0:0:0) */
+    EndPoint( char const * ipAddr, winux::ushort port );
+    /** \brief 构造函数4，分别指定IP地址和端口号
      *
      *  ipAddr为""则视为IPv4(0.0.0.0)，为"[]"则视为IPv6(0:0:0:0:0:0:0:0) */
     EndPoint( winux::String const & ipAddr, winux::ushort port );
@@ -758,10 +764,12 @@ public:
     virtual ~EndPoint();
 
     /** \brief 初始化0 */
+    void init( void const * sockaddr, size_t len );
+    /** \brief 初始化1 */
     void init( Socket::AddrFamily af = Socket::afUnspec );
-    /** \brief 初始化1，ipAndPort可以是下面几种类型："IPv4:port"、"[IPv6]:port"、[ "IP", port ]、{ "IP" : port }。 */
+    /** \brief 初始化2，ipAndPort可以是下面几种类型："IPv4:port"、"[IPv6]:port"、[ "IP", port ]、{ "IP" : port }。 */
     void init( winux::Mixed const & ipAndPort );
-    /** \brief 初始化2，分别指定IP地址和端口号
+    /** \brief 初始化3，分别指定IP地址和端口号
      *
      *  ipAddr为""则视为IPv4(0.0.0.0)，为"[]"则视为IPv6(0:0:0:0:0:0:0:0) */
     void init( winux::String const & ipAddr, winux::ushort port );
@@ -771,7 +779,7 @@ public:
     /** \brief 以`_Ty*`形式取得内部的`sockaddr_?`结构体指针 */
     template < typename _Ty >
     _Ty * get() const { return reinterpret_cast<_Ty *>( this->get() ); }
-    /** \brief 取得内部的`sockaddr`结构大小. */
+    /** \brief 取得内部的`sockaddr`结构大小 */
     virtual winux::uint & size() const override;
     /** \brief 转换成"IP:port"的字符串形式 */
     virtual winux::String toString() const override;
