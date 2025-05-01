@@ -747,7 +747,7 @@ public:
     /** \brief 构造函数3，分别指定IP地址和端口号
      *
      *  addr为""则视为IPv4(0.0.0.0)，为"[]"则视为IPv6(0:0:0:0:0:0:0:0) */
-    EndPoint( char const * ipAddr, winux::ushort port );
+    EndPoint( winux::tchar const * ipAddr, winux::ushort port );
     /** \brief 构造函数4，分别指定IP地址和端口号
      *
      *  ipAddr为""则视为IPv4(0.0.0.0)，为"[]"则视为IPv6(0:0:0:0:0:0:0:0) */

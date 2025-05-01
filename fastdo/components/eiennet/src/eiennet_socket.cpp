@@ -1716,7 +1716,7 @@ EndPoint::EndPoint( winux::Mixed const & ipAndPort )
     this->init(ipAndPort);
 }
 
-EndPoint::EndPoint( char const * ipAddr, winux::ushort port )
+EndPoint::EndPoint( winux::tchar const * ipAddr, winux::ushort port )
 {
     this->init( winux::String(ipAddr), port );
 }
