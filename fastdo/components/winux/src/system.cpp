@@ -832,11 +832,12 @@ CommandLineVars::CommandLineVars( int argc, winux::tchar const ** argv, Mixed co
     }
 }
 
-// struct MutexLockObj_Data ---------------------------------------------------------------
-struct MutexLockObj_Data
+// struct MutexNative_Data --------------------------------------------------------------------
+struct MutexNative_Data
 {
 #if defined(OS_WIN)
-    HANDLE _mutex;
+    //HANDLE _mutex;
+    CRITICAL_SECTION _cs;
 #else
     pthread_mutex_t _mutex;
 #endif
@@ -846,7 +847,8 @@ struct MutexLockObj_Data
 MutexNative::MutexNative()
 {
 #if defined(OS_WIN)
-    _self->_mutex = CreateMutex( NULL, FALSE, NULL );
+    //_self->_mutex = CreateMutex( NULL, FALSE, NULL );
+    InitializeCriticalSection(&_self->_cs);
 #else
     pthread_mutex_init( &_self->_mutex, NULL );
 #endif
@@ -855,7 +857,8 @@ MutexNative::MutexNative()
 MutexNative::~MutexNative()
 {
 #if defined(OS_WIN)
-    CloseHandle(_self->_mutex);
+    //CloseHandle(_self->_mutex);
+    DeleteCriticalSection(&_self->_cs);
 #else
     pthread_mutex_destroy(&_self->_mutex);
 #endif
@@ -864,7 +867,8 @@ MutexNative::~MutexNative()
 bool MutexNative::tryLock()
 {
 #if defined(OS_WIN)
-    return WaitForSingleObject( _self->_mutex, 0 ) == WAIT_OBJECT_0;
+    //return WaitForSingleObject( _self->_mutex, 0 ) == WAIT_OBJECT_0;
+    return TryEnterCriticalSection(&_self->_cs) == TRUE;
 #else
     return pthread_mutex_trylock(&_self->_mutex) == 0;
 #endif
@@ -873,7 +877,9 @@ bool MutexNative::tryLock()
 bool MutexNative::lock()
 {
 #if defined(OS_WIN)
-    return WaitForSingleObject( _self->_mutex, INFINITE ) == WAIT_OBJECT_0;
+    //return WaitForSingleObject( _self->_mutex, INFINITE ) == WAIT_OBJECT_0;
+    EnterCriticalSection(&_self->_cs);
+    return true;
 #else
     return pthread_mutex_lock(&_self->_mutex) == 0;
 #endif
@@ -882,7 +888,9 @@ bool MutexNative::lock()
 bool MutexNative::unlock()
 {
 #if defined(OS_WIN)
-    return ReleaseMutex(_self->_mutex) != 0;
+    //return ReleaseMutex(_self->_mutex) != 0;
+    LeaveCriticalSection(&_self->_cs);
+    return true;
 #else
     return pthread_mutex_unlock(&_self->_mutex) == 0;
 #endif

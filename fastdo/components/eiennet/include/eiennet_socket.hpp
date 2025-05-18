@@ -694,8 +694,6 @@ private:
 /** \brief 套接字输出流 */
 class EIENNET_DLL SocketStreamOut : public std::ostream
 {
-private:
-    SocketStreamBuf * _sockBuf;
 public:
     SocketStreamOut( SocketStreamBuf * sockBuf ) : std::ostream(sockBuf), _sockBuf(sockBuf) { }
     SocketStreamOut( SocketStreamBuf & sockBuf ) : std::ostream(&sockBuf), _sockBuf(&sockBuf) { }
@@ -704,13 +702,14 @@ public:
 
     /** \brief 写数据并flush流缓冲区 */
     SocketStreamOut & writeAndFlush( winux::Buffer const & data );
+
+private:
+    SocketStreamBuf * _sockBuf;
 };
 
 /** \brief 套接字输入流 */
 class EIENNET_DLL SocketStreamIn : public std::istream
 {
-private:
-    SocketStreamBuf * _sockBuf;
 public:
     SocketStreamIn( SocketStreamBuf * sockBuf ) : std::istream(sockBuf), _sockBuf(sockBuf) { }
     SocketStreamIn( SocketStreamBuf & sockBuf ) : std::istream(&sockBuf), _sockBuf(&sockBuf) { }
@@ -725,6 +724,9 @@ public:
     SocketStreamIn & read( winux::Buffer * data, size_t size );
     /** \brief 等待有数据到达，返回可无阻塞读取的数据量，若返回0超时，若返回<0出错 */
     std::streamsize waitAvail( double sec );
+
+private:
+    SocketStreamBuf * _sockBuf;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////

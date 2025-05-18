@@ -5,12 +5,14 @@ namespace eiennet
 /** \brief IO类型 */
 enum IoType
 {
+    ioNone,
     ioAccept,
     ioConnect,
     ioRecv,
     ioSend,
     ioRecvFrom,
     ioSendTo,
+    ioTimer
 };
 
 /** \brief IO场景基类 */

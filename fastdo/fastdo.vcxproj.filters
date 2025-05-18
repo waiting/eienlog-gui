@@ -102,6 +102,9 @@
     <ClInclude Include="components\eiennet\include\eiennet_server.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="components\eiennet\include\eiennet_io_select.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="components\winux\include\func_invoker.inl">
@@ -200,6 +203,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="components\eiennet\src\eiennet_server.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="components\eiennet\src\eiennet_io_select.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -244,7 +244,11 @@ public:
     virtual bool unlock() override;
 
 private:
-    PlainMembers<struct MutexLockObj_Data, 40> _self;
+#if defined(OS_WIN)
+    PlainMembers<struct MutexNative_Data, 40> _self;
+#else
+    PlainMembers<struct MutexNative_Data, 8> _self;
+#endif
 
     DISABLE_OBJECT_COPY(MutexNative)
 };

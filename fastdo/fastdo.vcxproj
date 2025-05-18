@@ -158,6 +158,7 @@
     <ClInclude Include="components\eiennet\include\eiennet_base.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet_curl.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet_io.hpp" />
+    <ClInclude Include="components\eiennet\include\eiennet_io_select.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet_server.hpp" />
     <ClInclude Include="components\eiennet\include\eiennet_socket.hpp" />
     <ClInclude Include="components\winux\include\archives.hpp" />
@@ -197,6 +198,7 @@
     <ClCompile Include="components\eiennet\src\eiennet_base.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_curl.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_io.cpp" />
+    <ClCompile Include="components\eiennet\src\eiennet_io_select.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_server.cpp" />
     <ClCompile Include="components\eiennet\src\eiennet_socket.cpp" />
     <ClCompile Include="components\winux\src\archives.cpp" />

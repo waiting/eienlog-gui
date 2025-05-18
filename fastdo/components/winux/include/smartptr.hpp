@@ -447,6 +447,14 @@ WINUX_FUNC_DECL(long) LongAtomicDecrement( long volatile * p );
 /** \brief 原子化操作，*p若和comparand相等，就把*p赋成exchange，返回值是初始的*p值 */
 WINUX_FUNC_DECL(long) LongAtomicCompareExchange( long volatile * p,  long exchange, long comparand );
 
+class ILockObj;
+/** \brief 原子化使一个Long型变量+1，返回值是+1后的*p值 */
+WINUX_FUNC_DECL(long) LongAtomicIncrement( ILockObj & lockObj, long volatile * p );
+/** \brief 原子化使一个Long型变量-1，返回值是-1后的*p值 */
+WINUX_FUNC_DECL(long) LongAtomicDecrement( ILockObj & lockObj, long volatile * p );
+/** \brief 原子化操作，*p若和comparand相等，就把*p赋成exchange，返回值是初始的*p值 */
+WINUX_FUNC_DECL(long) LongAtomicCompareExchange( ILockObj & lockObj, long volatile * p,  long exchange, long comparand );
+
 // 前向声明
 template < typename _HTy >
 class WeakHandle;
@@ -1220,7 +1228,7 @@ private:
     friend class SharedPointer;
 };
 
-
+/** \brief 能从this指针获得`SharedPointer` */
 template < typename _Ty >
 class EnableSharedFromThis
 {
