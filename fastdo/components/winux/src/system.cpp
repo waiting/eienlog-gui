@@ -1012,6 +1012,76 @@ void (* DllLoader::funcAddr( AnsiString const & funcName ) )()
 #endif
 }
 
+// class Pipe ---------------------------------------------------------------------------------
+Pipe::Pipe()
+{
+#if defined(OS_WIN)
+    CreatePipe( &_pipeHandle[0], &_pipeHandle[1], nullptr, 0 );
+#else
+    pipe(_pipeHandle);
+#endif
+}
+
+Pipe::~Pipe()
+{
+    this->closeRead();
+    this->closeWrite();
+}
+
+void Pipe::closeRead()
+{
+#if defined(OS_WIN)
+    if ( _pipeHandle[0] != INVALID_HANDLE_VALUE )
+    {
+        CloseHandle(_pipeHandle[0]);
+        _pipeHandle[0] = INVALID_HANDLE_VALUE;
+    }
+#else
+    if ( _pipeHandle[0] != -1 )
+    {
+        close(_pipeHandle[0]);
+        _pipeHandle[0] = -1;
+    }
+#endif
+}
+
+void Pipe::closeWrite()
+{
+#if defined(OS_WIN)
+    if ( _pipeHandle[1] != INVALID_HANDLE_VALUE )
+    {
+        CloseHandle(_pipeHandle[1]);
+        _pipeHandle[1] = INVALID_HANDLE_VALUE;
+    }
+#else
+    if ( _pipeHandle[1] != -1 )
+    {
+        close(_pipeHandle[1]);
+        _pipeHandle[1] = -1;
+    }
+#endif
+}
+
+HPipe Pipe::detachRead()
+{
+    auto h = _pipeHandle[0];
+    if ( _pipeHandle[0] != INVALID_HANDLE_VALUE )
+    {
+        _pipeHandle[0] = INVALID_HANDLE_VALUE;
+    }
+    return h;
+}
+
+HPipe Pipe::detachWrite()
+{
+    auto h = _pipeHandle[1];
+    if ( _pipeHandle[1] != INVALID_HANDLE_VALUE )
+    {
+        _pipeHandle[1] = INVALID_HANDLE_VALUE;
+    }
+    return h;
+}
+
 // class FileMapping --------------------------------------------------------------------------
 FileMapping::FileMapping()
 {

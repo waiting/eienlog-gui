@@ -181,13 +181,14 @@ public:
     /** \brief 构造函数2，指定socket的'地址簇'，'类型'，'协议' */
     Socket( AddrFamily af, SockType sockType, Protocol proto );
 
-// #ifndef MOVE_SEMANTICS_DISABLED
-//     /** \brief 移动构造函数 */
-//     Socket( Socket && other );
-//     /** \brief 移动赋值操作 */
-//     Socket & operator = ( Socket && other );
-// #endif
+#ifndef MOVE_SEMANTICS_DISABLED
+    /** \brief 移动构造函数 */
+    Socket( Socket && other );
+    /** \brief 移动赋值操作 */
+    Socket & operator = ( Socket && other );
+#endif
 
+    /** \brief 析构函数 */
     virtual ~Socket();
 
 public:
@@ -503,6 +504,36 @@ public:
     static int ErrNo();
 
 protected:
+    // 初始化全部成员
+    void _membersInit()
+    {
+        this->_addrFamily = afUnspec;
+        this->_sockType = sockUnknown;
+        this->_protocol = protoUnspec;
+
+        this->_attrBlocking = true;
+        this->_attrBroadcast = false;
+        this->_attrReUseAddr = false;
+        this->_attrSendTimeout = 0U;
+        this->_attrRecvTimeout = 0U;
+        this->_attrSendBufSize = 0;
+        this->_attrRecvBufSize = 0;
+    #if defined(OS_WIN)
+        this->_attrIpv6Only = true;   // IPV6套接字只开启IPV6功能
+    #else
+        this->_attrIpv6Only = false;  // IPV6套接字只开启IPV6功能
+    #endif
+
+        this->_resetManaged();
+    }
+
+    // 重置socket资源管理相关变量
+    void _resetManaged()
+    {
+        this->_sock = -1;
+        this->_isNewSock = false;
+    }
+
     // 延迟创建socket使用参数
     AddrFamily _addrFamily;  // 地址族
     SockType _sockType;      // 套接字类型
@@ -536,36 +567,6 @@ protected:
     // socket资源管理
     int _sock;           // socket描述符
     bool _isNewSock;     // 指示是否为新建socket。如果为true，则会在Socket对象析构时自动关闭sock
-
-    // 初始化全部成员
-    void _membersInit()
-    {
-        this->_addrFamily = afUnspec;
-        this->_sockType = sockUnknown;
-        this->_protocol = protoUnspec;
-
-        _attrBlocking = true;
-        _attrBroadcast = false;
-        _attrReUseAddr = false;
-        _attrSendTimeout = 0U;
-        _attrRecvTimeout = 0U;
-        _attrSendBufSize = 0;
-        _attrRecvBufSize = 0;
-    #if defined(OS_WIN)
-        _attrIpv6Only = true;   // IPV6套接字只开启IPV6功能
-    #else
-        _attrIpv6Only = false;  // IPV6套接字只开启IPV6功能
-    #endif
-
-        this->_resetManaged();
-    }
-
-    // 重置socket资源管理相关变量
-    void _resetManaged()
-    {
-        this->_sock = -1;
-        this->_isNewSock = false;
-    }
 
     DISABLE_OBJECT_COPY(Socket)
 };

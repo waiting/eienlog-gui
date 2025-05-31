@@ -397,4 +397,10 @@ int Select::wait( double sec )
 }
 
 
+namespace select
+{
+
+} // namespace select
+
+
 } // namespace io

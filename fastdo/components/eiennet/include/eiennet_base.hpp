@@ -63,6 +63,7 @@ inline _Ty ntoht( _Ty v )
     return v;
 }
 
-}
+
+} // namespace eiennet
 
 #endif // __EIENNET_BASE_HPP__

@@ -528,46 +528,48 @@ public:
         for ( ; ; )
         {
             // loop until state is known
-            long count = (long volatile &)_uses;
+            long count = _uses.load(std::memory_order_relaxed);
             if ( count == 0 ) return false;
-            if ( LongAtomicCompareExchange( &_uses, count + 1, count ) == count ) return true;
+            if ( _uses.compare_exchange_weak( count, count + 1, std::memory_order_acq_rel, std::memory_order_relaxed ) ) return true;
         }
     }
     /** \brief 增加引用计数 */
-    void incRef() { LongAtomicIncrement(&_uses); }
+    void incRef() { _uses.fetch_add( 1, std::memory_order_acq_rel ); }
     /** \brief 减少引用计数。当引用计数为0时销毁资源，并且销毁资源时减少弱引用计数。 */
     void decRef()
     {
-        if ( LongAtomicDecrement(&_uses) == 0 )
+        if ( _uses.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
         {
+            std::atomic_thread_fence(std::memory_order_acquire);
             this->_destroy();
             this->decWRef();
         }
     }
 
     /** \brief 增加弱引用计数 */
-    void incWRef() { LongAtomicIncrement(&_weaks); }
+    void incWRef() { _weaks.fetch_add( 1, std::memory_order_acq_rel ); }
     /** \brief 减少弱引用计数，当弱引用计数为0时销毁删除器场景对象 */
     void decWRef()
     {
-        if ( LongAtomicDecrement(&_weaks) == 0 )
+        if ( _weaks.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
         {
+            std::atomic_thread_fence(std::memory_order_acquire);
             this->_deleteThis();
         }
     }
 
     /** \brief 资源引用计数 */
-    long useCount() const { return (_uses); }
+    long useCount() const { return _uses.load(std::memory_order_relaxed); }
 
     /** \brief 资源是否已过期 */
-    bool expired() const { return ( _uses == 0 ); }
+    bool expired() const { return _uses.load(std::memory_order_relaxed) == 0; }
 
     /** \brief 弱引用计数 */
-    long weakCount() const { return (_weaks); }
+    long weakCount() const { return _weaks.load(std::memory_order_relaxed); }
 
 private:
-    long volatile _uses;
-    long volatile _weaks;
+    std::atomic<long> _uses;
+    std::atomic<long> _weaks;
 
     DISABLE_OBJECT_COPY(SharedDeleterContext)
 };

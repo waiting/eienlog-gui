@@ -326,22 +326,52 @@ Socket::Socket( AddrFamily af, SockType sockType, Protocol proto )
     this->setParams( af, sockType, proto );
 }
 
-// #ifndef MOVE_SEMANTICS_DISABLED
-// Socket::Socket( Socket && other ) : _self( std::move(other._self) )
-// {
-// }
-//
-// Socket & Socket::operator = ( Socket && other )
-// {
-//     if ( this != &other )
-//     {
-//         this->close();
-//
-//         _self = std::move(other._self);
-//     }
-//     return *this;
-// }
-// #endif
+#ifndef MOVE_SEMANTICS_DISABLED
+Socket::Socket( Socket && other ) :
+    _addrFamily( std::move(other._addrFamily) ),
+    _sockType( std::move(other._sockType) ),
+    _protocol( std::move(other._protocol) ),
+    _attrSendTimeout( std::move(other._attrSendTimeout) ),
+    _attrRecvTimeout( std::move(other._attrRecvTimeout) ),
+    _attrSendBufSize( std::move(other._attrSendBufSize) ),
+    _attrRecvBufSize( std::move(other._attrRecvBufSize) ),
+    _attrBlocking( std::move(other._attrBlocking) ),
+    _attrBroadcast( std::move(other._attrBroadcast) ),
+    _attrReUseAddr( std::move(other._attrReUseAddr) ),
+    _attrIpv6Only( std::move(other._attrIpv6Only) ),
+    _attrExecSets( std::move(other._attrExecSets) ),
+    _sock( std::move(other._sock) ),
+    _isNewSock( std::move(other._isNewSock) )
+{
+    other._resetManaged();
+}
+
+Socket & Socket::operator = ( Socket && other )
+{
+    if ( this != &other )
+    {
+        this->close();
+
+        _addrFamily = std::move(other._addrFamily);
+        _sockType = std::move(other._sockType);
+        _protocol = std::move(other._protocol);
+        _attrSendTimeout = std::move(other._attrSendTimeout);
+        _attrRecvTimeout = std::move(other._attrRecvTimeout);
+        _attrSendBufSize = std::move(other._attrSendBufSize);
+        _attrRecvBufSize = std::move(other._attrRecvBufSize);
+        _attrBlocking = std::move(other._attrBlocking);
+        _attrBroadcast = std::move(other._attrBroadcast);
+        _attrReUseAddr = std::move(other._attrReUseAddr);
+        _attrIpv6Only = std::move(other._attrIpv6Only);
+        _attrExecSets = std::move(other._attrExecSets);
+        _sock = std::move(other._sock);
+        _isNewSock = std::move(other._isNewSock);
+
+        other._resetManaged();
+    }
+    return *this;
+}
+#endif
 
 Socket::~Socket()
 {

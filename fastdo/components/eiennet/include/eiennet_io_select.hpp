@@ -1,6 +1,8 @@
 ﻿#ifndef __EIENNET_IO_SELECT_HPP__
 #define __EIENNET_IO_SELECT_HPP__
 
+#include "eiennet_io.hpp"
+
 /** \brief IO模型 */
 namespace io
 {
@@ -127,6 +129,12 @@ public:
      *  可用`Socket::ErrNo()`查看`select()`调用的错误，可用`Socket::getError()`查看`select()`无错时socket发生的错误。*/
     int wait( double sec = -1 );
 };
+
+
+namespace select
+{
+
+} // namespace select
 
 
 } // namespace io

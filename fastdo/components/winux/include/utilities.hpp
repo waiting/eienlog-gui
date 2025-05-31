@@ -22,6 +22,7 @@
 #include <queue>
 #include <functional>
 #include <algorithm>
+#include <atomic>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

@@ -341,6 +341,37 @@ private:
     DISABLE_OBJECT_COPY(DllLoader)
 };
 
+/** \brief 匿名管道 */
+class WINUX_DLL Pipe
+{
+public:
+    /** \brief 构造函数0 */
+    Pipe();
+
+    /** \brief 析构函数 */
+    ~Pipe();
+
+    /** \brief 关闭读端句柄 */
+    void closeRead();
+
+    /** \brief 关闭写端句柄 */
+    void closeWrite();
+
+    /** \brief 读端脱离管理 */
+    HPipe detachRead();
+
+    /** \brief 写端脱离管理 */
+    HPipe detachWrite();
+
+    /** \brief 读端句柄 */
+    HPipe getReadHandle() const { return _pipeHandle[0]; }
+    /** \brief 写端句柄 */
+    HPipe getWriteHandle() const { return _pipeHandle[1]; }
+
+private:
+    HPipe _pipeHandle[2];
+};
+
 /** \brief 文件映射旗标 */
 enum FileMappingFlag
 {
@@ -354,7 +385,7 @@ enum FileMappingFlag
 };
 
 /** \brief 文件映射。可以用来读写大文件 */
-class FileMapping
+class WINUX_DLL FileMapping
 {
 public:
     /** \brief 构造函数0 */
