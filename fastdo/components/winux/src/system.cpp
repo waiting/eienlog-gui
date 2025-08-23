@@ -1028,6 +1028,31 @@ Pipe::~Pipe()
     this->closeWrite();
 }
 
+Pipe::Pipe( Pipe && other )
+{
+    _pipeHandle[0] = other._pipeHandle[0];
+    _pipeHandle[1] = other._pipeHandle[1];
+
+    other.detachRead();
+    other.detachWrite();
+}
+
+Pipe & Pipe::operator = ( Pipe && other )
+{
+    if ( this != &other )
+    {
+        this->closeRead();
+        this->closeWrite();
+
+        _pipeHandle[0] = other._pipeHandle[0];
+        _pipeHandle[1] = other._pipeHandle[1];
+
+        other.detachRead();
+        other.detachWrite();
+    }
+    return *this;
+}
+
 void Pipe::closeRead()
 {
 #if defined(OS_WIN)
@@ -1065,20 +1090,34 @@ void Pipe::closeWrite()
 HPipe Pipe::detachRead()
 {
     auto h = _pipeHandle[0];
+#if defined(OS_WIN)
     if ( _pipeHandle[0] != INVALID_HANDLE_VALUE )
     {
         _pipeHandle[0] = INVALID_HANDLE_VALUE;
     }
+#else
+    if ( _pipeHandle[0] != -1 )
+    {
+        _pipeHandle[0] = -1;
+    }
+#endif
     return h;
 }
 
 HPipe Pipe::detachWrite()
 {
     auto h = _pipeHandle[1];
+#if defined(OS_WIN)
     if ( _pipeHandle[1] != INVALID_HANDLE_VALUE )
     {
         _pipeHandle[1] = INVALID_HANDLE_VALUE;
     }
+#else
+    if ( _pipeHandle[1] != -1 )
+    {
+        _pipeHandle[1] = -1;
+    }
+#endif
     return h;
 }
 

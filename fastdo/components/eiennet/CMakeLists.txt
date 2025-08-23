@@ -24,6 +24,7 @@ target_link_libraries(eiennet PRIVATE winux)
 
 add_library(eiennet_a STATIC ${eiennet_HEADERS} ${eiennet_SRCS} ${eienlog_HEADERS} ${eienlog_SRCS})
 target_include_directories(eiennet_a PUBLIC include PRIVATE ../eienlog/include)
+target_compile_definitions(eiennet_a PRIVATE CURL_STATICLIB)
 target_link_libraries(eiennet_a PRIVATE winux_a)
 
 # Public headers

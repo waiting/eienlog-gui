@@ -21,12 +21,14 @@
 
 #include <functional>
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) // Microsoft
     #include <sys/utime.h>
     #include <direct.h>
     #include <io.h>
     #include <process.h>
     #include <tchar.h>
+#elif defined(OS_DARWIN) // Apple
+    #include <mach-o/dyld.h>
 #else
     #include <utime.h>
     #include <unistd.h>
@@ -104,6 +106,20 @@ WINUX_FUNC_IMPL(String) GetExecutablePath( void )
         path.resize(n);
     #if defined(OS_WIN)
         nGet = GetModuleFileName( NULL, &path[0], (DWORD)path.size() );
+    #elif defined(OS_DARWIN)
+        uint32_t size = (uint32_t)n;
+        if ( _NSGetExecutablePath( &path[0], &size ) != 0 )
+        {
+            path.resize(size);
+            _NSGetExecutablePath( &path[0], &size );
+        }
+
+        nGet = strlen( path.c_str() );
+        break;
+    #elif defined(OS_BSD4) || defined(OS_BSDI)
+        nGet = readlink( "/proc/curproc/file", &path[0], path.size() );
+    #elif defined(OS_SOLARIS)
+        nGet = readlink( "/proc/self/path/a.out", &path[0], path.size() );
     #else
         nGet = readlink( "/proc/self/exe", &path[0], path.size() );
     #endif

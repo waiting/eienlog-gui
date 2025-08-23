@@ -400,7 +400,7 @@ public:
         MyBase::attachNew( p, (_Ty2*)0, dt );
     }
 
-    /** \brief 把指针由_Ty转换成_Ty2类型
+    /** \brief 把指针由_Ty转换(dynamic_cast)成_Ty2类型
      *
      *  通常_Ty为基类，_Ty2为派生类，并且_Ty指针所指的是_Ty2类型的对象。\n
      *  如果转换失败，返回空指针，自身改不变。如果转换成功，自身放弃所有权，置零。 */
@@ -418,7 +418,7 @@ public:
         return r;
     }
 
-    /** \brief 把指针由_Ty转换成_Ty2类型
+    /** \brief 把指针由_Ty转换(static_cast)成_Ty2类型
      *
      *  通常_Ty为基类，_Ty2为派生类，并且_Ty指针所指的必须是_Ty2类型的对象，才能使用这个函数。\n
      *  自身放弃所有权，置零。\n
@@ -999,7 +999,7 @@ public:
         _EnableSharedFromThis( *this, p );
     }
 
-    /** \brief 把指针由_Ty转换成_Ty2类型
+    /** \brief 把指针由_Ty转换(dynamic_cast)成_Ty2类型
      *
      *  通常_Ty为基类，_Ty2为派生类，并且_Ty指针所指的是_Ty2类型的对象。\n
      *  如果转换失败，返回空指针。如果转换成功，引用计数增加。 */
@@ -1013,7 +1013,7 @@ public:
         return r;
     }
 
-    /** \brief 把指针由_Ty转换成_Ty2类型
+    /** \brief 把指针由_Ty转换(static_cast)成_Ty2类型
      *
      *  通常_Ty为基类，_Ty2为派生类，并且_Ty指针所指的必须是_Ty2类型的对象，才能使用这个函数。\n
      *  你必须担保转换成功，否则将产生灾难。 */

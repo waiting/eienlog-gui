@@ -4,6 +4,12 @@
 #include "eiennet_io_select.hpp"
 #include "eiennet_async.hpp"
 
+#if defined(OS_WIN)
+#else
+#include <unistd.h>
+#include <sys/timerfd.h>
+#endif
+
 namespace eiennet
 {
 // class IoService ----------------------------------------------------------------------------
@@ -141,7 +147,8 @@ int IoService::run()
             else
             {
                 winux::ScopeGuard guard(_mtx);
-                for ( auto itMaps = _ioMaps.begin(); itMaps != _ioMaps.end(); )
+                bool hasEraseInIoMaps = false;
+                for ( auto itMaps = _ioMaps.begin(); itMaps != _ioMaps.end(); hasEraseInIoMaps = false )
                 {
                     IoMapMap::key_type const & sock = (*itMaps).first;
                     IoMap & ioMap = (*itMaps).second;
@@ -153,17 +160,19 @@ int IoService::run()
                             _pool.task( &AsyncSocket::onError, sock.get(), sock ).post();
                             // 删除该sock的所有IO事件
                             itMaps = _ioMaps.erase(itMaps);
+                            hasEraseInIoMaps = true;
                             // 就绪数-1
                             rc--;
 
-                            // 如果已经是end则不能再++it
-                            if ( itMaps != this->_ioMaps.end() ) ++itMaps;
+                            //// 如果已经是end则不能再++it
+                            //if ( itMaps != _ioMaps.end() ) ++itMaps;
                             continue;
                         }
                     }
 
                     // 处理该sock的IO事件
-                    for ( auto it = ioMap.begin(); it != ioMap.end(); )
+                    bool hasEraseInIoMap = false;
+                    for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
                     {
                         IoMap::value_type & pr = *it;
                         // 是否超时
@@ -185,6 +194,7 @@ int IoService::run()
                                     }
                                     // 已处理，删除这个请求
                                     it = ioMap.erase(it);
+                                    hasEraseInIoMap = true;
                                 }
                                 break;
                             case ioConnect:
@@ -195,6 +205,7 @@ int IoService::run()
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
                                     it = ioMap.erase(it);
+                                    hasEraseInIoMap = true;
                                 }
                                 break;
                             case ioRecv:
@@ -204,6 +215,7 @@ int IoService::run()
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
                                     it = ioMap.erase(it);
+                                    hasEraseInIoMap = true;
                                 }
                                 break;
                             case ioSend:
@@ -214,6 +226,7 @@ int IoService::run()
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
                                     it = ioMap.erase(it);
+                                    hasEraseInIoMap = true;
                                 }
                                 break;
                             case ioRecvFrom:
@@ -223,6 +236,7 @@ int IoService::run()
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
                                     it = ioMap.erase(it);
+                                    hasEraseInIoMap = true;
                                 }
                                 break;
                             case ioSendTo:
@@ -233,6 +247,7 @@ int IoService::run()
                                     if ( ctx->cbTimeout ) _pool.task( ctx->cbTimeout, sock, ctx, pr.second ).post();
                                     // 已处理，删除这个请求
                                     it = ioMap.erase(it);
+                                    hasEraseInIoMap = true;
                                 }
                                 break;
                             } // switch()
@@ -258,6 +273,7 @@ int IoService::run()
                                         }
                                         // 已处理，删除这个请求
                                         it = ioMap.erase(it);
+                                        hasEraseInIoMap = true;
                                         // 就绪数-1
                                         rc--;
                                     }
@@ -271,6 +287,7 @@ int IoService::run()
                                         if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->costTimeMs ).post();
                                         // 已处理，删除这个请求
                                         it = ioMap.erase(it);
+                                        hasEraseInIoMap = true;
                                         // 就绪数-1
                                         rc--;
                                     }
@@ -301,6 +318,7 @@ int IoService::run()
                                             if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, std::move(ctx->data), ctx->cnnAvail ).post();
                                             // 已处理，删除这个请求
                                             it = ioMap.erase(it);
+                                            hasEraseInIoMap = true;
                                         }
                                         else
                                         {
@@ -337,6 +355,7 @@ int IoService::run()
                                             if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail ).post();
                                             // 已处理，删除这个请求
                                             it = ioMap.erase(it);
+                                            hasEraseInIoMap = true;
                                         }
                                         else
                                         {
@@ -371,6 +390,7 @@ int IoService::run()
                                             if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, std::move(ctx->data), std::move(ctx->epFrom) ).post();
                                             // 已处理，删除这个请求
                                             it = ioMap.erase(it);
+                                            hasEraseInIoMap = true;
                                         }
                                         else
                                         {
@@ -407,6 +427,7 @@ int IoService::run()
                                             if ( ctx->cbOk ) _pool.task( ctx->cbOk, sock, ctx->hadBytes, ctx->costTimeMs ).post();
                                             // 已处理，删除这个请求
                                             it = ioMap.erase(it);
+                                            hasEraseInIoMap = true;
                                         }
                                         else
                                         {
@@ -427,14 +448,18 @@ int IoService::run()
                         }
 
                         // 如果已经是end则不能再++it
-                        if ( it != ioMap.end() ) ++it;
+                        if ( !hasEraseInIoMap && it != ioMap.end() ) ++it;
                     } // for ( auto it = ioMap.begin(); it != ioMap.end(); )
 
                     // 如果IO映射表已空，则删除该sock
-                    if ( ioMap.empty() ) itMaps = _ioMaps.erase(itMaps);
+                    if ( ioMap.empty() )
+                    {
+                        itMaps = _ioMaps.erase(itMaps);
+                        hasEraseInIoMaps = true;
+                    }
 
                     // 如果已经是end则不能再++it
-                    if ( itMaps != _ioMaps.end() ) ++itMaps;
+                    if ( !hasEraseInIoMaps && itMaps != _ioMaps.end() ) ++itMaps;
                 } // for ( auto itMaps = _ioMaps.begin(); itMaps != _ioMaps.end(); )
             }
         }
@@ -520,5 +545,253 @@ AsyncSocket * AsyncSocket::onCreateClient( IoService & ioServ, int sock, bool is
     }
 }
 
+namespace async
+{
+// class Socket -------------------------------------------------------------------------------
+Socket::Socket( io::IoService & serv, int sock, bool isNewSock ) : eiennet::Socket( sock, isNewSock ), _serv(&serv), _data(nullptr), _thread(nullptr)
+{
+    this->setBlocking(false);
+    //ColorOutputLine( winux::fgAtrovirens, "Socket(Accept)" );
+}
+
+Socket::Socket( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto ) : eiennet::Socket( af, sockType, proto ), _serv(&serv), _data(nullptr), _thread(nullptr)
+{
+    this->setBlocking(false);
+    //ColorOutputLine( winux::fgAtrovirens, "Socket()" );
+}
+
+Socket::~Socket()
+{
+    // 减小线程负载
+    if ( this->_thread ) this->_thread->decWeight();
+    //ColorOutputLine( winux::fgTeal, "~Socket() attach thread:", _thread );
+}
+
+void Socket::acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoAcceptCtx::TimeoutFn cbTimeout )
+{
+    this->_serv->postAccept( this->sharedFromThis(), cbOk, timeoutMs, cbTimeout );
+}
+
+void Socket::connectAsync( EndPoint const & ep, io::IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoConnectCtx::TimeoutFn cbTimeout )
+{
+    this->_serv->postConnect( this->sharedFromThis(), ep, cbOk, timeoutMs, cbTimeout );
+}
+
+void Socket::recvUntilSizeAsync( size_t targetSize, io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoRecvCtx::TimeoutFn cbTimeout )
+{
+    this->_serv->postRecv( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout );
+}
+
+void Socket::sendAsync( void const * data, size_t size, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoSendCtx::TimeoutFn cbTimeout )
+{
+    this->_serv->postSend( this->sharedFromThis(), data, size, cbOk, timeoutMs, cbTimeout );
+}
+
+void Socket::recvFromUntilSizeAsync( size_t targetSize, io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoRecvFromCtx::TimeoutFn cbTimeout )
+{
+    this->_serv->postRecvFrom( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout );
+}
+
+void Socket::sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoSendToCtx::TimeoutFn cbTimeout )
+{
+    this->_serv->postSendTo( this->sharedFromThis(), ep, data, size, cbOk, timeoutMs, cbTimeout );
+}
+
+Socket * Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock )
+{
+    if ( this->_CreateClientHandler )
+    {
+        return this->_CreateClientHandler( serv, sock, isNewSock );
+    }
+    else
+    {
+        return new Socket( serv, sock, isNewSock );
+    }
+}
+
+// struct Timer_Data --------------------------------------------------------------------------
+struct Timer_Data
+{
+#if defined(OS_WIN)
+    static void _TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER pTpTimer );
+    PTP_TIMER _pTpTimer;
+#else
+    int _timerFd;
+#endif
+
+    Timer_Data() :
+    #if defined(OS_WIN)
+        _pTpTimer(nullptr)
+    #else
+        _timerFd(-1)
+    #endif
+    {
+    }
+
+};
+
+// class Timer --------------------------------------------------------------------------------
+Timer::Timer( io::IoService & serv ) : posted(false), _serv(&serv), _thread(nullptr)
+{
+    this->create();
+
+    //ColorOutputLine( winux::fgAtrovirens, "Timer(", this, ")" );
+}
+
+Timer::~Timer()
+{
+    // 减小线程负载
+    if ( this->_thread ) this->_thread->decWeight();
+
+    this->destroy();
+
+    //ColorOutputLine( winux::fgTeal, "~Timer(", this, ") thread:", _thread );
+}
+
+void Timer::create()
+{
+    this->destroy();
+    {
+        winux::ScopeGuard guard(this->_mtx);
+    #if defined(OS_WIN)
+        _self->_pTpTimer = CreateThreadpoolTimer( &Timer_Data::_TimerCallback, this, nullptr );
+    #else
+        _self->_timerFd = timerfd_create( CLOCK_MONOTONIC, TFD_NONBLOCK );
+    #endif
+    }
+}
+
+void Timer::destroy()
+{
+    winux::ScopeGuard guard(this->_mtx);
+#if defined(OS_WIN)
+    if ( _self->_pTpTimer )
+    {
+        CloseThreadpoolTimer(_self->_pTpTimer);
+        _self->_pTpTimer = nullptr;
+    }
+#else
+    if ( _self->_timerFd != -1 )
+    {
+        close(_self->_timerFd);
+        _self->_timerFd = -1;
+    }
+#endif
+}
+
+void Timer::set( winux::uint64 timeoutMs, bool periodic )
+{
+    winux::ScopeGuard guard(this->_mtx);
+#if defined(OS_WIN)
+    if ( _self->_pTpTimer )
+    {
+        union
+        {
+            LARGE_INTEGER li;
+            FILETIME ft;
+        } dueTime;
+        dueTime.li.QuadPart = timeoutMs ? -( (winux::int64)timeoutMs * 10000 ) : -1;
+        SetThreadpoolTimer( _self->_pTpTimer, &dueTime.ft, ( periodic ? ( timeoutMs ? timeoutMs : 1 ) : 0 ), 0 );
+    }
+#else
+    if ( _self->_timerFd != -1 )
+    {
+        itimerspec tm = { { 0, 0 }, { 0, 0 } };
+        tm.it_value.tv_sec = timeoutMs / 1000;
+        tm.it_value.tv_nsec = ( timeoutMs % 1000 ) * 1000000;
+        if ( periodic )
+        {
+            tm.it_interval.tv_sec = timeoutMs / 1000;
+            tm.it_interval.tv_nsec = ( timeoutMs % 1000 ) * 1000000;
+        }
+        timerfd_settime( _self->_timerFd, 0, &tm, nullptr );
+    }
+#endif
+}
+
+void Timer::unset()
+{
+    winux::ScopeGuard guard(this->_mtx);
+#if defined(OS_WIN)
+    if ( _self->_pTpTimer )
+    {
+        SetThreadpoolTimer( _self->_pTpTimer, nullptr, 0, 0 );
+    }
+#else
+    if ( _self->_timerFd != -1 )
+    {
+        itimerspec tm = { { 0, 0 }, { 0, 0 } };
+        timerfd_settime( _self->_timerFd, 0, &tm, nullptr );
+    }
+#endif
+}
+
+void Timer::stop( bool timerCtxDecRef )
+{
+    this->_mtx.lock();
+    if ( this->timerCtx )
+    {
+        auto timerCtx = this->timerCtx.lock();
+        this->_mtx.unlock();
+
+        timerCtx->cancel(io::cancelProactive);
+
+        this->destroy();
+
+        this->_mtx.lock();
+        timerCtx->periodic = false;
+        if ( this->posted == false )
+        {
+            this->timerCtx.reset();
+            if ( timerCtxDecRef ) timerCtx->decRef();
+        }
+    }
+    this->_mtx.unlock();
+}
+
+void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, winux::SharedPointer<io::IoSocketCtx> assocCtx, io::IoServiceThread * th )
+{
+    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk, assocCtx, th );
+}
+
+intptr_t Timer::get() const
+{
+#if defined(OS_WIN)
+    return (intptr_t)_self->_pTpTimer;
+#else
+    return (intptr_t)_self->_timerFd;
+#endif
+}
+
+#if defined(OS_WIN)
+void Timer_Data::_TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER pTpTimer )
+{
+    auto timer = ((Timer *)Context)->sharedFromThis();
+    {
+        winux::ScopeGuard guard(timer->_mtx);
+
+        if ( timer->timerCtx )
+        {
+            timer->posted = true;
+            auto timerCtx = timer->timerCtx.lock();
+            if ( timerCtx )
+            {
+                if ( timer->_thread )
+                {
+                    timer->_thread->timerTrigger( timerCtx.get() );
+                }
+                else
+                {
+                    timer->_serv->timerTrigger( timerCtx.get() );
+                }
+            }
+        }
+    }
+}
+#else
+
+#endif
+
+} // namespace async
 
 } // namespace eiennet

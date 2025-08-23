@@ -189,6 +189,7 @@ public: \
     } \
 protected: \
     evtname##HandlerFunction _##evtname##Handler; \
+public: \
     virtual void on##evtname paramtypes \
     { \
         if ( this->_##evtname##Handler ) this->_##evtname##Handler calledparams; \
@@ -204,6 +205,7 @@ public: \
     } \
 protected: \
     evtname##HandlerFunction _##evtname##Handler; \
+public: \
     virtual ret on##evtname paramtypes
 
 
@@ -314,7 +316,7 @@ template <> struct Bin0<0>
 // 二进制数 macro包装
 #define BinVal(x) winux::Bin0<0##x>::val
 
-// 引用参数包装
+/** \brief 引用参数包装 */
 template < typename _Ty >
 class RefParam
 {
@@ -633,6 +635,18 @@ private:
     }
 
     char _block[_MembersSize];
+};
+
+/** \brief 静态New()支持 */
+template < typename _Ty >
+class EnableStaticNew
+{
+public:
+    template < typename... _ArgType >
+    static _Ty * New( _ArgType&&... arg )
+    {
+        return new _Ty( std::forward<_ArgType>(arg)... );
+    }
 };
 
 // 一些函数模板和函数 ------------------------------------------------------------------------

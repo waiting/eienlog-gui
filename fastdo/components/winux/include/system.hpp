@@ -244,11 +244,7 @@ public:
     virtual bool unlock() override;
 
 private:
-#if defined(OS_WIN)
     PlainMembers<struct MutexNative_Data, 40> _self;
-#else
-    PlainMembers<struct MutexNative_Data, 8> _self;
-#endif
 
     DISABLE_OBJECT_COPY(MutexNative)
 };
@@ -351,6 +347,12 @@ public:
     /** \brief 析构函数 */
     ~Pipe();
 
+    /** \brief 移动构造 */
+    Pipe( Pipe && other );
+
+    /** \brief 移动赋值 */
+    Pipe & operator = ( Pipe && other );
+
     /** \brief 关闭读端句柄 */
     void closeRead();
 
@@ -370,6 +372,7 @@ public:
 
 private:
     HPipe _pipeHandle[2];
+    DISABLE_OBJECT_COPY(Pipe)
 };
 
 /** \brief 文件映射旗标 */
