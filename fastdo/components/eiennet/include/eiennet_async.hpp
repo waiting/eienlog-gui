@@ -399,7 +399,7 @@ public:
 
     /** \brief 停止定时器
      *
-     *  取消定时器IO，如果尚未触发则释放`IoTimerCtx*` */
+     *  标记定时器IoTimerCtx为取消，摧毁定时器，标记为非周期。如果定时器未触发信号，重置关联的IoTimerCtx，并根据`timerCtxDecRef`尝试释放`IoTimerCtx` */
     void stop( bool timerCtxDecRef = true );
 
     void waitAsync( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk )
@@ -422,7 +422,9 @@ public:
      *  Windows平台是PTP_TIMER，Linux平台是timerfd文件描述符 */
     intptr_t get() const;
 
+    // 一个Timer只能投递一个IoTimerCtx，这个成员标记关联的IoTimerCtx，同时为Windows平台下回调函数传递IoTimerCtx
     winux::WeakPointer<io::IoTimerCtx> timerCtx;
+    // 是否已经发出定时器信号，如果是周期性的，则应恢复成false
     bool posted;
 
 private:

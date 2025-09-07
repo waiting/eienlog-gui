@@ -608,14 +608,17 @@ struct EIENNET_DLL DataRecvSendCtx
     size_t targetBytes;     //!< 目标数据量
     size_t retryCount;      //!< 已重试次数
 
+    /** \brief 构造函数0 */
     DataRecvSendCtx();
 
+    /** \brief 构造函数1 */
     DataRecvSendCtx(
         winux::Buffer const & data,
         size_t hadBytes = 0,
         size_t targetBytes = 0
     );
 
+    /** \brief 构造函数2 */
     DataRecvSendCtx(
         winux::Buffer && data,
         size_t hadBytes = 0,
@@ -649,7 +652,7 @@ struct EIENNET_DLL DataRecvSendCtx
         }
     }
 
-    /** \brief 在`find()`到目标内容后，从`data`中取出指定大小的数据，并保留其余数据，最后重置状态。
+    /** \brief 从`data`中取出指定大小的数据，并保留其余数据，最后重置状态。
      *
      *  \param extractDataSize 指定取出数据大小
      *  \param limitSpaceSize 限制空闲大小，超过这个大小的`data`空闲空间将会收缩 */

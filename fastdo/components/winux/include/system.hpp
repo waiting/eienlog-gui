@@ -231,6 +231,24 @@ private:
     DISABLE_OBJECT_COPY(ScopeGuard)
 };
 
+/** \brief 作用域范围不保护 */
+class WINUX_DLL ScopeUnguard
+{
+public:
+    ScopeUnguard( ILockObj & lockObj ) : _lockObj(lockObj)
+    {
+        _lockObj.unlock();
+    }
+    ~ScopeUnguard()
+    {
+        _lockObj.lock();
+    }
+
+private:
+    ILockObj & _lockObj;
+    DISABLE_OBJECT_COPY(ScopeUnguard)
+};
+
 /** \brief 原生互斥锁
  *
  *  Windows平台用win32api实现，Linux用pthread实现 */

@@ -256,11 +256,16 @@ public:
     // 唤醒沉默的select()等待
     void wakeUpTrigger( WakeUpType type );
 
+    // 预投递
+    void prePost( IoType type, winux::SharedPointer<IoCtx> ctx );
+
     // 投递IO事件
     void post( IoType type, winux::SharedPointer<IoCtx> ctx );
 
-    IoMapMap _ioMaps; //!< IO事件数据结构
-    winux::RecursiveMutex _mtx; //!< 互斥量，保护竞态数据
+    std::vector<IoMap::value_type> _preIoCtxs; //!< 预投递的IoCtx
+    winux::RecursiveMutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
+    IoMapMap _ioMaps; //!< 监听IO事件数据结构
+    winux::RecursiveMutex _mtxIoMaps; //!< 互斥量，保护IoMaps数据
     eiennet::ip::udp::Socket _sockWakeUp; //!< UDP套接字，用于发送唤醒select()信号
     winux::ushort _portSockWakeUp; //!< 唤醒信号套接字端口
 };
@@ -292,7 +297,7 @@ private:
 class EIENNET_DLL IoService : public io::IoService
 {
 public:
-    IoService( size_t groupThread = 4, size_t poolThread = 4 );
+    IoService( size_t groupThread = 4 );
 
     virtual void stop() override;
     virtual int run() override;
@@ -307,14 +312,14 @@ public:
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
-    /** \brief 删除指定sock所有IO监听 */
-    void removeSock( eiennet::async::Socket * sock );
+    /** \brief 标记删除指定sock所有IO监听 */
+    void removeSock( winux::SharedPointer<eiennet::async::Socket> sock );
 
     /** \brief 关联线程
      *
      *  \param sock 异步套接字
      *  \param mainRunThread 是否关联进主run()线程 */
-    bool associate( eiennet::async::Socket * sock, bool mainRunThread = false );
+    bool associate( winux::SharedPointer<eiennet::async::Socket> sock, bool mainRunThread = false );
 
     /** \brief 获取最小负载线程 */
     virtual IoServiceThread * getMinWeightThread() const override;
@@ -326,7 +331,7 @@ public:
     size_t getGroupThreadCount() const { return _group.count(); }
 
     IoEventsData _ioEvents;
-    winux::ThreadPool _pool;
+    //winux::ThreadPool _pool;
 
 private:
     winux::ThreadGroup _group;
