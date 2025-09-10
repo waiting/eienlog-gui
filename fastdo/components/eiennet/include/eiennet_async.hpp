@@ -423,9 +423,9 @@ public:
     intptr_t get() const;
 
     // 一个Timer只能投递一个IoTimerCtx，这个成员标记关联的IoTimerCtx，同时为Windows平台下回调函数传递IoTimerCtx
-    winux::WeakPointer<io::IoTimerCtx> timerCtx;
+    winux::WeakPointer<io::IoTimerCtx> _timerCtx;
     // 是否已经发出定时器信号，如果是周期性的，则应恢复成false
-    bool posted;
+    bool _posted;
 
 private:
     winux::PlainMembers<struct Timer_Data, 8> _self;

@@ -413,8 +413,8 @@ void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> ti
     }
 }
 
-// IoSocketCtx 重置超时场景，并取消超时事件
-void _IoSocketCtxResetTimerCtx( io::IoSocketCtx * ctx )
+// IoSocketCtx 取消超时事件关联，并取消超时定时器IO
+void _IoSocketCtxResetTimerCtx( winux::SharedPointer<io::IoSocketCtx> ctx )
 {
     if ( ctx->timerCtx ) // 有超时处理
     {
@@ -758,7 +758,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                         if ( timerCtx->periodic == false ) // 非周期
                                         {
                                             timer->unset();
-                                            timer->timerCtx.reset();
+                                            timer->_timerCtx.reset();
                                             //timerCtx->decRef();
 
                                             // 已处理，删除这个请求
@@ -767,7 +767,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                         }
                                         else
                                         {
-                                            timer->posted = false;
+                                            timer->_posted = false;
                                         }
                                     }
 
@@ -786,7 +786,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                     {
                                         auto ctx = sockIoCtx.ensureCast<IoAcceptCtx>();
 
-                                        _IoSocketCtxResetTimerCtx( ctx.get() ); // 如果有超时事件场景，重置超时场景，并取消超时事件
+                                        _IoSocketCtxResetTimerCtx(ctx);
 
                                         // 已处理，删除这个请求
                                         it = ioMap.erase(it);
@@ -819,7 +819,8 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                     {
                                         auto ctx = sockIoCtx.ensureCast<IoConnectCtx>();
 
-                                        _IoSocketCtxResetTimerCtx( ctx.get() ); // 如果有超时事件场景，重置超时场景，并取消超时事件
+                                        _IoSocketCtxResetTimerCtx(ctx);
+
                                         // 已处理，删除这个请求
                                         it = ioMap.erase(it);
                                         hasEraseInIoMap = true;
@@ -842,7 +843,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                     {
                                         auto ctx = sockIoCtx.ensureCast<IoRecvCtx>();
 
-                                        _IoSocketCtxResetTimerCtx( ctx.get() ); // 如果有超时事件场景，重置超时场景，并取消超时事件
+                                        _IoSocketCtxResetTimerCtx(ctx);
 
                                         size_t wantBytes = 0;
                                         if ( ctx->targetBytes > 0 )
@@ -887,7 +888,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                     {
                                         auto ctx = sockIoCtx.ensureCast<IoSendCtx>();
 
-                                        _IoSocketCtxResetTimerCtx( ctx.get() ); // 如果有超时事件场景，重置超时场景，并取消超时事件
+                                        _IoSocketCtxResetTimerCtx(ctx);
 
                                         ctx->cnnAvail = true;
                                         ctx->costTimeMs += timeDiff;
@@ -934,7 +935,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                     {
                                         auto ctx = sockIoCtx.ensureCast<IoRecvFromCtx>();
 
-                                        _IoSocketCtxResetTimerCtx( ctx.get() ); // 如果有超时事件场景，重置超时场景，并取消超时事件
+                                        _IoSocketCtxResetTimerCtx(ctx);
 
                                         size_t wantBytes = 0;
                                         if ( ctx->targetBytes > 0 )
@@ -978,7 +979,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                     {
                                         auto ctx = sockIoCtx.ensureCast<IoSendToCtx>();
 
-                                        _IoSocketCtxResetTimerCtx( ctx.get() ); // 如果有超时事件场景，重置超时场景，并取消超时事件
+                                        _IoSocketCtxResetTimerCtx(ctx);
 
                                         bool fail = false;
                                         ctx->costTimeMs += timeDiff;
@@ -1455,21 +1456,22 @@ void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, wi
     winux::SharedPointer<IoTimerCtx> timerCtx;
     {
         winux::ScopeGuard guard( timer->getMutex() );
-        timer->posted = false;
-        if ( timer->timerCtx )
+        timer->_posted = false;
+        if ( timer->_timerCtx )
         {
-            timerCtx = timer->timerCtx.lock().ensureCast<IoTimerCtx>();
+            timerCtx = timer->_timerCtx.lock().ensureCast<IoTimerCtx>();
         }
         else
         {
             timerCtx.attachNew( IoTimerCtx::New(), [] ( IoTimerCtx * ctx ) { ctx->decRef(); } );
-            timer->timerCtx = timerCtx;
+            timer->_timerCtx = timerCtx;
         }
     }
 
     if ( !timerCtx ) return;
 
     timerCtx->timeoutMs = timeoutMs;
+    timerCtx->cbOk = cbOk; // 回调函数
     timerCtx->timer = timer;
     timerCtx->periodic = periodic;
 
@@ -1478,8 +1480,6 @@ void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, wi
         timerCtx->assocCtx = assocCtx;
         assocCtx->timerCtx = timerCtx;
     }
-
-    timerCtx->cbOk = cbOk; // 回调函数
 
     // 分配处理线程
     timer->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );

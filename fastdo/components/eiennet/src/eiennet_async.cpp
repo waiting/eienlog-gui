@@ -631,7 +631,7 @@ struct Timer_Data
 };
 
 // class Timer --------------------------------------------------------------------------------
-Timer::Timer( io::IoService & serv ) : posted(false), _serv(&serv), _thread(nullptr)
+Timer::Timer( io::IoService & serv ) : _posted(false), _serv(&serv), _thread(nullptr)
 {
     this->create();
 
@@ -728,25 +728,26 @@ void Timer::unset()
 
 void Timer::stop( bool timerCtxDecRef )
 {
-    this->_mtx.lock();
-    if ( this->timerCtx )
+    winux::ScopeGuard guard(this->_mtx);
+
+    if ( this->_timerCtx )
     {
-        auto timerCtx = this->timerCtx.lock();
-        this->_mtx.unlock();
+        auto timerCtx = this->_timerCtx.lock();
 
-        timerCtx->cancel(io::cancelProactive);
-
-        this->destroy();
-
-        this->_mtx.lock();
-        timerCtx->periodic = false;
-        if ( this->posted == false )
         {
-            this->timerCtx.reset();
+            winux::ScopeUnguard unguard(this->_mtx);
+            timerCtx->cancel(io::cancelProactive);
+            this->destroy();
+        }
+
+        timerCtx->periodic = false;
+        if ( this->_posted == false )
+        {
+            this->_timerCtx.reset();
             if ( timerCtxDecRef ) timerCtx->decRef();
         }
     }
-    this->_mtx.unlock();
+
 }
 
 void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, winux::SharedPointer<io::IoSocketCtx> assocCtx, io::IoServiceThread * th )
@@ -770,10 +771,10 @@ void Timer_Data::_TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, 
     {
         winux::ScopeGuard guard(timer->_mtx);
 
-        if ( timer->timerCtx )
+        if ( timer->_timerCtx )
         {
-            timer->posted = true;
-            auto timerCtx = timer->timerCtx.lock();
+            timer->_posted = true;
+            auto timerCtx = timer->_timerCtx.lock();
             if ( timerCtx )
             {
                 if ( timer->_thread )
