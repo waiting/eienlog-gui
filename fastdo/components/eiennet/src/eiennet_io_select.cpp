@@ -485,7 +485,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                             winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                             if ( ctx->cbTimeout( ctx->sock, ctx.get() ) )
                                             {
-                                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout );
+                                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
                                             }
                                         }
                                     }
@@ -806,7 +806,7 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                             winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                             if ( ctx->cbOk( sock, clientSock, ctx->clientEp ) )
                                             {
-                                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout );
+                                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
                                             }
                                         }
 
@@ -1282,9 +1282,9 @@ int IoService::run()
     return 0;
 }
 
-void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFn cbTimeout )
+void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
-    if ( !this->associate( sock, true ) ) return;
+    if ( !this->associate( sock, th ) ) return;
 
     auto ctx = winux::MakeShared( IoAcceptCtx::New(), [] ( IoAcceptCtx * ctx ) { ctx->decRef(); } );
     ctx->timeoutMs = timeoutMs;
@@ -1309,9 +1309,9 @@ void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, I
     ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate);
 }
 
-void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs, IoConnectCtx::TimeoutFn cbTimeout )
+void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs, IoConnectCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
-    if ( !this->associate( sock, false ) ) return;
+    if ( !this->associate( sock, th ) ) return;
 
     sock->connect(ep);
 
@@ -1338,9 +1338,9 @@ void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, 
     ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate);
 }
 
-void IoService::postRecv( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFn cbTimeout )
+void IoService::postRecv( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
-    if ( !this->associate( sock, false ) ) return;
+    if ( !this->associate( sock, th ) ) return;
 
     auto ctx = winux::MakeShared( IoRecvCtx::New(), [] ( IoRecvCtx * ctx ) { ctx->decRef(); } );
     ctx->timeoutMs = timeoutMs;
@@ -1366,9 +1366,9 @@ void IoService::postRecv( winux::SharedPointer<eiennet::async::Socket> sock, siz
     ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate);
 }
 
-void IoService::postSend( winux::SharedPointer<eiennet::async::Socket> sock, void const * data, size_t size, IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs, IoSendCtx::TimeoutFn cbTimeout )
+void IoService::postSend( winux::SharedPointer<eiennet::async::Socket> sock, void const * data, size_t size, IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs, IoSendCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
-    if ( !this->associate( sock, false ) ) return;
+    if ( !this->associate( sock, th ) ) return;
 
     auto ctx = winux::MakeShared( IoSendCtx::New(), [] ( IoSendCtx * ctx ) { ctx->decRef(); } );
     ctx->timeoutMs = timeoutMs;
@@ -1394,9 +1394,9 @@ void IoService::postSend( winux::SharedPointer<eiennet::async::Socket> sock, voi
     ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate);
 }
 
-void IoService::postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs, IoRecvFromCtx::TimeoutFn cbTimeout )
+void IoService::postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs, IoRecvFromCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
-    if ( !this->associate( sock, false ) ) return;
+    if ( !this->associate( sock, th ) ) return;
 
     auto ctx = winux::MakeShared( IoRecvFromCtx::New(), [] ( IoRecvFromCtx * ctx ) { ctx->decRef(); } );
     ctx->timeoutMs = timeoutMs;
@@ -1422,9 +1422,9 @@ void IoService::postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock,
     ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate);
 }
 
-void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs, IoSendToCtx::TimeoutFn cbTimeout )
+void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs, IoSendToCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
-    if ( !this->associate( sock, false ) ) return;
+    if ( !this->associate( sock, th ) ) return;
 
     auto ctx = winux::MakeShared( IoSendToCtx::New(), [] ( IoSendToCtx * ctx ) { ctx->decRef(); } );
     ctx->timeoutMs = timeoutMs;
@@ -1556,22 +1556,18 @@ void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
     }
 }
 
-bool IoService::associate( winux::SharedPointer<eiennet::async::Socket> sock, bool mainRunThread )
+bool IoService::associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th )
 {
-    if ( mainRunThread )
+    if ( sock->getThread() == nullptr )
     {
-        sock->setThread(nullptr);
-    }
-    else
-    {
-        if ( sock->getThread() == nullptr )
+        sock->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );
+        if ( sock->getThread() != nullptr )
         {
-            sock->setThread( this->getMinWeightThread() );
-            if ( sock->getThread() )
-            {
-                sock->getThread()->incWeight(); // 增加线程负载权重
-                return true;
-            }
+            sock->getThread()->incWeight(); // 增加线程负载权重
+            return true;
+        }
+        else // sock->getThread() == nullptr
+        {
         }
     }
     return true;

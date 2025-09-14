@@ -329,36 +329,36 @@ public:
     /** \brief 获取IO服务对象 */
     io::IoService & getService() const { return *_serv; }
     /** \brief 接受客户连接（异步） */
-    void acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoAcceptCtx::TimeoutFn cbTimeout = nullptr );
+    void acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoAcceptCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = nullptr );
     /** \brief 连接服务器（异步） */
-    void connectAsync( EndPoint const & ep, io::IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoConnectCtx::TimeoutFn cbTimeout = nullptr );
+    void connectAsync( EndPoint const & ep, io::IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoConnectCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
     /** \brief 接收直到指定大小的数据（异步） */
-    void recvUntilSizeAsync( size_t targetSize, io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvCtx::TimeoutFn cbTimeout = nullptr );
+    void recvUntilSizeAsync( size_t targetSize, io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
     /** \brief 接收数据（异步） */
-    void recvAsync( io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvCtx::TimeoutFn cbTimeout = nullptr )
+    void recvAsync( io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->recvUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout );
+        this->recvUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout, th );
     }
     /** \brief 发送数据（异步） */
-    void sendAsync( void const * data, size_t size, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendCtx::TimeoutFn cbTimeout = nullptr );
+    void sendAsync( void const * data, size_t size, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
     /** \brief 发送数据（异步） */
-    void sendAsync( winux::Buffer const & data, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendCtx::TimeoutFn cbTimeout = nullptr )
+    void sendAsync( winux::Buffer const & data, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->sendAsync( data.get(), data.size(), cbOk, timeoutMs, cbTimeout );
+        this->sendAsync( data.get(), data.size(), cbOk, timeoutMs, cbTimeout, th );
     }
     /** \brief 无连接，接收直到指定大小的数据（异步） */
-    void recvFromUntilSizeAsync( size_t targetSize, io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvFromCtx::TimeoutFn cbTimeout = nullptr );
+    void recvFromUntilSizeAsync( size_t targetSize, io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvFromCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
     /** \brief 无连接，接收数据（异步） */
-    void recvFromAsync( io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvFromCtx::TimeoutFn cbTimeout = nullptr )
+    void recvFromAsync( io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvFromCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->recvFromUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout );
+        this->recvFromUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout, th );
     }
     /** \brief 无连接，发送数据（异步） */
-    void sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr );
+    void sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
     /** \brief 无连接，发送数据（异步） */
-    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr )
+    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->sendToAsync( ep, data.get(), data.size(), cbOk, timeoutMs, cbTimeout );
+        this->sendToAsync( ep, data.get(), data.size(), cbOk, timeoutMs, cbTimeout, th );
     }
 
     /** \brief 错误处理
