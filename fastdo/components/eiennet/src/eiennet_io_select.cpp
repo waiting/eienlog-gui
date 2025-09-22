@@ -583,6 +583,9 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
             // 监听唤醒select.wait事件
             sel.setReadFd( ioEvents->_sockWakeUp.get() );
 
+            // 统计
+            size_t sockIoCount = 0, timerIoCount = 0;
+
             bool hasEraseInIoMaps = false;
             // 监听IO事件
             for ( auto itMaps = ioEvents->_ioMaps.begin(); itMaps != ioEvents->_ioMaps.end(); hasEraseInIoMaps = false )
@@ -602,39 +605,72 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                         if ( obj.type == IoEventsData::aotTimer ) // aotTimer
                         {
                             auto timerCtx = ioCtx.cast<IoTimerCtx>();
-                        #if defined(OS_WIN)
-                            sel.setReadFd( timerCtx->_sockSignal.get() );
-                        #else
-                            sel.setReadFd( timerCtx->timer->get() );
-                        #endif
+                            if ( timerCtx->assocCtx ) // 有关联IO，是超时定时器
+                            {
+                                if ( timerCtx->assocCtx->sock->operator bool() ) // 关联IO的sock是否有效
+                                {
+                                #if defined(OS_WIN)
+                                    sel.setReadFd( timerCtx->_sockSignal.get() );
+                                #else
+                                    sel.setReadFd( timerCtx->timer->get() );
+                                #endif
+                                    timerIoCount++;
+                                }
+                                else // sock 失效
+                                {
+                                    timerCtx->cancel(cancelProactive);
+
+                                    //it = ioMap.erase(it);
+                                    //hasEraseInIoMap = true;
+                                }
+                            }
+                            else // 普通定时器
+                            {
+                            #if defined(OS_WIN)
+                                sel.setReadFd( timerCtx->_sockSignal.get() );
+                            #else
+                                sel.setReadFd( timerCtx->timer->get() );
+                            #endif
+                                timerIoCount++;
+                            }
                         }
                         else // aotSocket
                         {
                             auto sock = reinterpret_cast<eiennet::async::Socket *>(obj.ptr)->sharedFromThis();
-                            // 监听错误
-                            sel.setExceptFd( sock->get() );
-
-                            // 监听socket IO
-                            switch ( ioType )
+                            if ( sock->operator bool() )
                             {
-                            case ioAccept:
-                                sel.setReadFd( sock->get() );
-                                break;
-                            case ioConnect:
-                                sel.setWriteFd( sock->get() );
-                                break;
-                            case ioRecv:
-                                sel.setReadFd( sock->get() );
-                                break;
-                            case ioSend:
-                                sel.setWriteFd( sock->get() );
-                                break;
-                            case ioRecvFrom:
-                                sel.setReadFd( sock->get() );
-                                break;
-                            case ioSendTo:
-                                sel.setWriteFd( sock->get() );
-                                break;
+                                // 监听错误
+                                sel.setExceptFd( sock->get() );
+
+                                // 监听socket IO
+                                switch ( ioType )
+                                {
+                                case ioAccept:
+                                    sel.setReadFd( sock->get() );
+                                    break;
+                                case ioConnect:
+                                    sel.setWriteFd( sock->get() );
+                                    break;
+                                case ioRecv:
+                                    sel.setReadFd( sock->get() );
+                                    break;
+                                case ioSend:
+                                    sel.setWriteFd( sock->get() );
+                                    break;
+                                case ioRecvFrom:
+                                    sel.setReadFd( sock->get() );
+                                    break;
+                                case ioSendTo:
+                                    sel.setWriteFd( sock->get() );
+                                    break;
+                                }
+
+                                sockIoCount++;
+                            }
+                            else // sock 失效
+                            {
+                                it = ioMap.erase(it);
+                                hasEraseInIoMap = true;
                             }
                         }
                     }
@@ -653,6 +689,9 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                 // 如果已经是end则不能再++it
                 if ( !hasEraseInIoMaps && itMaps != ioEvents->_ioMaps.end() ) ++itMaps;
             }
+
+            ioEvents->_sockIoCount = sockIoCount;
+            ioEvents->_timerIoCount = timerIoCount;
         }
 
         int rc = sel.wait();
@@ -757,7 +796,9 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                         winux::ScopeGuard guard( timer->getMutex() );
                                         if ( timerCtx->periodic == false ) // 非周期
                                         {
+                                            timer->getMutex().unlock();
                                             timer->unset();
+                                            timer->getMutex().lock();
                                             timer->_timerCtx.reset();
                                             //timerCtx->decRef();
 
@@ -1149,7 +1190,7 @@ bool IoTimerCtx::cancel( CancelType cancelType )
 }
 
 // class IoEventsData -------------------------------------------------------------------------
-IoEventsData::IoEventsData() : _mtxPreIoCtxs(true), _mtxIoMaps(true), _portSockWakeUp(0)
+IoEventsData::IoEventsData() : _mtxPreIoCtxs(true), _mtxIoMaps(true), _portSockWakeUp(0), _sockIoCount(0), _timerIoCount(0)
 {
     if ( _sockWakeUp.bind( eiennet::ip::EndPoint( "", 0 ) ) )
     {

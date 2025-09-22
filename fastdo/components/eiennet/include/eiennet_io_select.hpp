@@ -264,10 +264,15 @@ public:
 
     std::vector<IoMap::value_type> _preIoCtxs; //!< 预投递的IoCtx
     winux::RecursiveMutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
+
     IoMapMap _ioMaps; //!< 监听IO事件数据结构
     winux::RecursiveMutex _mtxIoMaps; //!< 互斥量，保护IoMaps数据
+
     eiennet::ip::udp::Socket _sockWakeUp; //!< UDP套接字，用于发送唤醒select()信号
     winux::ushort _portSockWakeUp; //!< 唤醒信号套接字端口
+
+    size_t _sockIoCount; // 套接字IO数
+    size_t _timerIoCount; // 定时器IO数
 };
 
 class IoService;
