@@ -726,7 +726,7 @@ void Timer::unset()
 #endif
 }
 
-void Timer::stop( bool timerCtxDecRef )
+void Timer::stop( std::function< void ( io::IoTimerCtx * ) > cbDeleteCtx )
 {
     winux::ScopeGuard guard(this->_mtx);
 
@@ -744,15 +744,15 @@ void Timer::stop( bool timerCtxDecRef )
         if ( this->_posted == false )
         {
             this->_timerCtx.reset();
-            if ( timerCtxDecRef ) timerCtx->decRef();
+            if ( cbDeleteCtx ) cbDeleteCtx( timerCtx.get() );
         }
     }
 
 }
 
-void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, winux::SharedPointer<io::IoSocketCtx> assocCtx, io::IoServiceThread * th )
+void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk/*, winux::SharedPointer<io::IoSocketCtx> assocCtx*/, io::IoServiceThread * th )
 {
-    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk, assocCtx, th );
+    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk/*, assocCtx*/, th );
 }
 
 intptr_t Timer::get() const

@@ -18,13 +18,15 @@ public:
     SelectRead( winux::Mixed const & fds );
     ~SelectRead();
 
-    SelectRead & setReadSock( Socket const & sock ) { return setReadFd( sock.get() ); }
-    SelectRead & setReadFd( int fd );
-    SelectRead & delReadFd( int fd );
-    SelectRead & setReadFds( winux::Mixed const & fds );
-    SelectRead & clear();
+    bool setReadSock( Socket const & sock ) { return setReadFd( sock.get() ); }
+    bool setReadFd( int fd );
+    bool delReadFd( int fd );
+    bool setReadFds( winux::Mixed const & fds );
+    void clear();
     int hasReadSock( Socket const & sock ) const { return hasReadFd( sock.get() ); }
     int hasReadFd( int fd ) const;
+    int getReadFdsCount() const;
+    int getReadMaxFd() const;
 
     /** \brief 等待相应的fd就绪。sec<1表示小于1秒的时间，sec<0表示无限等待。eg: sec=1.5表示等待1500ms
      *
@@ -47,13 +49,15 @@ public:
     SelectWrite( winux::Mixed const & fds );
     ~SelectWrite();
 
-    SelectWrite & setWriteSock( Socket const & sock ) { return setWriteFd( sock.get() ); }
-    SelectWrite & setWriteFd( int fd );
-    SelectWrite & delWriteFd( int fd );
-    SelectWrite & setWriteFds( winux::Mixed const & fds );
-    SelectWrite & clear();
+    bool setWriteSock( Socket const & sock ) { return setWriteFd( sock.get() ); }
+    bool setWriteFd( int fd );
+    bool delWriteFd( int fd );
+    bool setWriteFds( winux::Mixed const & fds );
+    void clear();
     int hasWriteSock( Socket const & sock ) const { return hasWriteFd( sock.get() ); }
     int hasWriteFd( int fd ) const;
+    int getWriteFdsCount() const;
+    int getWriteMaxFd() const;
 
     /** \brief 等待相应的fd就绪。sec<1表示小于1秒的时间，sec<0表示无限等待。eg: sec=1.5表示等待1500ms
      *
@@ -76,13 +80,15 @@ public:
     SelectExcept( winux::Mixed const & fds );
     ~SelectExcept();
 
-    SelectExcept & setExceptSock( Socket const & sock ) { return setExceptFd( sock.get() ); }
-    SelectExcept & setExceptFd( int fd );
-    SelectExcept & delExceptFd( int fd );
-    SelectExcept & setExceptFds( winux::Mixed const & fds );
-    SelectExcept & clear();
+    bool setExceptSock( Socket const & sock ) { return setExceptFd( sock.get() ); }
+    bool setExceptFd( int fd );
+    bool delExceptFd( int fd );
+    bool setExceptFds( winux::Mixed const & fds );
+    void clear();
     int hasExceptSock( Socket const & sock ) const { return hasExceptFd( sock.get() ); }
     int hasExceptFd( int fd ) const;
+    int getExceptFdsCount() const;
+    int getExceptMaxFd() const;
 
     /** \brief 等待相应的fd就绪。sec<1表示小于1秒的时间，sec<0表示无限等待。eg: sec=1.5表示等待1500ms
      *
@@ -99,29 +105,32 @@ protected:
 class EIENNET_DLL Select : public SelectRead, public SelectWrite, public SelectExcept
 {
 public:
+    /** \brief 能`select()`有效的描述符（只判断值是否有效） */
+    static bool ValidFd( int fd );
+
     /** \brief Select模型构造函数 */
     Select() { }
 
-    Select & setReadSock( Socket const & sock ) { SelectRead::setReadSock(sock); return *this; }
-    Select & setReadFd( int fd ) { SelectRead::setReadFd(fd); return *this; }
-    Select & delReadFd( int fd ) { SelectRead::delReadFd(fd); return *this; }
-    Select & setReadFds( winux::Mixed const & fds ) { SelectRead::setReadFds(fds); return *this; }
-    Select & clearReadFds() { SelectRead::clear(); return *this; }
+    bool setReadSock( Socket const & sock ) { return SelectRead::setReadSock(sock); }
+    bool setReadFd( int fd ) { return SelectRead::setReadFd(fd); }
+    bool delReadFd( int fd ) { return SelectRead::delReadFd(fd); }
+    bool setReadFds( winux::Mixed const & fds ) { return SelectRead::setReadFds(fds); }
+    void clearReadFds() { SelectRead::clear(); }
 
-    Select & setWriteSock( Socket const & sock ) { SelectWrite::setWriteSock(sock); return *this; }
-    Select & setWriteFd( int fd ) { SelectWrite::setWriteFd(fd); return *this; }
-    Select & delWriteFd( int fd ) { SelectWrite::delWriteFd(fd); return *this; }
-    Select & setWriteFds( winux::Mixed const & fds ) { SelectWrite::setWriteFds(fds); return *this; }
-    Select & clearWriteFds() { SelectWrite::clear(); return *this; }
+    bool setWriteSock( Socket const & sock ) { return SelectWrite::setWriteSock(sock); }
+    bool setWriteFd( int fd ) { return SelectWrite::setWriteFd(fd); }
+    bool delWriteFd( int fd ) { return SelectWrite::delWriteFd(fd); }
+    bool setWriteFds( winux::Mixed const & fds ) { return SelectWrite::setWriteFds(fds); }
+    void clearWriteFds() { SelectWrite::clear(); }
 
-    Select & setExceptSock( Socket const & sock ) { SelectExcept::setExceptSock(sock); return *this; }
-    Select & setExceptFd( int fd ) { SelectExcept::setExceptFd(fd); return *this; }
-    Select & delExceptFd( int fd ) { SelectExcept::delExceptFd(fd); return *this; }
-    Select & setExceptFds( winux::Mixed const & fds ) { SelectExcept::setExceptFds(fds); return *this; }
-    Select & clearExceptFds() { SelectExcept::clear(); return *this; }
+    bool setExceptSock( Socket const & sock ) { return SelectExcept::setExceptSock(sock); }
+    bool setExceptFd( int fd ) { return SelectExcept::setExceptFd(fd); }
+    bool delExceptFd( int fd ) { return SelectExcept::delExceptFd(fd); }
+    bool setExceptFds( winux::Mixed const & fds ) { return SelectExcept::setExceptFds(fds); }
+    void clearExceptFds() { SelectExcept::clear(); }
 
     /** \brief 清空所有fds */
-    Select & clear() { SelectRead::clear(); SelectWrite::clear(); SelectExcept::clear(); return *this; }
+    void clear() { SelectRead::clear(); SelectWrite::clear(); SelectExcept::clear(); }
 
     /** \brief 等待相应的fd就绪。sec<1表示小于1秒的时间，sec<0表示无限等待。eg: sec=1.5表示等待1500ms
      *
@@ -130,7 +139,7 @@ public:
     int wait( double sec = -1 );
 };
 
-
+/** \brief select IO 模型 */
 namespace select
 {
 /** \brief 接受场景接口 */
@@ -218,6 +227,9 @@ protected:
     friend class winux::EnableStaticNew;
 };
 
+class IoService;
+class IoServiceThread;
+
 /** \brief IO事件数据 */
 class EIENNET_DLL IoEventsData
 {
@@ -262,20 +274,28 @@ public:
     // 投递IO事件
     void post( IoType type, winux::SharedPointer<IoCtx> ctx );
 
+    // 套接字IO数
+    size_t getSockIoCount() const { return this->_sockIoCount; }
+    // 定时器IO数
+    size_t getTimerIoCount() const { return this->_timerIoCount; }
+
+private:
     std::vector<IoMap::value_type> _preIoCtxs; //!< 预投递的IoCtx
-    winux::RecursiveMutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
+    winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
 
     IoMapMap _ioMaps; //!< 监听IO事件数据结构
-    winux::RecursiveMutex _mtxIoMaps; //!< 互斥量，保护IoMaps数据
+    winux::Mutex _mtxIoMaps; //!< 互斥量，保护IoMaps数据
 
     eiennet::ip::udp::Socket _sockWakeUp; //!< UDP套接字，用于发送唤醒select()信号
     winux::ushort _portSockWakeUp; //!< 唤醒信号套接字端口
 
     size_t _sockIoCount; // 套接字IO数
     size_t _timerIoCount; // 定时器IO数
+
+    friend void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData * ioEvents, bool * stop );
+    friend class IoService;
 };
 
-class IoService;
 /** \brief Io服务线程 */
 class EIENNET_DLL IoServiceThread : public io::IoServiceThread
 {
@@ -288,9 +308,10 @@ public:
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
-    IoEventsData _ioEvents;
+    IoEventsData & getIoEvents() { return this->_ioEvents; }
 
 private:
+    IoEventsData _ioEvents;
     IoService * _serv;
     bool _stop;
     friend class IoService;
@@ -307,13 +328,71 @@ public:
     virtual void stop() override;
     virtual int run() override;
 
-    virtual void postAccept( winux::SharedPointer<eiennet::async::Socket> sock, IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoAcceptCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = nullptr ) override;
-    virtual void postConnect( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoConnectCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 ) override;
-    virtual void postRecv( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 ) override;
-    virtual void postSend( winux::SharedPointer<eiennet::async::Socket> sock, void const * data, size_t size, IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoSendCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 ) override;
-    virtual void postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoRecvFromCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 ) override;
-    virtual void postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 ) override;
-    virtual void postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, winux::SharedPointer<IoSocketCtx> assocCtx = winux::SharedPointer<IoSocketCtx>(), io::IoServiceThread * th = (io::IoServiceThread *)-1 ) override;
+    virtual void postAccept(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        IoAcceptCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoAcceptCtx::TimeoutFn cbTimeout = nullptr,
+        io::IoServiceThread * th = nullptr
+    ) override;
+    virtual void postConnect(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        eiennet::EndPoint const & ep,
+        IoConnectCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoConnectCtx::TimeoutFn cbTimeout = nullptr,
+        io::IoServiceThread * th = AutoDispatch
+    ) override;
+    virtual void postRecv(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        size_t targetSize,
+        IoRecvCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoRecvCtx::TimeoutFn cbTimeout = nullptr,
+        io::IoServiceThread * th = AutoDispatch
+    ) override;
+    virtual void postSend(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        void const * data,
+        size_t size,
+        IoSendCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoSendCtx::TimeoutFn cbTimeout = nullptr,
+        io::IoServiceThread * th = AutoDispatch
+    ) override;
+    virtual void postRecvFrom(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        size_t targetSize,
+        IoRecvFromCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
+        io::IoServiceThread * th = AutoDispatch
+    ) override;
+    virtual void postSendTo(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        eiennet::EndPoint const & ep,
+        void const * data,
+        size_t size,
+        IoSendToCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoSendToCtx::TimeoutFn cbTimeout = nullptr,
+        io::IoServiceThread * th = AutoDispatch
+    ) override;
+    virtual void postTimer(
+        winux::SharedPointer<eiennet::async::Timer> timer,
+        winux::uint64 timeoutMs,
+        bool periodic,
+        IoTimerCtx::OkFn cbOk,
+        io::IoServiceThread * th = AutoDispatch
+    ) override;
+    void _postTimerEx(
+        winux::SharedPointer<eiennet::async::Timer> timer,
+        winux::uint64 timeoutMs,
+        bool periodic,
+        IoTimerCtx::OkFn cbOk,
+        winux::SharedPointer<IoSocketCtx> assocCtx = winux::SharedPointer<IoSocketCtx>(),
+        io::IoServiceThread * th = AutoDispatch
+    );
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
@@ -324,7 +403,7 @@ public:
      *
      *  \param sock 异步套接字
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
-    bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
+    bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = AutoDispatch );
 
     /** \brief 获取最小负载线程 */
     virtual IoServiceThread * getMinWeightThread() const override;
@@ -335,10 +414,11 @@ public:
     /** \brief 获取组线程数 */
     size_t getGroupThreadCount() const { return _group.count(); }
 
-    IoEventsData _ioEvents;
-    //winux::ThreadPool _pool;
+    IoEventsData & getIoEvents() { return this->_ioEvents; }
 
 private:
+    IoEventsData _ioEvents;
+    //winux::ThreadPool _pool;
     winux::ThreadGroup _group;
     bool _stop;
 

@@ -399,15 +399,21 @@ public:
 
     /** \brief 停止定时器
      *
-     *  标记定时器IoTimerCtx为取消，摧毁定时器，标记为非周期。如果定时器未触发信号，重置关联的IoTimerCtx，并根据`timerCtxDecRef`尝试释放`IoTimerCtx` */
-    void stop( bool timerCtxDecRef = true );
+     *  标记定时器IoTimerCtx为取消，摧毁定时器，标记为非周期。如果定时器未触发信号，重置关联的IoTimerCtx，并通过`cbDeleteCtx`尝试释放`IoTimerCtx` */
+    void stop( std::function< void ( io::IoTimerCtx * ) > cbDeleteCtx = nullptr );
 
     void waitAsync( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk )
     {
         this->waitAsyncEx( timeoutMs, periodic, cbOk );
     }
 
-    void waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, winux::SharedPointer<io::IoSocketCtx> assocCtx = winux::SharedPointer<io::IoSocketCtx>(), io::IoServiceThread * th = (io::IoServiceThread *)-1 );
+    void waitAsyncEx(
+        winux::uint64 timeoutMs,
+        bool periodic,
+        io::IoTimerCtx::OkFn cbOk,
+        //winux::SharedPointer<io::IoSocketCtx> assocCtx = winux::SharedPointer<io::IoSocketCtx>(),
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
+    );
 
     io::IoService & getService() const { return *_serv; }
     winux::MutexNative & getMutex() const { return const_cast<winux::MutexNative &>(_mtx); }

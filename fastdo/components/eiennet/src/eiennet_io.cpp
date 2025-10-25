@@ -35,6 +35,37 @@
 
 namespace io
 {
+// class IoServiceThread ----------------------------------------------------------------------
+IoServiceThread::IoServiceThread() : _weight(0)
+{
+
+}
+
+size_t IoServiceThread::getWeight() const
+{
+    return _weight.load(std::memory_order_acquire);
+}
+
+void IoServiceThread::incWeight()
+{
+    _weight.fetch_add( 1, std::memory_order_acq_rel );
+}
+
+void IoServiceThread::decWeight()
+{
+    _weight.fetch_sub( 1, std::memory_order_acq_rel );
+}
+
+void IoServiceThread::timerTrigger( IoTimerCtx * timerCtx )
+{
+
+}
+
+// class IoService ----------------------------------------------------------------------------
+void IoService::timerTrigger( IoTimerCtx * timerCtx )
+{
+
+}
 
 
 } // namespace io

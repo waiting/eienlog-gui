@@ -16,6 +16,14 @@ file(
 aux_source_directory(src eiennet_SRCS)
 aux_source_directory(../eienlog/src eienlog_SRCS)
 
+if(UNIX)
+    list(REMOVE_ITEM eiennet_HEADERS "include/eiennet_io_iocp.hpp")
+    list(REMOVE_ITEM eiennet_SRCS "src/eiennet_io_iocp.cpp")
+else()
+    list(REMOVE_ITEM eiennet_HEADERS "include/eiennet_io_epoll.hpp")
+    list(REMOVE_ITEM eiennet_SRCS "src/eiennet_io_epoll.cpp")
+endif()
+
 # Targets
 add_library(eiennet SHARED ${eiennet_HEADERS} ${eiennet_SRCS} ${eienlog_HEADERS} ${eienlog_SRCS})
 target_include_directories(eiennet PUBLIC include PRIVATE ../eienlog/include)

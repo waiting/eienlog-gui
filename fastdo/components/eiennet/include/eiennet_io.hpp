@@ -237,42 +237,34 @@ protected:
 };
 
 /** \brief IoService线程 */
-class IoServiceThread : public winux::Thread
+class EIENNET_DLL IoServiceThread : public winux::Thread
 {
 public:
-    IoServiceThread() : _weight(0) { }
+    IoServiceThread();
 
     virtual void run() override = 0;
 
     /** \brief 获取权重值 */
-    size_t getWeight() const
-    {
-        return _weight.load(std::memory_order_acquire);
-    }
+    size_t getWeight() const;
 
     /** \brief 增加权重值 */
-    void incWeight()
-    {
-        _weight.fetch_add( 1, std::memory_order_acq_rel );
-    }
+    void incWeight();
 
     /** \brief 减少权重值 */
-    void decWeight()
-    {
-        _weight.fetch_sub( 1, std::memory_order_acq_rel );
-    }
+    void decWeight();
 
     /** \brief 定时器IO触发器，直接发送到处理循环里 */
-    virtual void timerTrigger( io::IoTimerCtx * timerCtx )
-    {
-    }
+    virtual void timerTrigger( IoTimerCtx * timerCtx );
 
 private:
     std::atomic<size_t> _weight;
 };
 
+/** \brief 自动分派线程 */
+IoServiceThread * const AutoDispatch = reinterpret_cast<IoServiceThread *>(-1);
+
 /** \brief IoService基类 */
-class IoService
+class EIENNET_DLL IoService
 {
 public:
     virtual ~IoService() { }
@@ -280,19 +272,69 @@ public:
     virtual void stop() = 0;
     virtual int run() = 0;
 
-    virtual void postAccept( winux::SharedPointer<eiennet::async::Socket> sock, IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoAcceptCtx::TimeoutFn cbTimeout = nullptr, IoServiceThread * th = nullptr ) = 0;
-    virtual void postConnect( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoConnectCtx::TimeoutFn cbTimeout = nullptr, IoServiceThread * th = (IoServiceThread *)-1 ) = 0;
-    virtual void postRecv( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoRecvCtx::TimeoutFn cbTimeout = nullptr, IoServiceThread * th = (IoServiceThread *)-1 ) = 0;
-    virtual void postSend( winux::SharedPointer<eiennet::async::Socket> sock, void const * data, size_t size, IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoSendCtx::TimeoutFn cbTimeout = nullptr, IoServiceThread * th = (IoServiceThread *)-1 ) = 0;
-    virtual void postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock, size_t targetSize, IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoRecvFromCtx::TimeoutFn cbTimeout = nullptr, IoServiceThread * th = (IoServiceThread *)-1 ) = 0;
-    virtual void postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, IoSendToCtx::TimeoutFn cbTimeout = nullptr, IoServiceThread * th = (IoServiceThread *)-1 ) = 0;
-    virtual void postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, winux::SharedPointer<IoSocketCtx> assocCtx = winux::SharedPointer<IoSocketCtx>(), IoServiceThread * th = (IoServiceThread *)-1 ) = 0;
+    virtual void postAccept(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        IoAcceptCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoAcceptCtx::TimeoutFn cbTimeout = nullptr,
+        IoServiceThread * th = nullptr
+    ) = 0;
+    virtual void postConnect(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        eiennet::EndPoint const & ep,
+        IoConnectCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoConnectCtx::TimeoutFn cbTimeout = nullptr,
+        IoServiceThread * th = AutoDispatch
+    ) = 0;
+    virtual void postRecv(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        size_t targetSize,
+        IoRecvCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoRecvCtx::TimeoutFn cbTimeout = nullptr,
+        IoServiceThread * th = AutoDispatch
+    ) = 0;
+    virtual void postSend(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        void const * data,
+        size_t size,
+        IoSendCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoSendCtx::TimeoutFn cbTimeout = nullptr,
+        IoServiceThread * th = AutoDispatch
+    ) = 0;
+    virtual void postRecvFrom(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        size_t targetSize,
+        IoRecvFromCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
+        IoServiceThread * th = AutoDispatch
+    ) = 0;
+    virtual void postSendTo(
+        winux::SharedPointer<eiennet::async::Socket> sock,
+        eiennet::EndPoint const & ep,
+        void const * data,
+        size_t size,
+        IoSendToCtx::OkFn cbOk,
+        winux::uint64 timeoutMs = -1,
+        IoSendToCtx::TimeoutFn cbTimeout = nullptr,
+        IoServiceThread * th = AutoDispatch
+    ) = 0;
+    virtual void postTimer(
+        winux::SharedPointer<eiennet::async::Timer> timer,
+        winux::uint64 timeoutMs,
+        bool periodic,
+        IoTimerCtx::OkFn cbOk,
+        IoServiceThread * th = AutoDispatch
+    ) = 0;
 
     /** \brief 获取最小负载线程 */
     virtual IoServiceThread * getMinWeightThread() const = 0;
 
     /** \brief 定时器IO触发器，直接发送到处理循环里 */
-    virtual void timerTrigger( io::IoTimerCtx * timerCtx ) { }
+    virtual void timerTrigger( IoTimerCtx * timerCtx );
 };
 
 

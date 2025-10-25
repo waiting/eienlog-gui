@@ -39,10 +39,9 @@ namespace io
 // struct SelectRead_Data ---------------------------------------------------------------------
 struct SelectRead_Data
 {
-    fd_set readFds;
     int readFdsCount;
-
     int maxFd;
+    fd_set readFds;
 
     SelectRead_Data() { this->zeroInit(); }
 
@@ -79,53 +78,69 @@ SelectRead::~SelectRead()
 {
 }
 
-SelectRead & SelectRead::setReadFd( int fd )
+bool SelectRead::setReadFd( int fd )
 {
-    FD_SET( fd, &_self->readFds );
-    if ( fd > _self->maxFd ) _self->maxFd = fd;
-    _self->readFdsCount++;
-
-    return *this;
+    if ( Select::ValidFd(fd) )
+    {
+        FD_SET( fd, &_self->readFds );
+        if ( fd > _self->maxFd ) _self->maxFd = fd;
+        _self->readFdsCount++;
+        return true;
+    }
+    return false;
 }
 
-SelectRead & SelectRead::delReadFd( int fd )
+bool SelectRead::delReadFd( int fd )
 {
-    FD_CLR( fd, &_self->readFds );
-    _self->readFdsCount--;
-
-    return *this;
+    if ( Select::ValidFd(fd) )
+    {
+        FD_CLR( fd, &_self->readFds );
+        _self->readFdsCount--;
+        return true;
+    }
+    return false;
 }
 
-SelectRead & SelectRead::setReadFds( winux::Mixed const & fds )
+bool SelectRead::setReadFds( winux::Mixed const & fds )
 {
+    bool b = true;
     if ( fds.isArray() )
     {
         size_t n = fds.getCount();
         for ( size_t i = 0; i < n; i++ )
         {
-            this->setReadFd( fds[i].toInt() );
+            if ( !this->setReadFd( fds[i].toInt() ) )
+                b = false;
         }
     }
     else
     {
-        this->setReadFd( fds.toInt() );
+        b = this->setReadFd( fds.toInt() );
     }
 
-    return *this;
+    return b;
 }
 
-SelectRead & SelectRead::clear()
+void SelectRead::clear()
 {
     FD_ZERO(&_self->readFds);
     _self->maxFd = -2;
     _self->readFdsCount = 0;
-
-    return *this;
 }
 
 int SelectRead::hasReadFd( int fd ) const
 {
     return FD_ISSET( fd, &_self->readFds );
+}
+
+int SelectRead::getReadFdsCount() const
+{
+    return _self->readFdsCount;
+}
+
+int SelectRead::getReadMaxFd() const
+{
+    return _self->maxFd;
 }
 
 int SelectRead::wait( double sec )
@@ -150,10 +165,9 @@ int SelectRead::wait( double sec )
 // struct SelectWrite_Data --------------------------------------------------------------------
 struct SelectWrite_Data
 {
-    fd_set writeFds;
     int writeFdsCount;
-
     int maxFd;
+    fd_set writeFds;
 
     SelectWrite_Data() { this->zeroInit(); }
 
@@ -190,53 +204,69 @@ SelectWrite::~SelectWrite()
 {
 }
 
-SelectWrite & SelectWrite::setWriteFd( int fd )
+bool SelectWrite::setWriteFd( int fd )
 {
-    FD_SET( fd, &_self->writeFds );
-    if ( fd > _self->maxFd ) _self->maxFd = fd;
-    _self->writeFdsCount++;
-
-    return *this;
+    if ( Select::ValidFd(fd) )
+    {
+        FD_SET( fd, &_self->writeFds );
+        if ( fd > _self->maxFd ) _self->maxFd = fd;
+        _self->writeFdsCount++;
+        return true;
+    }
+    return false;
 }
 
-SelectWrite & SelectWrite::delWriteFd( int fd )
+bool SelectWrite::delWriteFd( int fd )
 {
-    FD_CLR( fd, &_self->writeFds );
-    _self->writeFdsCount--;
-
-    return *this;
+    if ( Select::ValidFd(fd) )
+    {
+        FD_CLR( fd, &_self->writeFds );
+        _self->writeFdsCount--;
+        return true;
+    }
+    return false;
 }
 
-SelectWrite & SelectWrite::setWriteFds( winux::Mixed const & fds )
+bool SelectWrite::setWriteFds( winux::Mixed const & fds )
 {
+    bool b = true;
     if ( fds.isArray() )
     {
         size_t n = fds.getCount();
         for ( size_t i = 0; i < n; i++ )
         {
-            this->setWriteFd( fds[i].toInt() );
+            if ( !this->setWriteFd( fds[i].toInt() ) )
+                b = false;
         }
     }
     else
     {
-        this->setWriteFd( fds.toInt() );
+        b = this->setWriteFd( fds.toInt() );
     }
 
-    return *this;
+    return b;
 }
 
-SelectWrite & SelectWrite::clear()
+void SelectWrite::clear()
 {
     FD_ZERO(&_self->writeFds);
     _self->maxFd = -2;
     _self->writeFdsCount = 0;
-
-    return *this;
 }
 
 int SelectWrite::hasWriteFd( int fd ) const
 {
     return FD_ISSET( fd, &_self->writeFds );
+}
+
+int SelectWrite::getWriteFdsCount() const
+{
+    return _self->writeFdsCount;
+}
+
+int SelectWrite::getWriteMaxFd() const
+{
+    return _self->maxFd;
 }
 
 int SelectWrite::wait( double sec )
@@ -261,10 +291,9 @@ int SelectWrite::wait( double sec )
 // struct SelectExcept_Data -------------------------------------------------------------------
 struct SelectExcept_Data
 {
-    fd_set exceptFds;
     int exceptFdsCount;
-
     int maxFd;
+    fd_set exceptFds;
 
     SelectExcept_Data() { this->zeroInit(); }
 
@@ -301,53 +330,69 @@ SelectExcept::~SelectExcept()
 {
 }
 
-SelectExcept & SelectExcept::setExceptFd( int fd )
+bool SelectExcept::setExceptFd( int fd )
 {
-    FD_SET( fd, &_self->exceptFds );
-    if ( fd > _self->maxFd ) _self->maxFd = fd;
-    _self->exceptFdsCount++;
-
-    return *this;
+    if ( Select::ValidFd(fd) )
+    {
+        FD_SET( fd, &_self->exceptFds );
+        if ( fd > _self->maxFd ) _self->maxFd = fd;
+        _self->exceptFdsCount++;
+        return true;
+    }
+    return false;
 }
 
-SelectExcept & SelectExcept::delExceptFd( int fd )
+bool SelectExcept::delExceptFd( int fd )
 {
-    FD_CLR( fd, &_self->exceptFds );
-    _self->exceptFdsCount--;
-
-    return *this;
+    if ( Select::ValidFd(fd) )
+    {
+        FD_CLR( fd, &_self->exceptFds );
+        _self->exceptFdsCount--;
+        return true;
+    }
+    return false;
 }
 
-SelectExcept & SelectExcept::setExceptFds( winux::Mixed const & fds )
+bool SelectExcept::setExceptFds( winux::Mixed const & fds )
 {
+    bool b = true;
     if ( fds.isArray() )
     {
         size_t n = fds.getCount();
         for ( size_t i = 0; i < n; i++ )
         {
-            this->setExceptFd( fds[i].toInt() );
+            if ( !this->setExceptFd( fds[i].toInt() ) )
+                b = false;
         }
     }
     else
     {
-        this->setExceptFd( fds.toInt() );
+        b = this->setExceptFd( fds.toInt() );
     }
 
-    return *this;
+    return b;
 }
 
-SelectExcept & SelectExcept::clear()
+void SelectExcept::clear()
 {
     FD_ZERO(&_self->exceptFds);
     _self->maxFd = -2;
     _self->exceptFdsCount = 0;
-
-    return *this;
 }
 
 int SelectExcept::hasExceptFd( int fd ) const
 {
     return FD_ISSET( fd, &_self->exceptFds );
+}
+
+int SelectExcept::getExceptFdsCount() const
+{
+    return _self->exceptFdsCount;
+}
+
+int SelectExcept::getExceptMaxFd() const
+{
+    return _self->maxFd;
 }
 
 int SelectExcept::wait( double sec )
@@ -370,6 +415,15 @@ int SelectExcept::wait( double sec )
 }
 
 // class Select -------------------------------------------------------------------------------
+bool Select::ValidFd( int fd )
+{
+#if defined(OS_WIN)
+    return fd > -1;
+#else
+    return fd > -1 && fd < FD_SETSIZE;
+#endif
+}
+
 int Select::wait( double sec )
 {
     fd_set * pReadFds = NULL;
@@ -398,6 +452,7 @@ int Select::wait( double sec )
 }
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////
 namespace select
 {
 // IoSocketCtx 超时处理
@@ -409,7 +464,7 @@ void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> ti
         assocCtx->timerCtx.reset(); // 取消关联的超时timer场景
         assocCtx->cancel(cancelTimeout); // 超时取消操作
         //winux::ColorOutputLine( winux::fgFuchsia, "timeout ", timerCtx->timeoutMs, " cancel io-type:", assocCtx->type );
-        ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate); // 唤醒以更新事件IO映射表
+        //ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate); // 唤醒以更新事件IO映射表
     }
 }
 
@@ -426,7 +481,7 @@ void _IoSocketCtxResetTimerCtx( winux::SharedPointer<io::IoSocketCtx> ctx )
             {
                 timerCtx->assocCtx.reset();
             }
-            timer->stop(false);
+            timer->stop();
             ctx->timerCtx.reset();
         }
     }
@@ -440,131 +495,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
     while ( !*stop )
     {
         sel.clear();
-
-        // 删除取消的IO，处理超时响应
-        {
-            winux::ScopeGuard guard(ioEvents->_mtxIoMaps);
-
-            bool hasEraseInIoMaps = false;
-            // 枚举IO对象
-            for ( auto itMaps = ioEvents->_ioMaps.begin(); itMaps != ioEvents->_ioMaps.end(); hasEraseInIoMaps = false )
-            {
-                auto obj = itMaps->first;
-                auto & ioMap = itMaps->second;
-
-                // 枚举IO请求
-                bool hasEraseInIoMap = false;
-                for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
-                {
-                    auto ioType = it->first;
-                    auto ioCtx = it->second;
-
-                    if ( ioCtx->cancelType != cancelNone ) // 已取消
-                    {
-                        it = ioMap.erase(it); // 删除已取消的IO事件
-                        hasEraseInIoMap = true;
-
-                        if ( obj.type == IoEventsData::aotSocket ) // aotSocket
-                        {
-                            if ( ioCtx->cancelType == cancelTimeout ) // 超时取消，处理超时响应
-                            {
-                                auto sockIoCtx = ioCtx.cast<IoSocketCtx>();
-                                switch ( ioType )
-                                {
-                                case ioAccept:
-                                    {
-                                        auto ctx = sockIoCtx.ensureCast<IoAcceptCtx>();
-                                        if ( ctx->cbTimeout )
-                                        {
-                                            //serv->_pool.task( [ctx] ( winux::SharedPointer<eiennet::async::Socket> servSock, IoAcceptCtx * ctx0 ) {
-                                            //    if ( ctx->cbTimeout( ctx->sock, ctx0 ) )
-                                            //    {
-                                            //        ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout );
-                                            //    }
-                                            //}, ctx->sock, ctx.get() ).post();
-                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
-                                            if ( ctx->cbTimeout( ctx->sock, ctx.get() ) )
-                                            {
-                                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case ioConnect:
-                                    {
-                                        auto ctx = sockIoCtx.ensureCast<IoConnectCtx>();
-                                        if ( ctx->cbTimeout )
-                                        {
-                                            //serv->_pool.task( ctx->cbTimeout, ctx->sock, ctx.get(), ctx ).post();
-                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
-                                            ctx->cbTimeout( ctx->sock, ctx.get() );
-                                        }
-                                    }
-                                    break;
-                                case ioRecv:
-                                    {
-                                        auto ctx = sockIoCtx.ensureCast<IoRecvCtx>();
-                                        if ( ctx->cbTimeout )
-                                        {
-                                            //serv->_pool.task( ctx->cbTimeout, ctx->sock, ctx.get(), ctx ).post();
-                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
-                                            ctx->cbTimeout( ctx->sock, ctx.get() );
-                                        }
-                                    }
-                                    break;
-                                case ioSend:
-                                    {
-                                        auto ctx = sockIoCtx.ensureCast<IoSendCtx>();
-                                        if ( ctx->cbTimeout )
-                                        {
-                                            //serv->_pool.task( ctx->cbTimeout, ctx->sock, ctx.get(), ctx ).post();
-                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
-                                            ctx->cbTimeout( ctx->sock, ctx.get() );
-                                        }
-                                    }
-                                    break;
-                                case ioRecvFrom:
-                                    {
-                                        auto ctx = sockIoCtx.ensureCast<IoRecvFromCtx>();
-                                        if ( ctx->cbTimeout )
-                                        {
-                                            //serv->_pool.task( ctx->cbTimeout, ctx->sock, ctx.get(), ctx ).post();
-                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
-                                            ctx->cbTimeout( ctx->sock, ctx.get() );
-                                        }
-                                    }
-                                    break;
-                                case ioSendTo:
-                                    {
-                                        auto ctx = sockIoCtx.ensureCast<IoSendToCtx>();
-                                        if ( ctx->cbTimeout )
-                                        {
-                                            //serv->_pool.task( ctx->cbTimeout, ctx->sock, ctx.get(), ctx ).post();
-                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
-                                            ctx->cbTimeout( ctx->sock, ctx.get() );
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    // 如果已经是end则不能再++it
-                    if ( !hasEraseInIoMap && it != ioMap.end() ) ++it;
-                } // for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
-
-                  // 如果IO映射表已空，则删除该异步对象
-                if ( ioMap.empty() )
-                {
-                    itMaps = ioEvents->_ioMaps.erase(itMaps);
-                    hasEraseInIoMaps = true;
-                }
-
-                // 如果已经是end则不能再++it
-                if ( !hasEraseInIoMaps && itMaps != ioEvents->_ioMaps.end() ) ++itMaps;
-            }
-        }
 
         // 处理预投递的IoCtxs
         {
@@ -607,37 +537,53 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                             auto timerCtx = ioCtx.cast<IoTimerCtx>();
                             if ( timerCtx->assocCtx ) // 有关联IO，是超时定时器
                             {
-                                if ( timerCtx->assocCtx->sock->operator bool() ) // 关联IO的sock是否有效
+                                if ( io::Select::ValidFd( timerCtx->assocCtx->sock->get() ) ) // 关联IO的sock是否有效
                                 {
+                                    auto fd =
                                 #if defined(OS_WIN)
-                                    sel.setReadFd( timerCtx->_sockSignal.get() );
+                                    timerCtx->_sockSignal.get();
                                 #else
-                                    sel.setReadFd( timerCtx->timer->get() );
+                                    timerCtx->timer->get();
                                 #endif
-                                    timerIoCount++;
+                                    if ( sel.setReadFd(fd) )
+                                    {
+                                        timerIoCount++;
+                                    }
+                                    else
+                                    {
+                                        timerCtx->cancel(cancelProactive);
+                                        timerCtx->assocCtx->cancel(cancelProactive);
+                                    }
                                 }
-                                else // sock 失效
+                                else // sockfd 无效
                                 {
                                     timerCtx->cancel(cancelProactive);
-
-                                    //it = ioMap.erase(it);
-                                    //hasEraseInIoMap = true;
+                                    timerCtx->assocCtx->cancel(cancelProactive);
                                 }
                             }
                             else // 普通定时器
                             {
+                                auto fd =
                             #if defined(OS_WIN)
-                                sel.setReadFd( timerCtx->_sockSignal.get() );
+                                timerCtx->_sockSignal.get();
                             #else
-                                sel.setReadFd( timerCtx->timer->get() );
+                                timerCtx->timer->get();
                             #endif
-                                timerIoCount++;
+                                if ( sel.setReadFd(fd) )
+                                {
+                                    timerIoCount++;
+                                }
+                                else
+                                {
+                                    timerCtx->cancel(cancelProactive);
+                                }
                             }
                         }
                         else // aotSocket
                         {
                             auto sock = reinterpret_cast<eiennet::async::Socket *>(obj.ptr)->sharedFromThis();
-                            if ( sock->operator bool() )
+                            auto sockIoCtx = ioCtx.cast<IoSocketCtx>();
+                            if ( io::Select::ValidFd( sock->get() ) )
                             {
                                 // 监听错误
                                 sel.setExceptFd( sock->get() );
@@ -667,10 +613,17 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
 
                                 sockIoCount++;
                             }
-                            else // sock 失效
+                            else // sockfd 无效
                             {
-                                it = ioMap.erase(it);
-                                hasEraseInIoMap = true;
+                                ioCtx->cancel(cancelProactive);
+                                if ( sockIoCtx->timerCtx )
+                                {
+                                    auto timerCtx = sockIoCtx->timerCtx.lock();
+                                    if ( timerCtx )
+                                    {
+                                        timerCtx->cancel(cancelProactive);
+                                    }
+                                }
                             }
                         }
                     }
@@ -796,9 +749,10 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                         winux::ScopeGuard guard( timer->getMutex() );
                                         if ( timerCtx->periodic == false ) // 非周期
                                         {
-                                            timer->getMutex().unlock();
-                                            timer->unset();
-                                            timer->getMutex().lock();
+                                            {
+                                                winux::ScopeUnguard unguard( timer->getMutex() );
+                                                timer->unset();
+                                            }
                                             timer->_timerCtx.reset();
                                             //timerCtx->decRef();
 
@@ -838,12 +792,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                         // 处理回调
                                         if ( ctx->cbOk )
                                         {
-                                            //serv->_pool.task( [ctx] ( winux::SharedPointer<eiennet::async::Socket> servSock, winux::SharedPointer<eiennet::async::Socket> clientSock, eiennet::ip::EndPoint const & ep ) {
-                                            //    if ( ctx->cbOk( servSock, clientSock, ctx->clientEp ) )
-                                            //    {
-                                            //        ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout );
-                                            //    }
-                                            //}, sock, clientSock, std::move(ctx->clientEp) ).post();
                                             winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                             if ( ctx->cbOk( sock, clientSock, ctx->clientEp ) )
                                             {
@@ -870,7 +818,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                         // 处理回调
                                         if ( ctx->cbOk )
                                         {
-                                            //serv->_pool.task( ctx->cbOk, sock, ctx->costTimeMs ).post();
                                             winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                             ctx->cbOk( sock, ctx->costTimeMs );
                                         }
@@ -910,7 +857,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                             // 处理回调
                                             if ( ctx->cbOk )
                                             {
-                                                //serv->_pool.task( ctx->cbOk, sock, std::move(ctx->data), ctx->cnnAvail ).post();
                                                 winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                                 ctx->cbOk( sock, data, ctx->cnnAvail );
                                             }
@@ -957,7 +903,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                             // 处理回调
                                             if ( ctx->cbOk )
                                             {
-                                                //serv->_pool.task( ctx->cbOk, sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail ).post();
                                                 winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                                 ctx->cbOk( sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail );
                                             }
@@ -1001,7 +946,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                             // 处理回调
                                             if ( ctx->cbOk )
                                             {
-                                                //serv->_pool.task( ctx->cbOk, sock, std::move(ctx->data), std::move(ctx->epFrom) ).post();
                                                 winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                                 ctx->cbOk( sock, ctx->data, ctx->epFrom );
                                             }
@@ -1048,7 +992,6 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                                             // 处理回调
                                             if ( ctx->cbOk )
                                             {
-                                                //serv->_pool.task( ctx->cbOk, sock, ctx->hadBytes, ctx->costTimeMs ).post();
                                                 winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
                                                 ctx->cbOk( sock, ctx->hadBytes, ctx->costTimeMs );
                                             }
@@ -1083,6 +1026,125 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
                 }
 
                 // 如果已经是`end`则不能再`++it`
+                if ( !hasEraseInIoMaps && itMaps != ioEvents->_ioMaps.end() ) ++itMaps;
+            }
+        }
+        
+        // 删除取消的IO，处理超时响应
+        {
+            winux::ScopeGuard guard(ioEvents->_mtxIoMaps);
+
+            bool hasEraseInIoMaps = false;
+            // 枚举IO对象
+            for ( auto itMaps = ioEvents->_ioMaps.begin(); itMaps != ioEvents->_ioMaps.end(); hasEraseInIoMaps = false )
+            {
+                auto obj = itMaps->first;
+                auto & ioMap = itMaps->second;
+
+                // 枚举IO请求
+                bool hasEraseInIoMap = false;
+                for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
+                {
+                    auto ioType = it->first;
+                    auto ioCtx = it->second;
+
+                    if ( ioCtx->cancelType != cancelNone ) // 已取消
+                    {
+                        it = ioMap.erase(it); // 删除已取消的IO事件
+                        hasEraseInIoMap = true;
+
+                        if ( obj.type == IoEventsData::aotSocket ) // aotSocket
+                        {
+                            if ( ioCtx->cancelType == cancelTimeout ) // 超时取消，处理超时响应
+                            {
+                                auto sockIoCtx = ioCtx.cast<IoSocketCtx>();
+                                switch ( ioType )
+                                {
+                                case ioAccept:
+                                    {
+                                        auto ctx = sockIoCtx.ensureCast<IoAcceptCtx>();
+                                        if ( ctx->cbTimeout )
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            if ( ctx->cbTimeout( ctx->sock, ctx.get() ) )
+                                            {
+                                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                            }
+                                        }
+                                        else
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                        }
+                                    }
+                                    break;
+                                case ioConnect:
+                                    {
+                                        auto ctx = sockIoCtx.ensureCast<IoConnectCtx>();
+                                        if ( ctx->cbTimeout )
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            ctx->cbTimeout( ctx->sock, ctx.get() );
+                                        }
+                                    }
+                                    break;
+                                case ioRecv:
+                                    {
+                                        auto ctx = sockIoCtx.ensureCast<IoRecvCtx>();
+                                        if ( ctx->cbTimeout )
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            ctx->cbTimeout( ctx->sock, ctx.get() );
+                                        }
+                                    }
+                                    break;
+                                case ioSend:
+                                    {
+                                        auto ctx = sockIoCtx.ensureCast<IoSendCtx>();
+                                        if ( ctx->cbTimeout )
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            ctx->cbTimeout( ctx->sock, ctx.get() );
+                                        }
+                                    }
+                                    break;
+                                case ioRecvFrom:
+                                    {
+                                        auto ctx = sockIoCtx.ensureCast<IoRecvFromCtx>();
+                                        if ( ctx->cbTimeout )
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            ctx->cbTimeout( ctx->sock, ctx.get() );
+                                        }
+                                    }
+                                    break;
+                                case ioSendTo:
+                                    {
+                                        auto ctx = sockIoCtx.ensureCast<IoSendToCtx>();
+                                        if ( ctx->cbTimeout )
+                                        {
+                                            winux::ScopeUnguard unguard(ioEvents->_mtxIoMaps);
+                                            ctx->cbTimeout( ctx->sock, ctx.get() );
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // 如果已经是end则不能再++it
+                    if ( !hasEraseInIoMap && it != ioMap.end() ) ++it;
+                } // for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
+
+                // 如果IO映射表已空，则删除该异步对象
+                if ( ioMap.empty() )
+                {
+                    itMaps = ioEvents->_ioMaps.erase(itMaps);
+                    hasEraseInIoMaps = true;
+                }
+
+                // 如果已经是end则不能再++it
                 if ( !hasEraseInIoMaps && itMaps != ioEvents->_ioMaps.end() ) ++itMaps;
             }
         }
@@ -1229,6 +1291,7 @@ void IoEventsData::post( IoType type, winux::SharedPointer<IoCtx> ctx )
             auto sockIoCtx = ctx.cast<IoSocketCtx>();
 
             IoKey key( sockIoCtx->sock.get(), aotSocket );
+
             auto itMaps = this->_ioMaps.find(key);
             if ( itMaps != this->_ioMaps.end() ) // 已存在此socket
             {
@@ -1236,21 +1299,22 @@ void IoEventsData::post( IoType type, winux::SharedPointer<IoCtx> ctx )
                 auto it = ioMap.find(type);
                 if ( it != ioMap.end() ) // 已存在此IoCtx
                 {
-                    auto oldCtx = it->second.cast<IoSocketCtx>();
-                    if ( oldCtx->timerCtx )
+                    auto existingCtx = it->second.cast<IoSocketCtx>();
+                    if ( existingCtx->timerCtx )
                     {
-                        auto timerCtx = oldCtx->timerCtx.lock();
+                        auto timerCtx = existingCtx->timerCtx.lock();
                         if ( timerCtx )
                         {
                             auto timer = timerCtx->timer;
 
                             // 删除关联的超时timer
-                            this->_ioMaps.erase( IoKey( timer.get(), aotTimer ) );
+                            //this->_ioMaps.erase( IoKey( timer.get(), aotTimer ) );
 
-                            timer->stop(false);
+                            timer->stop();
                         }
                     }
                 }
+
                 ioMap[type] = ctx;
             }
             else
@@ -1262,14 +1326,16 @@ void IoEventsData::post( IoType type, winux::SharedPointer<IoCtx> ctx )
     case ioTimer:
         {
             auto timerCtx = ctx.cast<IoTimerCtx>();
+
             IoKey key( timerCtx->timer.get(), aotTimer );
+
             auto itMaps = this->_ioMaps.find(key);
             if ( itMaps != this->_ioMaps.end() ) // 已存在此timer
             {
                 auto timer = timerCtx->timer;
-                timer->stop(false);
+                timer->stop();
                 // 删除已存在的IoTimerCtx
-                this->_ioMaps.erase(itMaps);
+                //this->_ioMaps.erase(itMaps);
             }
 
             this->_ioMaps[key][type] = timerCtx;
@@ -1338,7 +1404,7 @@ void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, I
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        this->_postTimerEx( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1367,7 +1433,7 @@ void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, 
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        this->_postTimerEx( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1395,7 +1461,7 @@ void IoService::postRecv( winux::SharedPointer<eiennet::async::Socket> sock, siz
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        this->_postTimerEx( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1423,7 +1489,7 @@ void IoService::postSend( winux::SharedPointer<eiennet::async::Socket> sock, voi
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        this->_postTimerEx( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1451,7 +1517,7 @@ void IoService::postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock,
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        this->_postTimerEx( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1480,7 +1546,7 @@ void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, e
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        this->_postTimerEx( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1492,7 +1558,12 @@ void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, e
     ioEvents->wakeUpTrigger(IoEventsData::wutWantUpdate);
 }
 
-void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, winux::SharedPointer<IoSocketCtx> assocCtx, io::IoServiceThread * th )
+void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, io::IoServiceThread * th )
+{
+    this->_postTimerEx( timer, timeoutMs, periodic, cbOk, winux::SharedPointer<IoSocketCtx>(), th );
+}
+
+void IoService::_postTimerEx( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, winux::SharedPointer<IoSocketCtx> assocCtx, io::IoServiceThread * th )
 {
     winux::SharedPointer<IoTimerCtx> timerCtx;
     {
@@ -1550,16 +1621,7 @@ void IoService::timerTrigger( io::IoTimerCtx * timerCtx )
 
 void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
 {
-    IoEventsData * ioEvents = nullptr;
-    if ( sock->getThread() )
-    {
-        auto * th = static_cast<IoServiceThread *>( sock->getThread() );
-        ioEvents = &th->_ioEvents;
-    }
-    else
-    {
-        ioEvents = &this->_ioEvents;
-    }
+    IoEventsData * ioEvents = sock->getThread() ? &static_cast<IoServiceThread *>( sock->getThread() )->_ioEvents : &this->_ioEvents;
 
     winux::ScopeGuard guard(ioEvents->_mtxIoMaps);
 
@@ -1567,33 +1629,21 @@ void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
     auto itMaps = ioMaps.find( IoEventsData::IoKey( sock.get(), IoEventsData::aotSocket ) );
     if ( itMaps != ioMaps.end() )
     {
-        //std::vector<eiennet::async::Timer *> timers;
         for ( auto & pr : itMaps->second )
         {
             auto ctx = pr.second.cast<IoSocketCtx>();
             ctx->cancelType = cancelProactive;
 
-            //_IoSocketCtxResetTimerCtx( ctx.get() );
             if ( ctx->timerCtx )
             {
                 auto timerCtx = ctx->timerCtx.lock();
-                if ( timerCtx )
+                if ( timerCtx ) // 如果有超时定时器，停止它
                 {
                     auto timer = timerCtx->timer;
-
-                    //timers.push_back( timer.get() );
-
-                    timer->stop(false);
+                    timer->stop();
                 }
             }
         }
-
-        //for ( auto & ptr : timers )
-        //{
-        //    m.erase( IoEventsData::IoKey( ptr, IoEventsData::aotTimer ) );
-        //}
-
-        //m.erase(it);
     }
 }
 
