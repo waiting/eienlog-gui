@@ -523,8 +523,8 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
             ioEvents->_handleIoEventsCallback( sel, rc );
         }
         
-        // 删除取消的IO，处理超时响应
-        ioEvents->_handleIoEventsTimeoutAndCancel();
+        // 处理超时响应，并删除取消的IO
+        ioEvents->_handleIoEventsTimeoutAndDeleteCancel();
     }
 }
 
@@ -1046,7 +1046,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
     }
 }
 
-void  IoEventsData::_handleIoEventsTimeoutAndCancel()
+void  IoEventsData::_handleIoEventsTimeoutAndDeleteCancel()
 {
     winux::ScopeGuard guard(this->_mtxIoMaps);
 
@@ -1168,67 +1168,67 @@ void  IoEventsData::_handleIoEventsTimeoutAndCancel()
 // struct IoAcceptCtx -------------------------------------------------------------------------
 IoAcceptCtx::IoAcceptCtx()
 {
-    //ColorOutputLine( winux::fgGreen, "IoAcceptCtx()" );
+
 }
 
 IoAcceptCtx::~IoAcceptCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoAcceptCtx()" );
+
 }
 
 // struct IoConnectCtx ------------------------------------------------------------------------
 IoConnectCtx::IoConnectCtx()
 {
-    //ColorOutputLine( winux::fgGreen, "IoConnectCtx()" );
+
 }
 
 IoConnectCtx::~IoConnectCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoConnectCtx()" );
+
 }
 
 // struct IoRecvCtx ---------------------------------------------------------------------------
 IoRecvCtx::IoRecvCtx()
 {
-    //ColorOutputLine( winux::fgGreen, "IoRecvCtx(", this, ")"  );
+
 }
 
 IoRecvCtx::~IoRecvCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoRecvCtx(", this, "), sock:", this->sock->get() );
+
 }
 
 // struct IoSendCtx ---------------------------------------------------------------------------
 IoSendCtx::IoSendCtx()
 {
-    //ColorOutputLine( winux::fgGreen, "IoSendCtx(", this, ")" );
+
 }
 
 IoSendCtx::~IoSendCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoSendCtx(", this, "), sock:", this->sock->get() );
+
 }
 
 // struct IoRecvFromCtx -----------------------------------------------------------------------
 IoRecvFromCtx::IoRecvFromCtx()
 {
-    //ColorOutputLine( winux::fgGreen, "IoRecvFromCtx()" );
+
 }
 
 IoRecvFromCtx::~IoRecvFromCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoRecvFromCtx()" );
+
 }
 
 // struct IoSendToCtx -------------------------------------------------------------------------
 IoSendToCtx::IoSendToCtx()
 {
-    //ColorOutputLine( winux::fgGreen, "IoSendToCtx()" );
+
 }
 
 IoSendToCtx::~IoSendToCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoSendToCtx()" );
+
 }
 
 // struct IoTimerCtx --------------------------------------------------------------------------
@@ -1245,12 +1245,11 @@ IoTimerCtx::IoTimerCtx()
 #else
 
 #endif
-    //ColorOutputLine( winux::fgGreen, "IoTimerCtx()" );
 }
 
 IoTimerCtx::~IoTimerCtx()
 {
-    //ColorOutputLine( winux::fgAqua, "~IoTimerCtx()" );
+
 }
 
 bool IoTimerCtx::cancel( CancelType cancelType )

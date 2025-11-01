@@ -280,10 +280,14 @@ public:
     size_t getTimerIoCount() const { return this->_timerIoCount; }
 
 private:
+    // 处理IoEvents投递
     void _handleIoEventsPost();
+    // 处理IoEvents监听
     void _handleIoEventsListen( io::Select & sel );
+    // 处理IoEvents事件回调
     void _handleIoEventsCallback( io::Select & sel, int rc );
-    void _handleIoEventsTimeoutAndCancel();
+    // 处理IoEvents超时响应以及删除取消的IO
+    void _handleIoEventsTimeoutAndDeleteCancel();
 
     std::vector<IoMap::value_type> _preIoCtxs; //!< 预投递的IoCtx
     winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据

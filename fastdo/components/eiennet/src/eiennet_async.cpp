@@ -750,9 +750,9 @@ void Timer::stop( std::function< void ( io::IoTimerCtx * ) > cbDeleteCtx )
 
 }
 
-void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk/*, winux::SharedPointer<io::IoSocketCtx> assocCtx*/, io::IoServiceThread * th )
+void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, io::IoServiceThread * th )
 {
-    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk/*, assocCtx*/, th );
+    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk, th );
 }
 
 intptr_t Timer::get() const

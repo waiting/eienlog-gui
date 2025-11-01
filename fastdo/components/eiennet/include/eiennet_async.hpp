@@ -411,7 +411,6 @@ public:
         winux::uint64 timeoutMs,
         bool periodic,
         io::IoTimerCtx::OkFn cbOk,
-        //winux::SharedPointer<io::IoSocketCtx> assocCtx = winux::SharedPointer<io::IoSocketCtx>(),
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     );
 
