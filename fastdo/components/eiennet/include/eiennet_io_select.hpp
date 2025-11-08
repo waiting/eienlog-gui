@@ -215,9 +215,10 @@ struct EIENNET_DLL IoTimerCtx : io::IoTimerCtx, winux::EnableStaticNew<IoTimerCt
     eiennet::ip::udp::Socket _sockSignal; //!< UDP套接字，用于发送定时信号的管道
     winux::ushort _portSockSignal; //!< 信号套接字端口
 #else
+
 #endif
 
-    virtual bool cancel( CancelType cancelType ) override;
+    virtual bool changeState( IoState state ) override;
 
 protected:
     IoTimerCtx();
@@ -260,7 +261,7 @@ public:
         AsyncObjectType type;
     };
 
-    using IoMapMap = std::map< IoKey, std::map< IoType, winux::SharedPointer<IoCtx> > >;
+    using IoMapMap = std::map< IoKey, std::map< IoType, IoCtx * > >;
     using IoMap = IoMapMap::mapped_type;
 
     IoEventsData();
@@ -269,10 +270,10 @@ public:
     void wakeUpTrigger( WakeUpType type );
 
     // 预投递
-    void prePost( IoType type, winux::SharedPointer<IoCtx> ctx );
+    void prePost( IoType type, IoCtx * ctx );
 
     // 投递IO事件
-    void post( IoType type, winux::SharedPointer<IoCtx> ctx );
+    void post( IoType type, IoCtx * ctx );
 
     // 套接字IO数
     size_t getSockIoCount() const { return this->_sockIoCount; }
@@ -287,7 +288,7 @@ private:
     // 处理IoEvents事件回调
     void _handleIoEventsCallback( io::Select & sel, int rc );
     // 处理IoEvents超时响应以及删除取消的IO
-    void _handleIoEventsTimeoutAndDeleteCancel();
+    void _handleIoEventsTimeoutAndDelete();
 
     std::vector<IoMap::value_type> _preIoCtxs; //!< 预投递的IoCtx
     winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
@@ -392,16 +393,9 @@ public:
         winux::uint64 timeoutMs,
         bool periodic,
         IoTimerCtx::OkFn cbOk,
+        IoSocketCtx * assocCtx = nullptr,
         io::IoServiceThread * th = AutoDispatch
     ) override;
-    void _postTimerEx(
-        winux::SharedPointer<eiennet::async::Timer> timer,
-        winux::uint64 timeoutMs,
-        bool periodic,
-        IoTimerCtx::OkFn cbOk,
-        winux::SharedPointer<IoSocketCtx> assocCtx = winux::SharedPointer<IoSocketCtx>(),
-        io::IoServiceThread * th = AutoDispatch
-    );
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 

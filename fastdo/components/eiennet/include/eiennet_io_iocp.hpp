@@ -83,7 +83,7 @@ struct EIENNET_DLL IoTimerCtx : io::IoTimerCtx, winux::EnableStaticNew<IoTimerCt
 #else
 #endif
 
-    virtual bool cancel( CancelType cancelType ) override;
+    virtual bool changeState( IoState state ) override;
 
 protected:
     IoTimerCtx();
@@ -180,7 +180,7 @@ public:
         winux::uint64 timeoutMs,
         bool periodic,
         IoTimerCtx::OkFn cbOk,
-        //winux::SharedPointer<IoSocketCtx> assocCtx = winux::SharedPointer<IoSocketCtx>(),
+        IoSocketCtx * assocCtx = nullptr,
         io::IoServiceThread * th = AutoDispatch
     ) override;
 

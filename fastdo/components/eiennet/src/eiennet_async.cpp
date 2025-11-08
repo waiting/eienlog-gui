@@ -551,20 +551,17 @@ namespace async
 Socket::Socket( io::IoService & serv, int sock, bool isNewSock ) : eiennet::Socket( sock, isNewSock ), _serv(&serv), _data(nullptr), _thread(nullptr)
 {
     this->setBlocking(false);
-    //ColorOutputLine( winux::fgAtrovirens, "Socket(Accept)" );
 }
 
 Socket::Socket( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto ) : eiennet::Socket( af, sockType, proto ), _serv(&serv), _data(nullptr), _thread(nullptr)
 {
     this->setBlocking(false);
-    //ColorOutputLine( winux::fgAtrovirens, "Socket()" );
 }
 
 Socket::~Socket()
 {
     // 减小线程负载
     if ( this->_thread ) this->_thread->decWeight();
-    //ColorOutputLine( winux::fgTeal, "~Socket() attach thread:", _thread );
 }
 
 void Socket::acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoAcceptCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
@@ -631,11 +628,10 @@ struct Timer_Data
 };
 
 // class Timer --------------------------------------------------------------------------------
-Timer::Timer( io::IoService & serv ) : _posted(false), _serv(&serv), _thread(nullptr)
+Timer::Timer( io::IoService & serv ) : _timerCtx(nullptr), _posted(false), _serv(&serv), _thread(nullptr)
 {
     this->create();
 
-    //ColorOutputLine( winux::fgAtrovirens, "Timer(", this, ")" );
 }
 
 Timer::~Timer()
@@ -644,8 +640,6 @@ Timer::~Timer()
     if ( this->_thread ) this->_thread->decWeight();
 
     this->destroy();
-
-    //ColorOutputLine( winux::fgTeal, "~Timer(", this, ") thread:", _thread );
 }
 
 void Timer::create()
@@ -726,33 +720,31 @@ void Timer::unset()
 #endif
 }
 
-void Timer::stop( std::function< void ( io::IoTimerCtx * ) > cbDeleteCtx )
+bool Timer::stop()
 {
     winux::ScopeGuard guard(this->_mtx);
-
     if ( this->_timerCtx )
     {
-        auto timerCtx = this->_timerCtx.lock();
-
         {
             winux::ScopeUnguard unguard(this->_mtx);
-            timerCtx->cancel(io::cancelProactive);
-            this->destroy();
+            this->_timerCtx->changeState(io::stateProactiveCancel); // unset() inside
+            //this->destroy();
         }
-
-        timerCtx->periodic = false;
-        if ( this->_posted == false )
+        this->_timerCtx->periodic = false;
+        if ( this->_posted == false ) // 还未投递
         {
-            this->_timerCtx.reset();
-            if ( cbDeleteCtx ) cbDeleteCtx( timerCtx.get() );
+            auto * timerCtx = this->_timerCtx;
+            this->_timerCtx = nullptr;
+            //timerCtx->decRef();
+            return true;
         }
     }
-
+    return false;
 }
 
-void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, io::IoServiceThread * th )
+void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, io::IoSocketCtx * assocCtx, io::IoServiceThread * th )
 {
-    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk, th );
+    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk, assocCtx, th );
 }
 
 intptr_t Timer::get() const
@@ -770,21 +762,16 @@ void Timer_Data::_TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, 
     auto timer = ((Timer *)Context)->sharedFromThis();
     {
         winux::ScopeGuard guard(timer->_mtx);
-
         if ( timer->_timerCtx )
         {
             timer->_posted = true;
-            auto timerCtx = timer->_timerCtx.lock();
-            if ( timerCtx )
+            if ( timer->_thread )
             {
-                if ( timer->_thread )
-                {
-                    timer->_thread->timerTrigger( timerCtx.get() );
-                }
-                else
-                {
-                    timer->_serv->timerTrigger( timerCtx.get() );
-                }
+                timer->_thread->timerTrigger(timer->_timerCtx);
+            }
+            else
+            {
+                timer->_serv->timerTrigger(timer->_timerCtx);
             }
         }
     }

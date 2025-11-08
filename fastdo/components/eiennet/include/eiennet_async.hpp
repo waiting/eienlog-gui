@@ -399,8 +399,9 @@ public:
 
     /** \brief 停止定时器
      *
-     *  标记定时器IoTimerCtx为取消，摧毁定时器，标记为非周期。如果定时器未触发信号，重置关联的IoTimerCtx，并通过`cbDeleteCtx`尝试释放`IoTimerCtx` */
-    void stop( std::function< void ( io::IoTimerCtx * ) > cbDeleteCtx = nullptr );
+     *  标记定时器关联的IoTimerCtx为主动取消，标记为非周期。
+     *  如果定时器未触发信号，重置关联的IoTimerCtx并返回true，否则返回false。 */
+    bool stop();
 
     void waitAsync( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk )
     {
@@ -411,6 +412,7 @@ public:
         winux::uint64 timeoutMs,
         bool periodic,
         io::IoTimerCtx::OkFn cbOk,
+        io::IoSocketCtx * assocCtx = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     );
 
@@ -428,7 +430,7 @@ public:
     intptr_t get() const;
 
     // 一个Timer只能投递一个IoTimerCtx，这个成员标记关联的IoTimerCtx，同时为Windows平台下回调函数传递IoTimerCtx
-    winux::WeakPointer<io::IoTimerCtx> _timerCtx;
+    io::IoTimerCtx * _timerCtx;
     // 是否已经发出定时器信号，如果是周期性的，则应恢复成false
     bool _posted;
 

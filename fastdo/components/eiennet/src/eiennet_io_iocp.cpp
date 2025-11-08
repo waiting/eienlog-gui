@@ -126,14 +126,20 @@ IoTimerCtx::~IoTimerCtx()
     //ColorOutputLine( winux::fgAqua, "~IoTimerCtx()" );
 }
 
-bool IoTimerCtx::cancel( CancelType cancelType )
+bool IoTimerCtx::changeState( IoState state )
 {
-    this->cancelType = cancelType;
-
-    if ( this->timer )
+    this->state = state;
+    switch ( this->state )
     {
-        this->timer->unset();
-        return true;
+    case stateProactiveCancel:
+    case stateTimeoutCancel:
+    case stateFinish:
+        if ( this->timer )
+        {
+            this->timer->unset();
+            return true;
+        }
+        break;
     }
     return false;
 }
@@ -207,13 +213,14 @@ void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, e
 
 }
 
-void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, io::IoServiceThread * th )
+void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, IoSocketCtx * assocCtx, io::IoServiceThread * th )
 {
 
 }
 
 void IoService::timerTrigger( io::IoTimerCtx * timerCtx )
 {
+
 }
 
 IoServiceThread * IoService::getMinWeightThread() const

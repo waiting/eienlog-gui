@@ -27,24 +27,25 @@ enum IoType
     ioTimer
 };
 
-/** \brief 取消类型 */
-enum CancelType
+/** \brief IO状态 */
+enum IoState
 {
-    cancelNone, //!< 不取消
-    cancelProactive, //!< 主动取消
-    cancelTimeout //!< 超时自动取消
+    stateNormal, //!< 正常状态
+    stateProactiveCancel, //!< 主动取消
+    stateTimeoutCancel, //!< 超时取消
+    stateFinish, //!< 完成状态
 };
 
 /** \brief IO场景基类（提供引用计数功能） */
 struct IoCtx
 {
     IoType type; //!< IO类型
-    CancelType cancelType; //!< 取消类型
+    IoState state; //!< IO状态
     winux::uint64 startTime; //!< 请求开启的时间
     winux::uint64 timeoutMs; //!< 超时时间
 
 protected:
-    IoCtx() : type(ioNone), cancelType(cancelNone), startTime( winux::GetUtcTimeMs() ), timeoutMs(-1), _uses(1) { }
+    IoCtx() : type(ioNone), state(stateNormal), startTime( winux::GetUtcTimeMs() ), timeoutMs(-1), _uses(1) { }
     virtual ~IoCtx() { }
 
 public:
@@ -64,8 +65,8 @@ public:
         }
     }
 
-    /** \brief 取消IO操作 */
-    virtual bool cancel( CancelType cancelType ) = 0;
+    /** \brief 改变IO状态 */
+    virtual bool changeState( IoState state ) = 0;
 
 private:
     std::atomic<long> _uses; // 引用计数
@@ -76,17 +77,16 @@ struct IoTimerCtx;
 struct IoSocketCtx : virtual IoCtx
 {
     winux::SharedPointer<eiennet::async::Socket> sock; //!< 异步套接字
-    winux::WeakPointer<IoTimerCtx> timerCtx;  //!< 超时场景
+    IoTimerCtx * timerCtx;  //!< 超时场景
 
-    /** \brief 取消IO操作 */
-    virtual bool cancel( CancelType cancelType ) override
+    virtual bool changeState( IoState state ) override
     {
-        this->cancelType = cancelType;
+        this->state = state;
         return true;
     }
 
 protected:
-    IoSocketCtx() { }
+    IoSocketCtx() : timerCtx(nullptr) { }
     virtual ~IoSocketCtx() { }
 };
 
@@ -224,11 +224,11 @@ struct IoTimerCtx : virtual IoCtx
     OkFn cbOk; //!< 回调函数
 
     winux::SharedPointer<eiennet::async::Timer> timer; //!< 定时器
-    winux::SharedPointer<IoSocketCtx> assocCtx; //!< 关联的IO场景
+    IoSocketCtx * assocCtx; //!< 关联的IO场景
     bool periodic; //!< 是否为周期的
 
 protected:
-    IoTimerCtx() : periodic(false)
+    IoTimerCtx() : assocCtx(nullptr), periodic(false)
     {
         this->type = ioTimer;
     }
@@ -327,6 +327,7 @@ public:
         winux::uint64 timeoutMs,
         bool periodic,
         IoTimerCtx::OkFn cbOk,
+        IoSocketCtx * assocCtx = nullptr,
         IoServiceThread * th = AutoDispatch
     ) = 0;
 
