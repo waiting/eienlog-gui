@@ -1421,7 +1421,7 @@ IoService::IoService( size_t groupThread ) : _stop(false)
 {
     // 创建工作线程组
     this->_group.create<IoServiceThread>( groupThread, this );
-    //this->_pool.startup(poolThread);
+
 }
 
 void IoService::stop()
@@ -1442,7 +1442,7 @@ int IoService::run()
     this->_group.startup();
     _WorkerThreadFunc( this, nullptr, &this->_ioEvents, &this->_stop );
     this->_group.wait();
-    //this->_pool.whenEmptyStopAndWait();
+
     return 0;
 }
 

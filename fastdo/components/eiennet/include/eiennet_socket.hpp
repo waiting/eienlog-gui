@@ -596,11 +596,6 @@ public:
 /** \brief 数据收发场景，存放数据收发过程中的一些变量 */
 struct EIENNET_DLL DataRecvSendCtx
 {
-    enum
-    {
-        RetryCount = 10 //!< 默认重试次数
-    };
-
     winux::GrowBuffer data; //!< 数据
     size_t startpos;        //!< 起始位置
     size_t pos;             //!< 找到位置

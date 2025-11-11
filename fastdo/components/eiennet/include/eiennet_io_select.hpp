@@ -417,11 +417,11 @@ public:
     /** \brief 获取组线程数 */
     size_t getGroupThreadCount() const { return _group.count(); }
 
+    /** \brief 获取IO事件数据 */
     IoEventsData & getIoEvents() { return this->_ioEvents; }
 
 private:
     IoEventsData _ioEvents;
-    //winux::ThreadPool _pool;
     winux::ThreadGroup _group;
     bool _stop;
 
