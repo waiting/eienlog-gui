@@ -31,120 +31,14 @@
 
 #include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
-#include "eiennet_io_epoll.hpp"
+#include "eiennet_io.hpp"
 #include "eiennet_async.hpp"
+#include "eiennet_io_epoll.hpp"
 
 namespace io
 {
 namespace epoll
 {
-// struct IoAcceptCtx -------------------------------------------------------------------------
-IoAcceptCtx::IoAcceptCtx()
-{
-    //ColorOutputLine( winux::fgGreen, "IoAcceptCtx()" );
-}
-
-IoAcceptCtx::~IoAcceptCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoAcceptCtx()" );
-}
-
-// struct IoConnectCtx ------------------------------------------------------------------------
-IoConnectCtx::IoConnectCtx()
-{
-    //ColorOutputLine( winux::fgGreen, "IoConnectCtx()" );
-}
-
-IoConnectCtx::~IoConnectCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoConnectCtx()" );
-}
-
-// struct IoRecvCtx ---------------------------------------------------------------------------
-IoRecvCtx::IoRecvCtx()
-{
-    //ColorOutputLine( winux::fgGreen, "IoRecvCtx(", this, ")"  );
-}
-
-IoRecvCtx::~IoRecvCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoRecvCtx(", this, "), sock:", this->sock->get() );
-}
-
-// struct IoSendCtx ---------------------------------------------------------------------------
-IoSendCtx::IoSendCtx()
-{
-    //ColorOutputLine( winux::fgGreen, "IoSendCtx(", this, ")" );
-}
-
-IoSendCtx::~IoSendCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoSendCtx(", this, "), sock:", this->sock->get() );
-}
-
-// struct IoRecvFromCtx -----------------------------------------------------------------------
-IoRecvFromCtx::IoRecvFromCtx()
-{
-    //ColorOutputLine( winux::fgGreen, "IoRecvFromCtx()" );
-}
-
-IoRecvFromCtx::~IoRecvFromCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoRecvFromCtx()" );
-}
-
-// struct IoSendToCtx -------------------------------------------------------------------------
-IoSendToCtx::IoSendToCtx()
-{
-    //ColorOutputLine( winux::fgGreen, "IoSendToCtx()" );
-}
-
-IoSendToCtx::~IoSendToCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoSendToCtx()" );
-}
-
-// struct IoTimerCtx --------------------------------------------------------------------------
-IoTimerCtx::IoTimerCtx()
-{
-#if defined(OS_WIN)
-    _portSockSignal = 0;
-    if ( _sockSignal.bind( eiennet::ip::EndPoint( "", 0 ) ) )
-    {
-        eiennet::ip::EndPoint ep;
-        _sockSignal.getBoundEp(&ep);
-        _portSockSignal = ep.getPort();
-    }
-#else
-
-#endif
-    //ColorOutputLine( winux::fgGreen, "IoTimerCtx()" );
-}
-
-IoTimerCtx::~IoTimerCtx()
-{
-    //ColorOutputLine( winux::fgAqua, "~IoTimerCtx()" );
-}
-
-bool IoTimerCtx::changeState( IoState state )
-{
-    this->state = state;
-    switch ( this->state )
-    {
-    case stateProactiveCancel:
-    case stateTimeoutCancel:
-    case stateFinish:
-        if ( this->timer )
-        {
-            this->timer->unset();
-            return true;
-        }
-        break;
-    }
-    return false;
-}
-
-
 // class IoServiceThread ----------------------------------------------------------------------
 void IoServiceThread::run()
 {

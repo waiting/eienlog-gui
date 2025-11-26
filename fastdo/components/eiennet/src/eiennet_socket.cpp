@@ -36,6 +36,7 @@
 #include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
 #include "eiennet_io.hpp"
+#include "eiennet_async.hpp"
 #include "eiennet_io_select.hpp"
 
 namespace eiennet

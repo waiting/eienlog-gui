@@ -1,93 +1,102 @@
 ﻿#ifndef __EIENNET_IO_EPOLL_HPP__
 #define __EIENNET_IO_EPOLL_HPP__
 
-#include "eiennet_io.hpp"
-
 /** \brief IO模型 */
 namespace io
 {
 namespace epoll
 {
 /** \brief 接受场景接口 */
-struct EIENNET_DLL IoAcceptCtx : io::IoAcceptCtx, winux::EnableStaticNew<IoAcceptCtx>
+struct IoAcceptCtx : io::IoAcceptCtx, winux::EnableStaticNew<IoAcceptCtx>
 {
 protected:
-    IoAcceptCtx();
-    virtual ~IoAcceptCtx();
+    IoAcceptCtx() { }
+    virtual ~IoAcceptCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
 };
 
 /** \brief 连接场景接口 */
-struct EIENNET_DLL IoConnectCtx : io::IoConnectCtx, winux::EnableStaticNew<IoConnectCtx>
+struct IoConnectCtx : io::IoConnectCtx, winux::EnableStaticNew<IoConnectCtx>
 {
 protected:
-    IoConnectCtx();
-    virtual ~IoConnectCtx();
+    IoConnectCtx() { }
+    virtual ~IoConnectCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
 };
 
 /** \brief 数据接收场景接口 */
-struct EIENNET_DLL IoRecvCtx : io::IoRecvCtx, winux::EnableStaticNew<IoRecvCtx>
+struct IoRecvCtx : io::IoRecvCtx, winux::EnableStaticNew<IoRecvCtx>
 {
 protected:
-    IoRecvCtx();
-    virtual ~IoRecvCtx();
+    IoRecvCtx() { }
+    virtual ~IoRecvCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
 };
 
 /** \brief 数据发送场景接口 */
-struct EIENNET_DLL IoSendCtx : io::IoSendCtx, winux::EnableStaticNew<IoSendCtx>
+struct IoSendCtx : io::IoSendCtx, winux::EnableStaticNew<IoSendCtx>
 {
 protected:
-    IoSendCtx();
-    virtual ~IoSendCtx();
+    IoSendCtx() { }
+    virtual ~IoSendCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
 };
 
 /** \brief 无连接，数据接收场景接口 */
-struct EIENNET_DLL IoRecvFromCtx : io::IoRecvFromCtx, winux::EnableStaticNew<IoRecvFromCtx>
+struct IoRecvFromCtx : io::IoRecvFromCtx, winux::EnableStaticNew<IoRecvFromCtx>
 {
 protected:
-    IoRecvFromCtx();
-    virtual ~IoRecvFromCtx();
+    IoRecvFromCtx() { }
+    virtual ~IoRecvFromCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
 };
 
 /** \brief 无连接，数据发送场景接口 */
-struct EIENNET_DLL IoSendToCtx : io::IoSendToCtx, winux::EnableStaticNew<IoSendToCtx>
+struct IoSendToCtx : io::IoSendToCtx, winux::EnableStaticNew<IoSendToCtx>
 {
 protected:
-    IoSendToCtx();
-    virtual ~IoSendToCtx();
+    IoSendToCtx() { }
+    virtual ~IoSendToCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
 };
 
 /** \brief 定时器IO场景 */
-struct EIENNET_DLL IoTimerCtx : io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
+struct IoTimerCtx : io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
 {
-#if defined(OS_WIN)
-    eiennet::ip::udp::Socket _sockSignal; //!< UDP套接字，用于发送定时信号的管道
-    winux::ushort _portSockSignal; //!< 信号套接字端口
-#else
-#endif
-
-    virtual bool changeState( IoState state ) override;
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoTimerCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->timer )
+            {
+                this->timer->unset();
+                return true;
+            }
+            break;
+        }
+        return false;
+    }
 
 protected:
-    IoTimerCtx();
-    virtual ~IoTimerCtx();
+    IoTimerCtx() { }
+    virtual ~IoTimerCtx() { }
 
     template < typename _Ty0 >
     friend class winux::EnableStaticNew;
@@ -205,7 +214,6 @@ public:
     size_t getGroupThreadCount() const { return _group.count(); }
 
 private:
-    //winux::ThreadPool _pool;
     winux::ThreadGroup _group;
     bool _stop;
 

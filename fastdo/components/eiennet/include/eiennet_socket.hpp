@@ -218,7 +218,6 @@ public:
     /** \brief 根据内部存储的'地址簇'，'类型'，'协议'创建一个socket */
     bool create();
 
-protected:
     /** \brief 如果未创建Socket则尝试创建。如果创建成功或已创建则返回true，如果创建失败则返回false
      *
      *  可传递指定参数，若不传递则用默认参数 */

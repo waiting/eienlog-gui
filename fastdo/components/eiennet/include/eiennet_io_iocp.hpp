@@ -1,107 +1,305 @@
 ﻿#ifndef __EIENNET_IO_IOCP_HPP__
 #define __EIENNET_IO_IOCP_HPP__
 
-#include "eiennet_io.hpp"
-
 /** \brief IO模型 */
 namespace io
 {
 namespace iocp
 {
-/** \brief 接受场景接口 */
-struct EIENNET_DLL IoAcceptCtx : io::IoAcceptCtx, winux::EnableStaticNew<IoAcceptCtx>
+/** \brief IO场景 */
+struct IoCtx : virtual io::IoCtx
 {
-protected:
-    IoAcceptCtx();
-    virtual ~IoAcceptCtx();
+    OVERLAPPED ol;
+};
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+/** \brief 接受场景接口 */
+struct IoAcceptCtx : IoCtx, io::IoAcceptCtx, winux::EnableStaticNew<IoAcceptCtx>
+{
+public:
+    winux::Buffer outputBuf; // for AcceptEx() lpOutputBuffer
+    winux::uint32 localAddrLen;
+    winux::uint32 remoteAddrLen;
+    winux::SharedPointer<eiennet::async::Socket> clientSock;
+
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoAcceptCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->sock && this->sock->operator bool() )
+            {
+                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
+                {
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
+
+protected:
+    IoAcceptCtx() : localAddrLen(0), remoteAddrLen(0)
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoAcceptCtx()
+    {
+    }
+
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 连接场景接口 */
-struct EIENNET_DLL IoConnectCtx : io::IoConnectCtx, winux::EnableStaticNew<IoConnectCtx>
+struct IoConnectCtx : IoCtx, io::IoConnectCtx, winux::EnableStaticNew<IoConnectCtx>
 {
-protected:
-    IoConnectCtx();
-    virtual ~IoConnectCtx();
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoConnectCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->sock && this->sock->operator bool() )
+            {
+                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
+                {
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+protected:
+    IoConnectCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoConnectCtx()
+    {
+    }
+
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 数据接收场景接口 */
-struct EIENNET_DLL IoRecvCtx : io::IoRecvCtx, winux::EnableStaticNew<IoRecvCtx>
+struct IoRecvCtx : IoCtx, io::IoRecvCtx, winux::EnableStaticNew<IoRecvCtx>
 {
-protected:
-    IoRecvCtx();
-    virtual ~IoRecvCtx();
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoRecvCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->sock && this->sock->operator bool() )
+            {
+                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
+                {
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+protected:
+    IoRecvCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoRecvCtx()
+    {
+    }
+
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 数据发送场景接口 */
-struct EIENNET_DLL IoSendCtx : io::IoSendCtx, winux::EnableStaticNew<IoSendCtx>
+struct IoSendCtx : IoCtx, io::IoSendCtx, winux::EnableStaticNew<IoSendCtx>
 {
-protected:
-    IoSendCtx();
-    virtual ~IoSendCtx();
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoSendCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->sock && this->sock->operator bool() )
+            {
+                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
+                {
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+protected:
+    IoSendCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoSendCtx()
+    {
+    }
+
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 无连接，数据接收场景接口 */
-struct EIENNET_DLL IoRecvFromCtx : io::IoRecvFromCtx, winux::EnableStaticNew<IoRecvFromCtx>
+struct IoRecvFromCtx : IoCtx, io::IoRecvFromCtx, winux::EnableStaticNew<IoRecvFromCtx>
 {
-protected:
-    IoRecvFromCtx();
-    virtual ~IoRecvFromCtx();
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoRecvFromCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->sock && this->sock->operator bool() )
+            {
+                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
+                {
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+protected:
+    IoRecvFromCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoRecvFromCtx()
+    {
+    }
+
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 无连接，数据发送场景接口 */
-struct EIENNET_DLL IoSendToCtx : io::IoSendToCtx, winux::EnableStaticNew<IoSendToCtx>
+struct IoSendToCtx : IoCtx, io::IoSendToCtx, winux::EnableStaticNew<IoSendToCtx>
 {
-protected:
-    IoSendToCtx();
-    virtual ~IoSendToCtx();
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoSendToCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->sock && this->sock->operator bool() )
+            {
+                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
+                {
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+protected:
+    IoSendToCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoSendToCtx()
+    {
+    }
+
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 定时器IO场景 */
-struct EIENNET_DLL IoTimerCtx : io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
+struct IoTimerCtx : IoCtx, io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
 {
-#if defined(OS_WIN)
-    eiennet::ip::udp::Socket _sockSignal; //!< UDP套接字，用于发送定时信号的管道
-    winux::ushort _portSockSignal; //!< 信号套接字端口
-#else
-#endif
-
-    virtual bool changeState( IoState state ) override;
+public:
+    virtual bool changeState( IoState state ) override
+    {
+        io::IoTimerCtx::changeState(state);
+        switch ( this->state )
+        {
+        case stateProactiveCancel:
+        case stateTimeoutCancel:
+        case stateFinish:
+            if ( this->timer )
+            {
+                this->timer->unset();
+                return true;
+            }
+            break;
+        }
+        return false;
+    }
 
 protected:
-    IoTimerCtx();
-    virtual ~IoTimerCtx();
+    IoTimerCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoTimerCtx()
+    {
+    }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 class IoService;
 class IoServiceThread;
 
+/** \brief IOCP封装 */
+class Iocp
+{
+public:
+    Iocp();
+    ~Iocp();
+
+    // 初始化一些函数，因为这是属于WinSock2规范之外的微软另外提供的扩展函数，所以需要额外获取一下函数的指针
+    bool initFuncs();
+
+    // 关联句柄到IOCP
+    bool associate( HANDLE h, ULONG_PTR key );
+
+    // 投递自定义IOCP完成消息
+    void postCustom( DWORD bytesTransferred, ULONG_PTR key, LPOVERLAPPED ol );
+
+    HANDLE get() const;
+    operator bool() const;
+
+    winux::PlainMembers< struct Iocp_Data, sizeof(HANDLE) * 5 > _self;
+};
+
+
 /** \brief Io服务线程 */
 class EIENNET_DLL IoServiceThread : public io::IoServiceThread
 {
 public:
-    IoServiceThread( IoService * serv ) : _serv(serv), _stop(false)
+    IoServiceThread( IoService * serv ) : _serv(serv)
     {
+        _iocp.initFuncs();
     }
 
     virtual void run() override;
@@ -109,8 +307,8 @@ public:
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
 private:
+    Iocp _iocp;
     IoService * _serv;
-    bool _stop;
     friend class IoService;
 
     DISABLE_OBJECT_COPY(IoServiceThread)
@@ -205,12 +403,12 @@ public:
     size_t getGroupThreadCount() const { return _group.count(); }
 
 private:
-    //winux::ThreadPool _pool;
+    Iocp _iocp;
     winux::ThreadGroup _group;
-    bool _stop;
 
     DISABLE_OBJECT_COPY(IoService)
 };
+
 
 } // namespace iocp
 

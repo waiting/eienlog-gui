@@ -649,6 +649,11 @@ public:
     }
 };
 
+#define FRIEND_ENABLE_STATIC_NEW \
+    template < typename _Ty0 > \
+    friend class winux::EnableStaticNew
+
+
 // 一些函数模板和函数 ------------------------------------------------------------------------
 /** \brief 计算字符串长度 */
 template < typename _ChTy, typename = CharTypeConstrain<_ChTy> >

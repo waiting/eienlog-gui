@@ -1,8 +1,8 @@
 ﻿#include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
 #include "eiennet_io.hpp"
-#include "eiennet_io_select.hpp"
 #include "eiennet_async.hpp"
+#include "eiennet_io_select.hpp"
 
 #if defined(OS_WIN)
 #else
@@ -720,26 +720,24 @@ void Timer::unset()
 #endif
 }
 
-bool Timer::stop()
+io::IoTimerCtx * Timer::stop()
 {
     winux::ScopeGuard guard(this->_mtx);
     if ( this->_timerCtx )
     {
         {
             winux::ScopeUnguard unguard(this->_mtx);
-            this->_timerCtx->changeState(io::stateProactiveCancel); // unset() inside
-            //this->destroy();
+            this->_timerCtx->changeState(io::stateProactiveCancel); // Timer::unset() inside
         }
-        this->_timerCtx->periodic = false;
+        this->_timerCtx->periodic = false; // 设为非周期
         if ( this->_posted == false ) // 还未投递
         {
             auto * timerCtx = this->_timerCtx;
             this->_timerCtx = nullptr;
-            //timerCtx->decRef();
-            return true;
+            return timerCtx;
         }
     }
-    return false;
+    return nullptr;
 }
 
 void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, io::IoSocketCtx * assocCtx, io::IoServiceThread * th )

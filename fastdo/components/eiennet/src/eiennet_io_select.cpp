@@ -31,8 +31,9 @@
 
 #include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
-#include "eiennet_io_select.hpp"
+#include "eiennet_io.hpp"
 #include "eiennet_async.hpp"
+#include "eiennet_io_select.hpp"
 
 namespace io
 {
@@ -526,8 +527,8 @@ void _CancelIoCtxs( IoEventsData::IoMapMap & ioMaps, IoEventsData::IoMapMap::ite
     } // for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
 }
 
-// 工作线程函数
-void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData * ioEvents, bool * stop )
+// Select工作函数
+void _SelectWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData * ioEvents, bool * stop )
 {
     io::Select sel;
     *stop = false;
@@ -564,6 +565,17 @@ void _WorkerThreadFunc( IoService * serv, IoServiceThread * thread, IoEventsData
         
         // 处理超时响应，并删除不是普通状态的IO
         ioEvents->_handleIoEventsTimeoutAndDelete();
+    }
+}
+
+// class IoEventsData -------------------------------------------------------------------------
+IoEventsData::IoEventsData() : _mtxPreIoCtxs(true), _mtxIoMaps(true), _portSockWakeUp(0), _sockIoCount(0), _timerIoCount(0)
+{
+    if ( _sockWakeUp.bind( eiennet::ip::EndPoint( "", 0 ) ) )
+    {
+        eiennet::ip::EndPoint ep;
+        _sockWakeUp.getBoundEp(&ep);
+        _portSockWakeUp = ep.getPort();
     }
 }
 
@@ -1193,122 +1205,6 @@ void  IoEventsData::_handleIoEventsTimeoutAndDelete()
     }
 }
 
-// struct IoAcceptCtx -------------------------------------------------------------------------
-IoAcceptCtx::IoAcceptCtx()
-{
-
-}
-
-IoAcceptCtx::~IoAcceptCtx()
-{
-
-}
-
-// struct IoConnectCtx ------------------------------------------------------------------------
-IoConnectCtx::IoConnectCtx()
-{
-
-}
-
-IoConnectCtx::~IoConnectCtx()
-{
-
-}
-
-// struct IoRecvCtx ---------------------------------------------------------------------------
-IoRecvCtx::IoRecvCtx()
-{
-
-}
-
-IoRecvCtx::~IoRecvCtx()
-{
-
-}
-
-// struct IoSendCtx ---------------------------------------------------------------------------
-IoSendCtx::IoSendCtx()
-{
-
-}
-
-IoSendCtx::~IoSendCtx()
-{
-
-}
-
-// struct IoRecvFromCtx -----------------------------------------------------------------------
-IoRecvFromCtx::IoRecvFromCtx()
-{
-
-}
-
-IoRecvFromCtx::~IoRecvFromCtx()
-{
-
-}
-
-// struct IoSendToCtx -------------------------------------------------------------------------
-IoSendToCtx::IoSendToCtx()
-{
-
-}
-
-IoSendToCtx::~IoSendToCtx()
-{
-
-}
-
-// struct IoTimerCtx --------------------------------------------------------------------------
-IoTimerCtx::IoTimerCtx()
-{
-#if defined(OS_WIN)
-    _portSockSignal = 0;
-    if ( _sockSignal.bind( eiennet::ip::EndPoint( "", 0 ) ) )
-    {
-        eiennet::ip::EndPoint ep;
-        _sockSignal.getBoundEp(&ep);
-        _portSockSignal = ep.getPort();
-    }
-#else
-
-#endif
-}
-
-IoTimerCtx::~IoTimerCtx()
-{
-
-}
-
-bool IoTimerCtx::changeState( IoState state )
-{
-    this->state = state;
-    switch ( this->state )
-    {
-    case stateProactiveCancel:
-    case stateTimeoutCancel:
-    case stateFinish:
-        if ( this->timer )
-        {
-            this->timer->unset();
-            return true;
-        }
-        break;
-    }
-    return false;
-}
-
-// class IoEventsData -------------------------------------------------------------------------
-IoEventsData::IoEventsData() : _mtxPreIoCtxs(true), _mtxIoMaps(true), _portSockWakeUp(0), _sockIoCount(0), _timerIoCount(0)
-{
-    if ( _sockWakeUp.bind( eiennet::ip::EndPoint( "", 0 ) ) )
-    {
-        eiennet::ip::EndPoint ep;
-        _sockWakeUp.getBoundEp(&ep);
-        _portSockWakeUp = ep.getPort();
-    }
-}
-
 void IoEventsData::wakeUpTrigger( WakeUpType type )
 {
     winux::ushort t = (winux::ushort)type;
@@ -1404,7 +1300,7 @@ void IoEventsData::post( IoType type, IoCtx * ctx )
 // class IoServiceThread ----------------------------------------------------------------------
 void IoServiceThread::run()
 {
-    _WorkerThreadFunc( this->_serv, this, &this->_ioEvents, &this->_stop );
+    _SelectWorkerFunc( this->_serv, this, &this->_ioEvents, &this->_stop );
 }
 
 void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
@@ -1440,7 +1336,7 @@ void IoService::stop()
 int IoService::run()
 {
     this->_group.startup();
-    _WorkerThreadFunc( this, nullptr, &this->_ioEvents, &this->_stop );
+    _SelectWorkerFunc( this, nullptr, &this->_ioEvents, &this->_stop );
     this->_group.wait();
 
     return 0;

@@ -400,8 +400,8 @@ public:
     /** \brief 停止定时器
      *
      *  标记定时器关联的IoTimerCtx为主动取消，标记为非周期。
-     *  如果定时器未触发信号，重置关联的IoTimerCtx并返回true，否则返回false。 */
-    bool stop();
+     *  如果定时器未触发信号，返回`IoTimerCtx`并设置`Timer::_timerCtx`为`nullptr`，否则返回`nullptr`。 */
+    io::IoTimerCtx * stop();
 
     void waitAsync( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk )
     {

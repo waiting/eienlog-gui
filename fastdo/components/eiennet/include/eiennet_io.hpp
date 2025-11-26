@@ -66,7 +66,11 @@ public:
     }
 
     /** \brief 改变IO状态 */
-    virtual bool changeState( IoState state ) = 0;
+    virtual bool changeState( IoState state )
+    {
+        this->state = state;
+        return true;
+    }
 
 private:
     std::atomic<long> _uses; // 引用计数
@@ -78,12 +82,6 @@ struct IoSocketCtx : virtual IoCtx
 {
     winux::SharedPointer<eiennet::async::Socket> sock; //!< 异步套接字
     IoTimerCtx * timerCtx;  //!< 超时场景
-
-    virtual bool changeState( IoState state ) override
-    {
-        this->state = state;
-        return true;
-    }
 
 protected:
     IoSocketCtx() : timerCtx(nullptr) { }
@@ -237,24 +235,26 @@ protected:
 };
 
 /** \brief IoService线程 */
-class EIENNET_DLL IoServiceThread : public winux::Thread
+class IoServiceThread : public winux::Thread
 {
 public:
-    IoServiceThread();
+    IoServiceThread() : _weight(0)
+    {
+    }
 
     virtual void run() override = 0;
 
     /** \brief 获取权重值 */
-    size_t getWeight() const;
+    size_t getWeight() const { return _weight.load(std::memory_order_acquire); }
 
     /** \brief 增加权重值 */
-    void incWeight();
+    void incWeight() { _weight.fetch_add( 1, std::memory_order_acq_rel ); }
 
     /** \brief 减少权重值 */
-    void decWeight();
+    void decWeight() { _weight.fetch_sub( 1, std::memory_order_acq_rel ); }
 
     /** \brief 定时器IO触发器，直接发送到处理循环里 */
-    virtual void timerTrigger( IoTimerCtx * timerCtx );
+    virtual void timerTrigger( IoTimerCtx * timerCtx ) { }
 
 private:
     std::atomic<size_t> _weight;
@@ -264,7 +264,7 @@ private:
 IoServiceThread * const AutoDispatch = reinterpret_cast<IoServiceThread *>(-1);
 
 /** \brief IoService基类 */
-class EIENNET_DLL IoService
+class IoService
 {
 public:
     virtual ~IoService() { }
@@ -335,7 +335,7 @@ public:
     virtual IoServiceThread * getMinWeightThread() const = 0;
 
     /** \brief 定时器IO触发器，直接发送到处理循环里 */
-    virtual void timerTrigger( IoTimerCtx * timerCtx );
+    virtual void timerTrigger( IoTimerCtx * timerCtx ) { }
 };
 
 
