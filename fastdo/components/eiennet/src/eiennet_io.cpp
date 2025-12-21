@@ -32,9 +32,23 @@
 #include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
 #include "eiennet_io.hpp"
+#include "eiennet_async.hpp"
+#if defined(OS_WIN)
+#include "eiennet_io_iocp.hpp"
+#else
+#include "eiennet_io_epoll.hpp"
+#endif
 
 namespace io
 {
+EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupThread )
+{
+#if defined(OS_WIN)
+    return winux::MakeSharedNew<io::iocp::IoService>(groupThread);
+#else
+    return winux::MakeSharedNew<io::epoll::IoService>(groupThread);
+#endif
+}
 
 
 } // namespace io

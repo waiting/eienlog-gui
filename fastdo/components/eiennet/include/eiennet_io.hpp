@@ -267,6 +267,8 @@ IoServiceThread * const AutoDispatch = reinterpret_cast<IoServiceThread *>(-1);
 class IoService
 {
 public:
+    static EIENNET_FUNC_DECL(winux::SharedPointer<IoService>) New( size_t groupThread = 4 );
+
     virtual ~IoService() { }
 
     virtual void stop() = 0;

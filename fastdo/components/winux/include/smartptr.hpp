@@ -1292,6 +1292,13 @@ inline SimplePointer<_Ty> MakeSimple( _Ty * newObj, _Dt dt )
     return SimplePointer<_Ty>( newObj, dt );
 }
 
+/** \brief 创建一个`SimplePointer`来管理新对象资源 */
+template < typename _Ty, typename... _ArgType >
+inline SimplePointer<_Ty> MakeSimpleNew( _ArgType&& ... arg )
+{
+    return SimplePointer<_Ty>( new _Ty( std::forward<_ArgType>(arg)... ) );
+}
+
 /** \brief 创建一个`SharedPointer`来管理新对象资源 */
 template < typename _Ty >
 inline SharedPointer<_Ty> MakeShared( _Ty * newObj )
@@ -1304,6 +1311,13 @@ template < typename _Ty, typename _Dt >
 inline SharedPointer<_Ty> MakeShared( _Ty * newObj, _Dt dt )
 {
     return SharedPointer<_Ty>( newObj, dt );
+}
+
+/** \brief 创建一个`SharedPointer`来管理新对象资源 */
+template < typename _Ty, typename... _ArgType >
+inline SharedPointer<_Ty> MakeSharedNew( _ArgType&& ... arg )
+{
+    return SharedPointer<_Ty>( new _Ty( std::forward<_ArgType>(arg)... ) );
 }
 
 

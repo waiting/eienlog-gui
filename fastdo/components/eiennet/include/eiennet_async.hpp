@@ -305,6 +305,16 @@ public:
         return winux::SharedPointer<Socket>( new Socket( serv, af, sockType, proto ) );
     }
 
+    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, int sock = -1, bool isNewSock = false )
+    {
+        return winux::SharedPointer<Socket>( new Socket( *serv.get(), sock, isNewSock ) );
+    }
+
+    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, AddrFamily af, SockType sockType, Protocol proto )
+    {
+        return winux::SharedPointer<Socket>( new Socket( *serv.get(), af, sockType, proto ) );
+    }
+
     virtual ~Socket();
 
     winux::SharedPointer<Socket> accept( EndPoint * ep = nullptr )
@@ -497,6 +507,16 @@ public:
     {
         return winux::SharedPointer<Socket>( new Socket(serv) );
     }
+
+    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, int sock, bool isNewSock = false )
+    {
+        return winux::SharedPointer<Socket>( new Socket( *serv.get(), sock, isNewSock ) );
+    }
+
+    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv )
+    {
+        return winux::SharedPointer<Socket>( new Socket( *serv.get() ) );
+    }
 };
 
 } // namespace async
@@ -550,6 +570,16 @@ public:
     static winux::SharedPointer<Socket> New( io::IoService & serv )
     {
         return winux::SharedPointer<Socket>( new Socket(serv) );
+    }
+
+    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, int sock, bool isNewSock = false )
+    {
+        return winux::SharedPointer<Socket>( new Socket( *serv.get(), sock, isNewSock ) );
+    }
+
+    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv )
+    {
+        return winux::SharedPointer<Socket>( new Socket( *serv.get() ) );
     }
 };
 

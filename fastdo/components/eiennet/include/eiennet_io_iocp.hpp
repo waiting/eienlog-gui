@@ -10,6 +10,13 @@ namespace iocp
 struct IoCtx : virtual io::IoCtx
 {
     OVERLAPPED ol;
+
+protected:
+    IoCtx()
+    {
+        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+    }
+    virtual ~IoCtx() { }
 };
 
 /** \brief 接受场景接口 */
@@ -42,13 +49,8 @@ public:
     }
 
 protected:
-    IoAcceptCtx() : localAddrLen(0), remoteAddrLen(0)
-    {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
-    }
-    virtual ~IoAcceptCtx()
-    {
-    }
+    IoAcceptCtx() : localAddrLen(0), remoteAddrLen(0) { }
+    virtual ~IoAcceptCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };
@@ -78,13 +80,8 @@ public:
     }
 
 protected:
-    IoConnectCtx()
-    {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
-    }
-    virtual ~IoConnectCtx()
-    {
-    }
+    IoConnectCtx() { }
+    virtual ~IoConnectCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };
@@ -92,6 +89,8 @@ protected:
 /** \brief 数据接收场景接口 */
 struct IoRecvCtx : IoCtx, io::IoRecvCtx, winux::EnableStaticNew<IoRecvCtx>
 {
+    WSABUF wsabuf;
+
 public:
     virtual bool changeState( IoState state ) override
     {
@@ -116,11 +115,9 @@ public:
 protected:
     IoRecvCtx()
     {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+        ZeroMemory( &this->wsabuf, sizeof(WSABUF) );
     }
-    virtual ~IoRecvCtx()
-    {
-    }
+    virtual ~IoRecvCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };
@@ -128,6 +125,8 @@ protected:
 /** \brief 数据发送场景接口 */
 struct IoSendCtx : IoCtx, io::IoSendCtx, winux::EnableStaticNew<IoSendCtx>
 {
+    WSABUF wsabuf;
+
 public:
     virtual bool changeState( IoState state ) override
     {
@@ -152,11 +151,9 @@ public:
 protected:
     IoSendCtx()
     {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+        ZeroMemory( &this->wsabuf, sizeof(WSABUF) );
     }
-    virtual ~IoSendCtx()
-    {
-    }
+    virtual ~IoSendCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };
@@ -164,6 +161,8 @@ protected:
 /** \brief 无连接，数据接收场景接口 */
 struct IoRecvFromCtx : IoCtx, io::IoRecvFromCtx, winux::EnableStaticNew<IoRecvFromCtx>
 {
+    WSABUF wsabuf;
+
 public:
     virtual bool changeState( IoState state ) override
     {
@@ -188,11 +187,9 @@ public:
 protected:
     IoRecvFromCtx()
     {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+        ZeroMemory( &this->wsabuf, sizeof(WSABUF) );
     }
-    virtual ~IoRecvFromCtx()
-    {
-    }
+    virtual ~IoRecvFromCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };
@@ -200,6 +197,8 @@ protected:
 /** \brief 无连接，数据发送场景接口 */
 struct IoSendToCtx : IoCtx, io::IoSendToCtx, winux::EnableStaticNew<IoSendToCtx>
 {
+    WSABUF wsabuf;
+
 public:
     virtual bool changeState( IoState state ) override
     {
@@ -224,11 +223,9 @@ public:
 protected:
     IoSendToCtx()
     {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
+        ZeroMemory( &this->wsabuf, sizeof(WSABUF) );
     }
-    virtual ~IoSendToCtx()
-    {
-    }
+    virtual ~IoSendToCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };
@@ -256,13 +253,8 @@ public:
     }
 
 protected:
-    IoTimerCtx()
-    {
-        ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
-    }
-    virtual ~IoTimerCtx()
-    {
-    }
+    IoTimerCtx() { }
+    virtual ~IoTimerCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
 };

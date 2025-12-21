@@ -855,6 +855,10 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                         ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
                                     }
                                 }
+                                else
+                                {
+                                    ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                }
 
                                 // 已处理，取消这个请求
                                 ctx->changeState(stateFinish);
@@ -903,9 +907,12 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                 }
 
                                 winux::Buffer data = sock->recv(wantBytes);
-                                if ( data ) ctx->data.append(data);
-                                ctx->hadBytes += data.size();
                                 ctx->cnnAvail = data && data.size();
+                                if ( ctx->cnnAvail )
+                                {
+                                    ctx->data.append(data);
+                                    ctx->hadBytes += data.size();
+                                }
 
                                 if ( ctx->hadBytes >= ctx->targetBytes || data.size() == 0 )
                                 {
@@ -913,7 +920,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                     if ( ctx->cbOk )
                                     {
                                         winux::ScopeUnguard unguard(this->_mtxIoMaps);
-                                        ctx->cbOk( sock, data, ctx->cnnAvail );
+                                        ctx->cbOk( sock, ctx->data, ctx->cnnAvail );
                                     }
 
                                     // 已处理，取消这个请求
@@ -941,7 +948,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                 if ( ctx->hadBytes < ctx->data.size() )
                                 {
                                     size_t wantBytes = ctx->data.size() - ctx->hadBytes;
-                                    int sendBytes = sock->send( ctx->data.get<winux::byte>() + ctx->hadBytes, wantBytes );
+                                    int sendBytes = sock->send( ctx->data.getAt<winux::byte>(ctx->hadBytes), wantBytes );
                                     if ( sendBytes > 0 )
                                     {
                                         ctx->hadBytes += sendBytes;
@@ -952,7 +959,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                     }
                                 }
 
-                                if ( ctx->hadBytes == ctx->data.size() || !ctx->cnnAvail )
+                                if ( ctx->hadBytes >= ctx->data.size() || !ctx->cnnAvail )
                                 {
                                     // 处理回调
                                     if ( ctx->cbOk )
@@ -991,7 +998,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                 }
 
                                 winux::Buffer data = sock->recvFrom( &ctx->epFrom, wantBytes );
-                                if ( data ) ctx->data.append( data );
+                                if ( data ) ctx->data.append(data);
                                 ctx->hadBytes += data.size();
 
                                 if ( ctx->hadBytes >= ctx->targetBytes || data.size() == 0 )
@@ -1028,7 +1035,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                 if ( ctx->hadBytes < ctx->data.size() )
                                 {
                                     size_t wantBytes = ctx->data.size() - ctx->hadBytes;
-                                    int sendBytes = sock->sendTo( *ctx->epTo.get(), ctx->data.get<winux::byte>() + ctx->hadBytes, wantBytes );
+                                    int sendBytes = sock->sendTo( *ctx->epTo.get(), ctx->data.getAt<winux::byte>(ctx->hadBytes), wantBytes );
                                     if ( sendBytes > 0 )
                                     {
                                         ctx->hadBytes += sendBytes;
@@ -1039,7 +1046,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                     }
                                 }
 
-                                if ( ctx->hadBytes == ctx->data.size() || fail )
+                                if ( ctx->hadBytes >= ctx->data.size() || fail )
                                 {
                                     // 处理回调
                                     if ( ctx->cbOk )
@@ -1357,7 +1364,7 @@ void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, I
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        this->postTimer( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1386,7 +1393,7 @@ void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, 
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        this->postTimer( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1414,7 +1421,7 @@ void IoService::postRecv( winux::SharedPointer<eiennet::async::Socket> sock, siz
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        this->postTimer( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1442,7 +1449,7 @@ void IoService::postSend( winux::SharedPointer<eiennet::async::Socket> sock, voi
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        this->postTimer( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1470,7 +1477,7 @@ void IoService::postRecvFrom( winux::SharedPointer<eiennet::async::Socket> sock,
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        this->postTimer( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }
@@ -1499,7 +1506,7 @@ void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, e
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {
-        this->postTimer( eiennet::async::Timer::New(*this), ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
             _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
         }, ctx, sock->getThread() );
     }

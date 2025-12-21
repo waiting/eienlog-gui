@@ -856,7 +856,7 @@ bool Socket::bind( EndPoint const & ep )
         if ( !this->create() ) return false;
     }
 
-    int rc = ::bind( this->_sock, (sockaddr*)ep.get(), ep.size() );
+    int rc = ::bind( this->_sock, ep.get<sockaddr>(), ep.size() );
     if ( rc == SOCKET_ERROR )
     {
     #if defined(SOCKET_EXCEPTION_USE)
