@@ -16,6 +16,7 @@
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <sys/ioctl.h>
+    #include <sys/epoll.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
     #include <netdb.h>
@@ -39,10 +40,99 @@ namespace io
 {
 namespace epoll
 {
+// EPOLL工作函数 ------------------------------------------------------------------------------
+void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll )
+{
+
+}
+
+// class Epoll --------------------------------------------------------------------------------
+Epoll::Epoll( size_t maxEvents, bool mts ) : _epollFd(-1), _maxEvents(maxEvents), _mtx(mts), _mts(mts)
+{
+    _epollFd = epoll_create1(0);
+    _evts.resize(_maxEvents);
+}
+
+Epoll::~Epoll()
+{
+    if ( _epollFd != -1 ) close(_epollFd);
+}
+
+int Epoll::add( int fd, uint32_t events, void * data )
+{
+    struct epoll_event ev;
+    ev.events = events;
+
+    if ( !data )
+        ev.data.fd = fd;
+    else
+        ev.data.ptr = data;
+
+    if ( _mts )
+    {
+        winux::ScopeGuard guard(_mtx);
+        return epoll_ctl( _epollFd, EPOLL_CTL_ADD, fd, &ev );
+    }
+    else
+    {
+        return epoll_ctl( _epollFd, EPOLL_CTL_ADD, fd, &ev );
+    }
+}
+
+int Epoll::mod( int fd, uint32_t events, void * data )
+{
+    struct epoll_event ev;
+    ev.events = events;
+
+    if ( !data )
+        ev.data.fd = fd;
+    else
+        ev.data.ptr = data;
+
+    if ( _mts )
+    {
+        winux::ScopeGuard guard(_mtx);
+        return epoll_ctl( _epollFd, EPOLL_CTL_MOD, fd, &ev );
+    }
+    else
+    {
+        return epoll_ctl( _epollFd, EPOLL_CTL_MOD, fd, &ev );
+    }
+}
+
+int Epoll::del( int fd )
+{
+    if ( _mts )
+    {
+        winux::ScopeGuard guard(_mtx);
+        return epoll_ctl( _epollFd, EPOLL_CTL_DEL, fd, nullptr );
+    }
+    else
+    {
+        return epoll_ctl( _epollFd, EPOLL_CTL_DEL, fd, nullptr );
+    }
+}
+
+int Epoll::wait( int timeout )
+{
+    return epoll_wait( _epollFd, _evts.data(), _maxEvents, timeout );
+}
+
+struct epoll_event * Epoll::evts( int i )
+{
+    return _evts.data();
+}
+
+struct epoll_event & Epoll::evt( int i )
+{
+    return _evts[i];
+}
+
+
 // class IoServiceThread ----------------------------------------------------------------------
 void IoServiceThread::run()
 {
-
+    _EpollWorkerFunc( this->_serv, this, &this->_epoll );
 }
 
 void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
@@ -51,28 +141,28 @@ void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
 
 
 // class IoService ----------------------------------------------------------------------------
-IoService::IoService( size_t groupThread ) : _stop(false)
+IoService::IoService( size_t groupThread )
 {
     // 创建工作线程组
     this->_group.create<IoServiceThread>( groupThread, this );
-    //this->_pool.startup(poolThread);
+
 }
 
 void IoService::stop()
 {
-    this->_stop = true;
+    close( this->_epoll.get() );
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
         auto * th = this->getGroupThread(i);
-        th->_stop = true;
+        close( th->_epoll.get() );
     }
 }
 
 int IoService::run()
 {
     this->_group.startup();
-
+    _EpollWorkerFunc( this, nullptr, &this->_epoll );
     this->_group.wait();
     return 0;
 }

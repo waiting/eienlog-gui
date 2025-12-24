@@ -98,11 +98,44 @@ protected:
 class IoService;
 class IoServiceThread;
 
+/** \brief epoll封装 */
+class Epoll
+{
+public:
+    Epoll( size_t maxEvents = 1024, bool mts = false );
+
+    ~Epoll();
+
+    int add( int fd, uint32_t events, void * data = nullptr );
+
+    int mod( int fd, uint32_t events, void * data = nullptr );
+
+    int del( int fd );
+
+    int wait( int timeout = -1 );
+
+    int get() const { return _epollFd; }
+
+    struct epoll_event * evts( int i );
+
+    struct epoll_event & evt( int i );
+
+    winux::Mutex & getMutex() { return _mtx; }
+
+private:
+    int _epollFd;
+    size_t _maxEvents;
+    winux::Mutex _mtx;
+    bool _mts;  // 是否多线程安全（加锁）
+    std::vector<struct epoll_event> _evts; // 最大事件返回
+};
+
+
 /** \brief Io服务线程 */
 class EIENNET_DLL IoServiceThread : public io::IoServiceThread
 {
 public:
-    IoServiceThread( IoService * serv ) : _serv(serv), _stop(false)
+    IoServiceThread( IoService * serv ) : _serv(serv)
     {
     }
 
@@ -111,8 +144,8 @@ public:
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
 private:
+    Epoll _epoll;
     IoService * _serv;
-    bool _stop;
     friend class IoService;
 
     DISABLE_OBJECT_COPY(IoServiceThread)
@@ -207,8 +240,8 @@ public:
     size_t getGroupThreadCount() const { return _group.count(); }
 
 private:
+    Epoll _epoll;
     winux::ThreadGroup _group;
-    bool _stop;
 
     DISABLE_OBJECT_COPY(IoService)
 };
