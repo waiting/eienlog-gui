@@ -102,7 +102,7 @@ class IoServiceThread;
 class Epoll
 {
 public:
-    Epoll( size_t maxEvents = 1024, bool mts = false );
+    Epoll( size_t maxEvents = 64, bool mts = false );
 
     ~Epoll();
 
@@ -135,9 +135,7 @@ private:
 class EIENNET_DLL IoServiceThread : public io::IoServiceThread
 {
 public:
-    IoServiceThread( IoService * serv ) : _serv(serv)
-    {
-    }
+    IoServiceThread( IoService * serv );
 
     virtual void run() override;
 
@@ -145,6 +143,7 @@ public:
 
 private:
     Epoll _epoll;
+    winux::SimpleHandle<int> _stopEventFd;
     IoService * _serv;
     friend class IoService;
 
@@ -241,6 +240,7 @@ public:
 
 private:
     Epoll _epoll;
+    winux::SimpleHandle<int> _stopEventFd;
     winux::ThreadGroup _group;
 
     DISABLE_OBJECT_COPY(IoService)

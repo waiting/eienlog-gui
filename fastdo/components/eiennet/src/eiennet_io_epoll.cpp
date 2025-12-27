@@ -17,6 +17,7 @@
     #include <sys/socket.h>
     #include <sys/ioctl.h>
     #include <sys/epoll.h>
+    #include <sys/eventfd.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
     #include <netdb.h>
@@ -130,6 +131,12 @@ struct epoll_event & Epoll::evt( int i )
 
 
 // class IoServiceThread ----------------------------------------------------------------------
+IoServiceThread::IoServiceThread( IoService * serv ) : _serv(serv)
+{
+    // 创建eventfd
+    this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
+}
+
 void IoServiceThread::run()
 {
     _EpollWorkerFunc( this->_serv, this, &this->_epoll );
@@ -145,17 +152,21 @@ IoService::IoService( size_t groupThread )
 {
     // 创建工作线程组
     this->_group.create<IoServiceThread>( groupThread, this );
-
+    // 创建eventfd
+    this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
 }
 
 void IoService::stop()
 {
-    close( this->_epoll.get() );
+    winux::uint64 u = 1;
+    write( _stopEventFd.get(), &u, sizeof(winux::uint64) );
+    //close( this->_epoll.get() );
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
         auto * th = this->getGroupThread(i);
-        close( th->_epoll.get() );
+        write( _stopEventFd.get(), &u, sizeof(winux::uint64) );
+        //close( th->_epoll.get() );
     }
 }
 
