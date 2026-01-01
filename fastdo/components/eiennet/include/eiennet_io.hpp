@@ -260,9 +260,6 @@ private:
     std::atomic<size_t> _weight;
 };
 
-/** \brief 自动分派线程 */
-IoServiceThread * const AutoDispatch = reinterpret_cast<IoServiceThread *>(-1);
-
 /** \brief IoService基类 */
 class IoService
 {
@@ -287,7 +284,7 @@ public:
         IoConnectCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoConnectCtx::TimeoutFn cbTimeout = nullptr,
-        IoServiceThread * th = AutoDispatch
+        IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postRecv(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -295,7 +292,7 @@ public:
         IoRecvCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoRecvCtx::TimeoutFn cbTimeout = nullptr,
-        IoServiceThread * th = AutoDispatch
+        IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postSend(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -304,7 +301,7 @@ public:
         IoSendCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoSendCtx::TimeoutFn cbTimeout = nullptr,
-        IoServiceThread * th = AutoDispatch
+        IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postRecvFrom(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -312,7 +309,7 @@ public:
         IoRecvFromCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
-        IoServiceThread * th = AutoDispatch
+        IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postSendTo(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -322,7 +319,7 @@ public:
         IoSendToCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoSendToCtx::TimeoutFn cbTimeout = nullptr,
-        IoServiceThread * th = AutoDispatch
+        IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postTimer(
         winux::SharedPointer<eiennet::async::Timer> timer,
@@ -330,7 +327,7 @@ public:
         bool periodic,
         IoTimerCtx::OkFn cbOk,
         IoSocketCtx * assocCtx = nullptr,
-        IoServiceThread * th = AutoDispatch
+        IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
 
     /** \brief 获取最小负载线程 */
@@ -342,5 +339,6 @@ public:
 
 
 } // namespace io
+
 
 #endif // __EIENNET_IO_HPP__

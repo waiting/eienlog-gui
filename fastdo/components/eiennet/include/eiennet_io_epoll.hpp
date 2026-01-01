@@ -98,10 +98,28 @@ protected:
 class IoService;
 class IoServiceThread;
 
+/** \brief fd到IoCtx的映射 */
+class FdIoCtxMap
+{
+public:
+    FdIoCtxMap() : _mtx(true)
+    {
+
+    }
+
+private:
+    std::map< int, IoCtx * > _fdToIoCtx;
+    winux::Mutex _mtx;
+};
+
 /** \brief epoll封装 */
 class Epoll
 {
 public:
+    /** \brief Epoll 构造函数
+     * 
+     *  \param maxEvents 单次wait()最大处理事件
+     *  \param mts 是否多线程安全 */
     Epoll( size_t maxEvents = 64, bool mts = false );
 
     ~Epoll();
@@ -115,6 +133,8 @@ public:
     int wait( int timeout = -1 );
 
     int get() const { return _epollFd; }
+
+    size_t evtsCount() const;
 
     struct epoll_event * evts( int i );
 
@@ -143,9 +163,13 @@ public:
 
 private:
     Epoll _epoll;
+    FdIoCtxMap _fdIoCtxMap;
     winux::SimpleHandle<int> _stopEventFd;
     IoService * _serv;
+    bool _stop;
+
     friend class IoService;
+    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
 
     DISABLE_OBJECT_COPY(IoServiceThread)
 };
@@ -172,7 +196,7 @@ public:
         IoConnectCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoConnectCtx::TimeoutFn cbTimeout = nullptr,
-        io::IoServiceThread * th = AutoDispatch
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postRecv(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -180,7 +204,7 @@ public:
         IoRecvCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoRecvCtx::TimeoutFn cbTimeout = nullptr,
-        io::IoServiceThread * th = AutoDispatch
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postSend(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -189,7 +213,7 @@ public:
         IoSendCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoSendCtx::TimeoutFn cbTimeout = nullptr,
-        io::IoServiceThread * th = AutoDispatch
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postRecvFrom(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -197,7 +221,7 @@ public:
         IoRecvFromCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
-        io::IoServiceThread * th = AutoDispatch
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postSendTo(
         winux::SharedPointer<eiennet::async::Socket> sock,
@@ -207,7 +231,7 @@ public:
         IoSendToCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoSendToCtx::TimeoutFn cbTimeout = nullptr,
-        io::IoServiceThread * th = AutoDispatch
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postTimer(
         winux::SharedPointer<eiennet::async::Timer> timer,
@@ -215,7 +239,7 @@ public:
         bool periodic,
         IoTimerCtx::OkFn cbOk,
         IoSocketCtx * assocCtx = nullptr,
-        io::IoServiceThread * th = AutoDispatch
+        io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
@@ -227,7 +251,7 @@ public:
      *
      *  \param sock 异步套接字
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
-    bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = AutoDispatch );
+    bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
 
     /** \brief 获取最小负载线程 */
     virtual IoServiceThread * getMinWeightThread() const override;
@@ -240,8 +264,12 @@ public:
 
 private:
     Epoll _epoll;
+    FdIoCtxMap _fdIoCtxMap;
     winux::SimpleHandle<int> _stopEventFd;
     winux::ThreadGroup _group;
+    bool _stop;
+
+    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
 
     DISABLE_OBJECT_COPY(IoService)
 };
@@ -250,6 +278,7 @@ private:
 
 
 } // namespace io
+
 
 #endif // __EIENNET_IO_EPOLL_HPP__
 

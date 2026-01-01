@@ -42,9 +42,37 @@ namespace io
 namespace epoll
 {
 // EPOLL工作函数 ------------------------------------------------------------------------------
-void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll )
+void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop )
 {
+    while ( !*stop )
+    {
+        int rc = epoll->wait();
+        if ( rc < 0 )
+        {
+            if ( errno == EINTR ) continue;
+            //*stop = false;
+        }
+        else
+        {
+            // stop signal eventfd
+            auto & stopEventFd = thread ? thread->_stopEventFd : serv->_stopEventFd;
 
+            for ( int i = 0; i < rc; i++ )
+            {
+                if ( epoll->evt(i).data.fd == stopEventFd.get() )
+                {
+                    // 控制事件，清理 eventfd
+                    uint64_t value;
+                    read( stopEventFd.get(), &value, sizeof(value) );
+                    continue;
+                }
+                
+                // 处理其他事件
+
+            }
+        }
+    }
+    
 }
 
 // class Epoll --------------------------------------------------------------------------------
@@ -119,6 +147,11 @@ int Epoll::wait( int timeout )
     return epoll_wait( _epollFd, _evts.data(), _maxEvents, timeout );
 }
 
+size_t Epoll::evtsCount() const
+{
+    return _evts.size();
+}
+
 struct epoll_event * Epoll::evts( int i )
 {
     return _evts.data();
@@ -131,15 +164,17 @@ struct epoll_event & Epoll::evt( int i )
 
 
 // class IoServiceThread ----------------------------------------------------------------------
-IoServiceThread::IoServiceThread( IoService * serv ) : _serv(serv)
+IoServiceThread::IoServiceThread( IoService * serv ) : _serv(serv), _stop(false)
 {
     // 创建eventfd
     this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
+    // 监听stop event
+    this->_epoll.add( this->_stopEventFd.get(), EPOLLIN );
 }
 
 void IoServiceThread::run()
 {
-    _EpollWorkerFunc( this->_serv, this, &this->_epoll );
+    _EpollWorkerFunc( this->_serv, this, &this->_epoll, &this->_stop );
 }
 
 void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
@@ -148,23 +183,27 @@ void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
 
 
 // class IoService ----------------------------------------------------------------------------
-IoService::IoService( size_t groupThread )
+IoService::IoService( size_t groupThread ) : _stop(false)
 {
     // 创建工作线程组
     this->_group.create<IoServiceThread>( groupThread, this );
     // 创建eventfd
     this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
+    // 监听stop event
+    this->_epoll.add( this->_stopEventFd.get(), EPOLLIN );
 }
 
 void IoService::stop()
 {
     winux::uint64 u = 1;
+    this->_stop = true;
     write( _stopEventFd.get(), &u, sizeof(winux::uint64) );
     //close( this->_epoll.get() );
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
         auto * th = this->getGroupThread(i);
+        th->_stop = true;
         write( _stopEventFd.get(), &u, sizeof(winux::uint64) );
         //close( th->_epoll.get() );
     }
@@ -173,7 +212,7 @@ void IoService::stop()
 int IoService::run()
 {
     this->_group.startup();
-    _EpollWorkerFunc( this, nullptr, &this->_epoll );
+    _EpollWorkerFunc( this, nullptr, &this->_epoll, &this->_stop );
     this->_group.wait();
     return 0;
 }
@@ -215,6 +254,23 @@ void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, wi
 
 void IoService::timerTrigger( io::IoTimerCtx * timerCtx )
 {
+}
+
+bool IoService::associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th )
+{
+    if ( sock->getThread() == nullptr )
+    {
+        sock->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );
+        if ( sock->getThread() != nullptr )
+        {
+            sock->getThread()->incWeight(); // 增加线程负载权重
+            return true;
+        }
+        else // sock->getThread() == nullptr
+        {
+        }
+    }
+    return true;
 }
 
 IoServiceThread * IoService::getMinWeightThread() const
