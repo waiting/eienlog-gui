@@ -97,23 +97,64 @@ protected:
 
 class IoService;
 class IoServiceThread;
+class Epoll;
 
-/** \brief fd到IoCtx的映射 */
-class FdIoCtxMap
+/** \brief fd到IoCtxs的映射 */
+class FdIoCtxsMap
 {
 public:
-    FdIoCtxMap() : _mtx(true)
-    {
+    using IoMapMap = std::map< int, std::map< IoType, IoCtx * > >;
+    using IoMap = IoMapMap::mapped_type;
 
+    FdIoCtxsMap() : _mtx(true)
+    {
+    }
+
+    void setIoCtx( IoCtx * ioCtx )
+    {
+        winux::ScopeGuard guard(this->_mtx);
+        if ( ioCtx->type == ioTimer )
+        {
+            auto * ctx = dynamic_cast<IoTimerCtx *>(ioCtx);
+            this->_fdToIoCtxs[ctx->timer->get()][ctx->type] = ctx;
+        }
+        else
+        {
+            auto * ctx = dynamic_cast<IoSocketCtx *>(ioCtx);
+            this->_fdToIoCtxs[ctx->sock->get()][ctx->type] = ctx;
+        }
+    }
+
+    IoCtx * getIoCtx( int fd, IoType type )
+    {
+        winux::ScopeGuard guard(this->_mtx);
+        if ( winux::isset( this->_fdToIoCtxs, fd ) )
+        {
+            auto & ioMap = this->_fdToIoCtxs[fd];
+            if ( winux::isset( ioMap, type ) )
+            {
+                return ioMap[type];
+            }
+        }
+        return nullptr;
+    }
+
+    bool hasIoCtxs( int fd ) const { return winux::isset( this->_fdToIoCtxs, fd ); }
+
+    IoMap & getIoCtxs( int fd )
+    {
+        return this->_fdToIoCtxs[fd];
     }
 
 private:
-    std::map< int, IoCtx * > _fdToIoCtx;
+    IoMapMap _fdToIoCtxs;
     winux::Mutex _mtx;
+
+    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
 };
 
 /** \brief epoll封装 */
-class Epoll
+class EIENNET_DLL Epoll
 {
 public:
     /** \brief Epoll 构造函数
@@ -163,7 +204,7 @@ public:
 
 private:
     Epoll _epoll;
-    FdIoCtxMap _fdIoCtxMap;
+    FdIoCtxsMap _fdIoCtxsMap;
     winux::SimpleHandle<int> _stopEventFd;
     IoService * _serv;
     bool _stop;
@@ -264,7 +305,7 @@ public:
 
 private:
     Epoll _epoll;
-    FdIoCtxMap _fdIoCtxMap;
+    FdIoCtxsMap _fdIoCtxsMap;
     winux::SimpleHandle<int> _stopEventFd;
     winux::ThreadGroup _group;
     bool _stop;

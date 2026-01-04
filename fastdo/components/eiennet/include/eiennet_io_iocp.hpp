@@ -263,7 +263,7 @@ class IoService;
 class IoServiceThread;
 
 /** \brief IOCP封装 */
-class Iocp
+class EIENNET_DLL Iocp
 {
 public:
     Iocp();

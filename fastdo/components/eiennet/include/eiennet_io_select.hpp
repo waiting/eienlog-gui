@@ -148,8 +148,7 @@ protected:
     IoAcceptCtx() { }
     virtual ~IoAcceptCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 连接场景接口 */
@@ -159,8 +158,7 @@ protected:
     IoConnectCtx() { }
     virtual ~IoConnectCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 数据接收场景接口 */
@@ -170,8 +168,7 @@ protected:
     IoRecvCtx() { }
     virtual ~IoRecvCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 数据发送场景接口 */
@@ -181,8 +178,7 @@ protected:
     IoSendCtx() { }
     virtual ~IoSendCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 无连接，数据接收场景接口 */
@@ -192,8 +188,7 @@ protected:
     IoRecvFromCtx() { }
     virtual ~IoRecvFromCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 无连接，数据发送场景接口 */
@@ -203,8 +198,7 @@ protected:
     IoSendToCtx() { }
     virtual ~IoSendToCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 /** \brief 定时器IO场景 */
@@ -252,8 +246,7 @@ protected:
     }
     virtual ~IoTimerCtx() { }
 
-    template < typename _Ty0 >
-    friend class winux::EnableStaticNew;
+    FRIEND_ENABLE_STATIC_NEW;
 };
 
 class IoService;
