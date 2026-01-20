@@ -118,8 +118,8 @@ void LogViewerWindow::renderComponents()
                     ImGui::TableSetColumnIndex(0);
                     char szNo[20] = { 0 };
                     sprintf( szNo, u8"%u", row + 1 );
-                    bool isCtrlDown = ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_LeftCtrl) ) || ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_RightCtrl) );
-                    bool isShiftDown = ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_LeftShift) ) || ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_RightShift) );
+                    bool isCtrlDown = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+                    bool isShiftDown = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
                     if ( ImGui::Selectable( szNo, this->selected.find(row) != this->selected.end() && this->selected[row], ImGuiSelectableFlags_SpanAllColumns ) )
                     {
                         if ( isCtrlDown )

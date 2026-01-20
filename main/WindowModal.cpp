@@ -23,7 +23,7 @@ void WindowModal::render()
         this->renderComponents();
 
         ImGui::Separator();
-        if ( ImGui::Button( u8"确定", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) )
+        if ( ImGui::Button( u8"确定", ImVec2( 120, 0 ) ) || ImGui::IsKeyPressed(ImGuiKey_Enter) )
         {
             ImGui::CloseCurrentPopup();
             this->onOk();

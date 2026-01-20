@@ -20,7 +20,7 @@ struct MainWindow
 
     // Dock space state
     ImGuiID dockSpaceId;
-    bool optFullScreen = false;
+    bool optFullScreen = true;
     bool optPadding = false;
     ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_None;
 

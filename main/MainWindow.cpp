@@ -134,14 +134,14 @@ void MainWindow::renderDockSpace()
 
 void MainWindow::renderDockSpaceMenuBar()
 {
-    bool isCtrlDown = ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_LeftCtrl) ) || ImGui::IsKeyDown( ImGui::GetKeyIndex(ImGuiKey_RightCtrl) );
+    bool isCtrlDown = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
     // 快捷 新建监听
-    if ( isCtrlDown && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_N) ) )
+    if ( isCtrlDown && ImGui::IsKeyPressed(ImGuiKey_N) )
     {
         this->newListenWindow->toggle();
     }
     // 快捷 打开日志
-    if ( isCtrlDown && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_O) ) )
+    if ( isCtrlDown && ImGui::IsKeyPressed(ImGuiKey_O) )
     {
     }
 

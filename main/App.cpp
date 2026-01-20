@@ -144,7 +144,7 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     if ( !gi.create(wi) ) return false;
 
     // Show the window
-    wi.showUpdate(SW_HIDE/*nCmdShow*/);
+    wi.showUpdate(nCmdShow);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -153,8 +153,9 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    this->ctx->IO.ConfigViewportsNoAutoMerge = true;
+    //this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    //this->ctx->IO.ConfigViewportsNoAutoMerge = true;
+    //this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_TransparentBackbuffers;
     //io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style
@@ -381,7 +382,7 @@ void App::renderUI()
         // 设置窗口为透明
         ImGui::SetNextWindowBgAlpha(0);
         // 纹理ID
-        static ImTextureID bg_tex_id = nullptr;
+        static ImTextureID bg_tex_id = 0;
         if ( !bg_tex_id )
         {
             // 这里使用opencv加载图片，你也可以使用其他方式加载图片
