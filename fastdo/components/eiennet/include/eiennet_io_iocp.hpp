@@ -281,7 +281,10 @@ public:
     HANDLE get() const;
     operator bool() const;
 
+private:
     winux::PlainMembers< struct Iocp_Data, sizeof(HANDLE) * 5 > _self;
+    friend class IoService;
+    DISABLE_OBJECT_COPY(Iocp)
 };
 
 

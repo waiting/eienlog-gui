@@ -72,7 +72,104 @@ void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll
             }
         }
     }
-    
+}
+
+// class FdIoCtxsMap --------------------------------------------------------------------------
+FdIoCtxsMap::FdIoCtxsMap( Epoll * epoll ) : _mtx(true), _epoll(epoll)
+{
+
+}
+
+void FdIoCtxsMap::setIoCtx( IoCtx * ioCtx )
+{
+    winux::ScopeGuard guard(this->_mtx);
+    if ( ioCtx->type == ioTimer )
+    {
+        auto * ctx = dynamic_cast<IoTimerCtx *>(ioCtx);
+        this->_fdToIoCtxs[ctx->timer->get()][ctx->type] = ctx;
+    }
+    else
+    {
+        auto * ctx = dynamic_cast<IoSocketCtx *>(ioCtx);
+        this->_fdToIoCtxs[ctx->sock->get()][ctx->type] = ctx;
+    }
+}
+
+IoCtx * FdIoCtxsMap::getIoCtx( int fd, IoType type )
+{
+    winux::ScopeGuard guard(this->_mtx);
+    if ( winux::isset( this->_fdToIoCtxs, fd ) )
+    {
+        auto & ioMap = this->_fdToIoCtxs[fd];
+        if ( winux::isset( ioMap, type ) )
+        {
+            return ioMap[type];
+        }
+    }
+    return nullptr;
+}
+
+bool FdIoCtxsMap::hasIoCtxs( int fd ) const
+{
+    winux::ScopeGuard guard( const_cast<winux::Mutex &>(this->_mtx) );
+    return winux::isset( this->_fdToIoCtxs, fd );
+}
+
+FdIoCtxsMap::IoMap & FdIoCtxsMap::getIoCtxs( int fd )
+{
+    winux::ScopeGuard guard(this->_mtx);
+    return this->_fdToIoCtxs[fd];
+}
+
+void FdIoCtxsMap::delIoCtxs( int fd )
+{
+    winux::ScopeGuard guard(this->_mtx);
+    // 应该先从epoll中DEL相应的fd
+    this->_epoll->del(fd);
+    if ( winux::isset( this->_fdToIoCtxs, fd ) )
+    {
+        std::vector<int> wantRemoveTimerFds;
+        auto & ioMap = this->_fdToIoCtxs[fd];
+        for ( auto & pr : ioMap )
+        {
+            auto * ioCtx = pr.second;
+            if ( ioCtx->type == ioTimer ) // timer io
+            {
+                auto * timerCtx = dynamic_cast<IoTimerCtx *>(ioCtx);
+                auto timer = timerCtx->timer;
+                if ( timer->stop() )
+                {
+                    timerCtx->decRef();
+                }
+            }
+            else // socket io
+            {
+                auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
+                if ( sockIoCtx->timerCtx )
+                {
+                    auto timer = sockIoCtx->timerCtx->timer;
+                    // 先从epoll中DEL相应的timerfd
+                    int timerfd = timer->get();
+                    this->_epoll->del(timerfd);
+                    if ( timer->stop() )
+                    {
+                        sockIoCtx->timerCtx->decRef();
+                    }
+                    // 再从fdToIoCtxs中移除对应的timerfd
+                    wantRemoveTimerFds.push_back(timerfd);
+                }
+                sockIoCtx->changeState(stateProactiveCancel);
+                sockIoCtx->decRef();
+            }
+        }
+        // 从FdIoCtxsMap中移除对应fd所有io
+        this->_fdToIoCtxs.erase(fd);
+        // 删除sock io的超时timer io
+        for ( auto fd0 : wantRemoveTimerFds )
+        {
+            this->_fdToIoCtxs.erase(fd0);
+        }
+    }
 }
 
 // class Epoll --------------------------------------------------------------------------------
@@ -164,7 +261,7 @@ struct epoll_event & Epoll::evt( int i )
 
 
 // class IoServiceThread ----------------------------------------------------------------------
-IoServiceThread::IoServiceThread( IoService * serv ) : _serv(serv), _stop(false)
+IoServiceThread::IoServiceThread( IoService * serv ) : _epoll( 64, true ), _fdIoCtxsMap(&_epoll), _serv(serv), _stop(false)
 {
     // 创建eventfd
     this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
@@ -183,7 +280,7 @@ void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
 
 
 // class IoService ----------------------------------------------------------------------------
-IoService::IoService( size_t groupThread ) : _stop(false)
+IoService::IoService( size_t groupThread ) : _epoll( 64, true ), _fdIoCtxsMap(&_epoll), _stop(false)
 {
     // 创建工作线程组
     this->_group.create<IoServiceThread>( groupThread, this );
@@ -254,6 +351,14 @@ void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, wi
 
 void IoService::timerTrigger( io::IoTimerCtx * timerCtx )
 {
+}
+
+void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
+{
+    FdIoCtxsMap & fdIoCtxsMap = sock->getThread() ? static_cast<IoServiceThread *>( sock->getThread() )->_fdIoCtxsMap : this->_fdIoCtxsMap;
+    //Epoll & epoll = sock->getThread() ? static_cast<IoServiceThread *>( sock->getThread() )->_epoll : this->_epoll;
+    //epoll.del( sock->get() );
+    fdIoCtxsMap.delIoCtxs( sock->get() );
 }
 
 bool IoService::associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th )

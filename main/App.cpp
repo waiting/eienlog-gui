@@ -144,7 +144,7 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     if ( !gi.create(wi) ) return false;
 
     // Show the window
-    wi.showUpdate(nCmdShow);
+    wi.showUpdate(SW_HIDE/*nCmdShow*/);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -153,8 +153,8 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    //this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
+    this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    this->ctx->IO.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style

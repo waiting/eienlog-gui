@@ -100,55 +100,28 @@ class IoServiceThread;
 class Epoll;
 
 /** \brief fd到IoCtxs的映射 */
-class FdIoCtxsMap
+class EIENNET_DLL FdIoCtxsMap
 {
 public:
     using IoMapMap = std::map< int, std::map< IoType, IoCtx * > >;
     using IoMap = IoMapMap::mapped_type;
 
-    FdIoCtxsMap() : _mtx(true)
-    {
-    }
+    FdIoCtxsMap( Epoll * epoll );
 
-    void setIoCtx( IoCtx * ioCtx )
-    {
-        winux::ScopeGuard guard(this->_mtx);
-        if ( ioCtx->type == ioTimer )
-        {
-            auto * ctx = dynamic_cast<IoTimerCtx *>(ioCtx);
-            this->_fdToIoCtxs[ctx->timer->get()][ctx->type] = ctx;
-        }
-        else
-        {
-            auto * ctx = dynamic_cast<IoSocketCtx *>(ioCtx);
-            this->_fdToIoCtxs[ctx->sock->get()][ctx->type] = ctx;
-        }
-    }
+    void setIoCtx( IoCtx * ioCtx );
 
-    IoCtx * getIoCtx( int fd, IoType type )
-    {
-        winux::ScopeGuard guard(this->_mtx);
-        if ( winux::isset( this->_fdToIoCtxs, fd ) )
-        {
-            auto & ioMap = this->_fdToIoCtxs[fd];
-            if ( winux::isset( ioMap, type ) )
-            {
-                return ioMap[type];
-            }
-        }
-        return nullptr;
-    }
+    IoCtx * getIoCtx( int fd, IoType type );
 
-    bool hasIoCtxs( int fd ) const { return winux::isset( this->_fdToIoCtxs, fd ); }
+    bool hasIoCtxs( int fd ) const;
 
-    IoMap & getIoCtxs( int fd )
-    {
-        return this->_fdToIoCtxs[fd];
-    }
+    IoMap & getIoCtxs( int fd );
+
+    void delIoCtxs( int fd );
 
 private:
     IoMapMap _fdToIoCtxs;
     winux::Mutex _mtx;
+    Epoll * _epoll;
 
     friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
 };

@@ -1584,7 +1584,7 @@ void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
     {
         for ( auto & pr : itMaps->second )
         {
-            auto * sockIoCtx = dynamic_cast<IoSocketCtx*>(pr.second);
+            auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(pr.second);
             if ( sockIoCtx->timerCtx ) // 如果有超时定时器，停止它
             {
                 auto timer = sockIoCtx->timerCtx->timer;

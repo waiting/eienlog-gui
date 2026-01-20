@@ -17,7 +17,7 @@ void MainWindow::render()
 
     if ( showSettingsWindow )
     {
-        ImGui::Begin( u8"EienLogViewer", &showSettingsWindow );
+        ImGui::Begin( u8"EienLog Settings", &showSettingsWindow );
         ImGui::SetWindowDock( ImGui::GetCurrentWindow(), dockSpaceId, ImGuiCond_Once );
         ImGui::PushFont(app.bigFont);
         ImGui::Text(app.welcomeText.c_str());
@@ -104,7 +104,7 @@ void MainWindow::renderDockSpace()
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
     if ( !optPadding ) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    ImGui::Begin("EienLog DockSpace", nullptr, window_flags);
+    ImGui::Begin(u8"EienLog Viewer", nullptr, window_flags);
 
     if (!optPadding) ImGui::PopStyleVar();
 
@@ -228,7 +228,7 @@ void MainWindow::renderDockSpaceMenuBar()
         {
             // Disabling fullscreen would allow the window to be moved to the front of other windows,
             // which we can't undo at the moment without finer window depth/z control.
-            ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
+            //ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
             ImGui::MenuItem( u8"Padding", nullptr, &optPadding );
             ImGui::Separator();
 

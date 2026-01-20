@@ -610,7 +610,7 @@ Socket * Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock 
 struct Timer_Data
 {
 #if defined(OS_WIN)
-    static void _TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER pTpTimer );
+    static void CALLBACK _TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER pTpTimer );
     PTP_TIMER _pTpTimer;
 #else
     int _timerFd;
@@ -685,7 +685,7 @@ void Timer::set( winux::uint64 timeoutMs, bool periodic )
             FILETIME ft;
         } dueTime;
         dueTime.li.QuadPart = timeoutMs ? -( (winux::int64)timeoutMs * 10000 ) : -1;
-        SetThreadpoolTimer( _self->_pTpTimer, &dueTime.ft, ( periodic ? ( timeoutMs ? timeoutMs : 1 ) : 0 ), 0 );
+        SetThreadpoolTimer( _self->_pTpTimer, &dueTime.ft, (DWORD)( periodic ? ( timeoutMs ? timeoutMs : 1 ) : 0 ), 0 );
     }
 #else
     if ( _self->_timerFd != -1 )
@@ -755,7 +755,7 @@ intptr_t Timer::get() const
 }
 
 #if defined(OS_WIN)
-void Timer_Data::_TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER pTpTimer )
+void CALLBACK Timer_Data::_TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID Context, PTP_TIMER pTpTimer )
 {
     auto timer = ((Timer *)Context)->sharedFromThis();
     {
