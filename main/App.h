@@ -101,6 +101,7 @@ struct App
     ImFont * normalFont;
     // 主渲染窗口
     MainWindow * mainWindow = nullptr;
+    bool mainWindowRunning = true;
     winux::Utf8String welcomeText;
 };
 

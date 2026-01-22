@@ -31,7 +31,7 @@ void MainWindow::render()
 
         //static float f = 0.0f;
         //ImGui::SliderFloat( "float", &f, 0.0f, 1.0f );            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3( u8"背景擦除色", (float*)&app.bgClearColor ); // Edit 3 floats representing a color
+        ImGui::ColorEdit4( u8"背景擦除色", (float*)&app.bgClearColor ); // Edit 3 floats representing a color
 
         static bool vsync = true;
         if ( ImGui::Checkbox( u8"垂直同步", &vsync ) )
@@ -52,7 +52,7 @@ void MainWindow::render()
     }
 
     this->logWinManager->render();
-    this->newListenWindow->render();
+
 
     if ( showDemoWindow )
         ImGui::ShowDemoWindow(&showDemoWindow);
@@ -104,7 +104,7 @@ void MainWindow::renderDockSpace()
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
     if ( !optPadding ) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    ImGui::Begin(u8"EienLog Viewer", nullptr, window_flags);
+    ImGui::Begin(u8"EienLog Viewer", &this->app.mainWindowRunning, window_flags);
 
     if (!optPadding) ImGui::PopStyleVar();
 
@@ -128,6 +128,8 @@ void MainWindow::renderDockSpace()
     }
 
     this->renderDockSpaceMenuBar();
+
+    this->newListenWindow->render();
 
     ImGui::End();
 }
@@ -228,7 +230,7 @@ void MainWindow::renderDockSpaceMenuBar()
         {
             // Disabling fullscreen would allow the window to be moved to the front of other windows,
             // which we can't undo at the moment without finer window depth/z control.
-            //ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
+            ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
             ImGui::MenuItem( u8"Padding", nullptr, &optPadding );
             ImGui::Separator();
 

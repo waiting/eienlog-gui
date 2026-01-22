@@ -69,8 +69,8 @@ void WindowInterface::unregisterWndClass()
 
 bool WindowInterface::createWindow( LPCWSTR wndTitleName )
 {
-    this->hWnd = ::CreateWindowExW(
-        /*WS_EX_TRANSPARENT*/0/*WS_EX_TOPMOST | WS_EX_TOOLWINDOW*/,
+    this->hWnd = ::CreateWindowW(
+        //0/*WS_EX_TRANSPARENT*//*WS_EX_TOPMOST | WS_EX_TOOLWINDOW*/,
         wc.lpszClassName,
         wndTitleName,
         /*WS_POPUP*/WS_OVERLAPPEDWINDOW,
@@ -81,6 +81,8 @@ bool WindowInterface::createWindow( LPCWSTR wndTitleName )
         wc.hInstance,
         nullptr
     );
+
+    ImGui_ImplWin32_EnableAlphaCompositing(this->hWnd);
     bool ok = this->hWnd != nullptr;
     return ok;
 }

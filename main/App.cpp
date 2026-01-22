@@ -153,7 +153,7 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    //this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
     //this->ctx->IO.ConfigViewportsNoAutoMerge = true;
     //this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_TransparentBackbuffers;
     //io.ConfigViewportsNoTaskBarIcon = true;
@@ -283,8 +283,8 @@ void App::exitInstance()
 int App::run()
 {
     // Main loop
-    bool done = false;
-    while (!done)
+    //bool done = false;
+    while (mainWindowRunning)
     {
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -294,9 +294,10 @@ int App::run()
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT)
-                done = true;
+                mainWindowRunning = false;
+                //done = true;
         }
-        if (done)
+        if (!mainWindowRunning)
             break;
 
         // Handle lost D3D9 device
@@ -342,7 +343,12 @@ int App::run()
         gi.pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
         gi.pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
         gi.pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-        D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(bgClearColor.x*bgClearColor.w*255.0f), (int)(bgClearColor.y*bgClearColor.w*255.0f), (int)(bgClearColor.z*bgClearColor.w*255.0f), (int)(bgClearColor.w*255.0f));
+        D3DCOLOR clear_col_dx = D3DCOLOR_RGBA(
+            (int)(bgClearColor.x*bgClearColor.w*255.0f),
+            (int)(bgClearColor.y*bgClearColor.w*255.0f),
+            (int)(bgClearColor.z*bgClearColor.w*255.0f),
+            (int)(bgClearColor.w*255.0f)
+        );
         gi.pd3dDevice->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
 
         if (gi.pd3dDevice->BeginScene() >= 0)

@@ -18,6 +18,9 @@ void WindowModal::render()
         ImGui::OpenPopup( _name.c_str() );
     }
 
+    //ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    //ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
     if ( ImGui::BeginPopupModal( _name.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings ) )
     {
         this->renderComponents();
