@@ -230,7 +230,7 @@ void MainWindow::renderDockSpaceMenuBar()
         {
             // Disabling fullscreen would allow the window to be moved to the front of other windows,
             // which we can't undo at the moment without finer window depth/z control.
-            ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
+            //ImGui::MenuItem( u8"全窗显示", nullptr, &optFullScreen );
             ImGui::MenuItem( u8"Padding", nullptr, &optPadding );
             ImGui::Separator();
 

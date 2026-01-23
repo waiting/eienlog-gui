@@ -124,7 +124,7 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
+    //device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
     device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
     device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
@@ -526,7 +526,7 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     vd->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
     vd->d3dpp.BackBufferWidth = (UINT)viewport->Size.x;
     vd->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
-    vd->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+    vd->d3dpp.BackBufferFormat = D3DFMT_A8R8G8B8;
     vd->d3dpp.hDeviceWindow = hwnd;
     vd->d3dpp.EnableAutoDepthStencil = FALSE;
     vd->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
@@ -570,7 +570,7 @@ static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
     ImGui_ImplDX9_ViewportData* vd = (ImGui_ImplDX9_ViewportData*)viewport->RendererUserData;
-    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 
     LPDIRECT3DSURFACE9 render_target = nullptr;
     LPDIRECT3DSURFACE9 last_render_target = nullptr;

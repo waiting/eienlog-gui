@@ -12,7 +12,7 @@ bool GraphicsInterface::create( WindowInterface & wi )
     ZeroMemory(&this->d3dpp, sizeof(this->d3dpp));
     this->d3dpp.Windowed = TRUE;
     this->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    this->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN; // Need to use an explicit format with alpha if needing per-pixel alpha composition.
+    this->d3dpp.BackBufferFormat = D3DFMT_A8R8G8B8; // Need to use an explicit format with alpha if needing per-pixel alpha composition.
     this->d3dpp.EnableAutoDepthStencil = TRUE;
     this->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
     this->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;           // Present with vsync

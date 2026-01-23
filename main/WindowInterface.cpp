@@ -53,7 +53,7 @@ bool WindowInterface::registerWndClass( LPCWSTR wndClassName, HINSTANCE hInstanc
     this->wc.hInstance = hInstance;
     this->wc.hIcon = this->hIcon;
     this->wc.hCursor = nullptr;
-    this->wc.hbrBackground = nullptr;
+    this->wc.hbrBackground = CreateSolidBrush(0);
     this->wc.lpszMenuName = nullptr;
     this->wc.lpszClassName = wndClassName;
     this->wc.hIconSm = this->hIcon;
@@ -64,16 +64,17 @@ bool WindowInterface::registerWndClass( LPCWSTR wndClassName, HINSTANCE hInstanc
 
 void WindowInterface::unregisterWndClass()
 {
-    UnregisterClassW( wc.lpszClassName, wc.hInstance );
+    DeleteObject(this->wc.hbrBackground);
+    UnregisterClassW( this->wc.lpszClassName, this->wc.hInstance );
 }
 
 bool WindowInterface::createWindow( LPCWSTR wndTitleName )
 {
-    this->hWnd = ::CreateWindowW(
-        //0/*WS_EX_TRANSPARENT*//*WS_EX_TOPMOST | WS_EX_TOOLWINDOW*/,
+    this->hWnd = ::CreateWindowExW(
+        WS_EX_LAYERED /*WS_EX_TRANSPARENT*/ /*WS_EX_TOPMOST | WS_EX_TOOLWINDOW*/,
         wc.lpszClassName,
         wndTitleName,
-        /*WS_POPUP*/WS_OVERLAPPEDWINDOW,
+        WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
         CW_USEDEFAULT, CW_USEDEFAULT,
         nullptr,
@@ -81,7 +82,7 @@ bool WindowInterface::createWindow( LPCWSTR wndTitleName )
         wc.hInstance,
         nullptr
     );
-
+    SetLayeredWindowAttributes( hWnd, 0, 255, LWA_ALPHA );
     ImGui_ImplWin32_EnableAlphaCompositing(this->hWnd);
     bool ok = this->hWnd != nullptr;
     return ok;
@@ -89,7 +90,7 @@ bool WindowInterface::createWindow( LPCWSTR wndTitleName )
 
 void WindowInterface::showUpdate( int cmdShow, bool update )
 {
-    ::ShowWindow( this->hWnd, cmdShow );
+    //::ShowWindow( this->hWnd, cmdShow );
     if ( update ) ::UpdateWindow(this->hWnd);
 }
 

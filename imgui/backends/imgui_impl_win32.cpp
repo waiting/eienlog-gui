@@ -1138,6 +1138,8 @@ static void ImGui_ImplWin32_GetWin32StyleFromViewportFlags(ImGuiViewportFlags fl
 
     if (flags & ImGuiViewportFlags_TopMost)
         *out_ex_style |= WS_EX_TOPMOST;
+
+    *out_ex_style |= WS_EX_LAYERED;
 }
 
 static HWND ImGui_ImplWin32_GetHwndFromViewport(ImGuiViewport* viewport)
@@ -1163,6 +1165,8 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
         vd->DwExStyle, L"ImGui Platform", L"Untitled", vd->DwStyle,       // Style, class name, window name
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
         vd->HwndParent, nullptr, ::GetModuleHandle(nullptr), nullptr);          // Owner window, Menu, Instance, Param
+    SetLayeredWindowAttributes(vd->Hwnd, 0, 255, LWA_ALPHA);
+    ImGui_ImplWin32_EnableAlphaCompositing(vd->Hwnd);
     vd->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
@@ -1443,7 +1447,7 @@ static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc)
     wcex.hInstance = ::GetModuleHandle(nullptr);
     wcex.hIcon = nullptr;
     wcex.hCursor = nullptr;
-    wcex.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
+    wcex.hbrBackground = CreateSolidBrush(0); //(HBRUSH)(COLOR_BACKGROUND + 1);
     wcex.lpszMenuName = nullptr;
     wcex.lpszClassName = L"ImGui Platform";
     wcex.hIconSm = nullptr;

@@ -154,7 +154,7 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
     this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //this->ctx->IO.ConfigViewportsNoAutoMerge = true;
+    this->ctx->IO.ConfigViewportsNoAutoMerge = true;
     //this->ctx->IO.ConfigFlags |= ImGuiConfigFlags_TransparentBackbuffers;
     //io.ConfigViewportsNoTaskBarIcon = true;
 
@@ -177,7 +177,12 @@ bool App::initInstance( HINSTANCE hInstance, int nCmdShow )
     if (this->ctx->IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 180.0f/255.0f;
+        style.Colors[ImGuiCol_FrameBg].w = 200.0f/255.0f;
+        style.Colors[ImGuiCol_Header] = style.Colors[ImGuiCol_FrameBg];
+        style.Colors[ImGuiCol_DockingEmptyBg].w = 200.0f/255.0f;
+        style.Colors[ImGuiCol_PopupBg].w = 200.0f/255.0f;
+        style.Colors[ImGuiCol_MenuBarBg].w = 240.0f/255.0f;
     }
 
     // Setup Platform/Renderer backends
