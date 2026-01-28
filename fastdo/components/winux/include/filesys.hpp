@@ -59,7 +59,7 @@ WINUX_FUNC_DECL(String) FileTitle( String const & fileName, String * extName = N
 WINUX_FUNC_DECL(bool) IsAbsPath( String const & path );
 
 /** \brief 使路径规则化(末尾不带路径分割符) */
-WINUX_FUNC_DECL(String) NormalizePath( String const & path );
+WINUX_FUNC_DECL(String) NormalizePath( String const & path, String const & dirSep = DirSep );
 
 /** \brief 根据当前工作目录计算绝对路径，不会检查存在性 */
 WINUX_FUNC_DECL(String) RealPath( String const & path );

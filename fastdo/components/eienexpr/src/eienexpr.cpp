@@ -422,7 +422,9 @@ bool ExprIdentifier::evaluate( winux::SimplePointer<ExprOperand> * result ) cons
     }
     else
     {
-        throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal(this->_name).c_str() ) );
+        result->attachNew( new ExprLiteral() );
+        return true;
+        //throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal(this->_name).c_str() ) );
     }
     return false;
 }
@@ -1138,7 +1140,7 @@ winux::Mixed VarContext::dump() const
 // built-in operators ---------------------------------------------------------------------
 
 // 句点，用于Array/Collection类型访问容器元素 `arr.0` `coll.elem` `coll."key-name"`
-static bool __Period( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1248,7 +1250,7 @@ static bool __Period( Expression const * e, ExprOperand * arOperands[], short n,
 }
 
 // 正号
-static bool __Plus( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprPlus( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1265,7 +1267,7 @@ static bool __Plus( Expression const * e, ExprOperand * arOperands[], short n, w
 }
 
 // 负号
-static bool __Minus( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprMinus( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1289,7 +1291,7 @@ static bool __Minus( Expression const * e, ExprOperand * arOperands[], short n, 
 }
 
 // 加法
-static bool __Add( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprAdd( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1300,9 +1302,9 @@ static bool __Add( Expression const * e, ExprOperand * arOperands[], short n, wi
         if ( v0.isNumeric() ) // 数值
         {
             if ( v0.isInteger() && v1.isInteger() )
-                outRetValue->attachNew( new ExprLiteral( (winux::int64)v0 + (winux::int64)v1 ) );
+                outRetValue->attachNew( new ExprLiteral( v0.to<winux::int64>() + v1.to<winux::int64>() ) );
             else
-                outRetValue->attachNew( new ExprLiteral( (double)v0 + (double)v1 ) );
+                outRetValue->attachNew( new ExprLiteral( v0.to<double>() + v1.to<double>() ) );
 
             return true;
         }
@@ -1316,12 +1318,17 @@ static bool __Add( Expression const * e, ExprOperand * arOperands[], short n, wi
             outRetValue->attachNew( new ExprLiteral( v0.merge(v1) ) );
             return true;
         }
+        else if ( v0.isNull() ) // null
+        {
+            outRetValue->attachNew( new ExprLiteral(v1) );
+            return true;
+        }
     }
     return false;
 }
 
 // 字符串连结
-static bool __Concat( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprConcat( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1335,8 +1342,35 @@ static bool __Concat( Expression const * e, ExprOperand * arOperands[], short n,
     return false;
 }
 
+// 组合目录名称
+static bool __OprCombinePath( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( n == 2 )
+    {
+        winux::Mixed v0 = arOperands[0]->val();
+        winux::Mixed v1 = arOperands[1]->val();
+        outRetValue->attachNew( new ExprLiteral( winux::CombinePath( v0.to<winux::String>(), v1.to<winux::String>() ) ) );
+        return true;
+    }
+    return false;
+}
+
+// 规则化路径
+static bool __OprNormalizePath( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( n == 1 )
+    {
+        winux::Mixed v0 = arOperands[0]->val();
+        outRetValue->attachNew( new ExprLiteral( winux::NormalizePath( v0.to<winux::String>() ) ) );
+        return true;
+    }
+    return false;
+}
+
 // 减法
-static bool __Subtract( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprSubtract( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1358,7 +1392,7 @@ static bool __Subtract( Expression const * e, ExprOperand * arOperands[], short 
 }
 
 // 乘法
-static bool __Multiply( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprMultiply( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1380,7 +1414,7 @@ static bool __Multiply( Expression const * e, ExprOperand * arOperands[], short 
 }
 
 // 除法
-static bool __Divide( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprDivide( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1402,7 +1436,7 @@ static bool __Divide( Expression const * e, ExprOperand * arOperands[], short n,
 }
 
 // 赋值
-static bool __Assign( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprAssign( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1445,7 +1479,7 @@ static bool __Assign( Expression const * e, ExprOperand * arOperands[], short n,
 }
 
 // 逗号
-static bool __Comma( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprComma( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1459,7 +1493,7 @@ static bool __Comma( Expression const * e, ExprOperand * arOperands[], short n, 
 }
 
 // 大于
-static bool __Greater( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprGreater( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1486,7 +1520,7 @@ static bool __Greater( Expression const * e, ExprOperand * arOperands[], short n
 }
 
 // 小于
-static bool __Less( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprLess( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1513,7 +1547,7 @@ static bool __Less( Expression const * e, ExprOperand * arOperands[], short n, w
 }
 
 // 大于等于
-static bool __GreaterEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprGreaterEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1540,7 +1574,7 @@ static bool __GreaterEqual( Expression const * e, ExprOperand * arOperands[], sh
 }
 
 // 小于等于
-static bool __LessEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprLessEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1567,7 +1601,7 @@ static bool __LessEqual( Expression const * e, ExprOperand * arOperands[], short
 }
 
 // 不等于
-static bool __NotEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprNotEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1594,7 +1628,7 @@ static bool __NotEqual( Expression const * e, ExprOperand * arOperands[], short 
 }
 
 // 等于
-static bool __Equal( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprEqual( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1621,7 +1655,7 @@ static bool __Equal( Expression const * e, ExprOperand * arOperands[], short n, 
 }
 
 // 非
-static bool __Not( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprNot( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1634,7 +1668,7 @@ static bool __Not( Expression const * e, ExprOperand * arOperands[], short n, wi
 }
 
 // 且
-static bool __And( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprAnd( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1656,7 +1690,7 @@ static bool __And( Expression const * e, ExprOperand * arOperands[], short n, wi
 }
 
 // 或
-static bool __Or( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprOr( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1679,7 +1713,7 @@ static bool __Or( Expression const * e, ExprOperand * arOperands[], short n, win
 }
 
 // 乘方
-static bool __Power( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprPower( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1697,7 +1731,7 @@ static bool __Power( Expression const * e, ExprOperand * arOperands[], short n, 
 }
 
 // 取模
-static bool __Mod( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprMod( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1715,7 +1749,7 @@ static bool __Mod( Expression const * e, ExprOperand * arOperands[], short n, wi
 }
 
 // 整除
-static bool __IntDivide( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprIntDivide( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 2 )
@@ -1733,7 +1767,7 @@ static bool __IntDivide( Expression const * e, ExprOperand * arOperands[], short
 }
 
 // 右结合自增 ++i
-static bool __Increase( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprIncrease( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1766,7 +1800,7 @@ static bool __Increase( Expression const * e, ExprOperand * arOperands[], short 
 }
 
 // 右结合自减 --i
-static bool __Decrease( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprDecrease( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1799,7 +1833,7 @@ static bool __Decrease( Expression const * e, ExprOperand * arOperands[], short 
 }
 
 // 左结合自增 i++
-static bool __Increase2( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprIncrease2( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1832,7 +1866,7 @@ static bool __Increase2( Expression const * e, ExprOperand * arOperands[], short
 }
 
 // 左结合自减 i--
-static bool __Decrease2( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+static bool __OprDecrease2( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
 {
     outRetValue->attachNew(NULL);
     if ( n == 1 )
@@ -1875,47 +1909,50 @@ static bool __Decrease2( Expression const * e, ExprOperand * arOperands[], short
  */
 
 static ExprOperator __Operators[] = {
-    ExprOperator( $T("."), false, false, 2000, __Period ),  // 句点
-    ExprOperator( $T("+"), true, true, 1000, __Plus ),  // 正号
-    ExprOperator( $T("-"), true, true, 1000, __Minus ), // 负号
+    ExprOperator( $T("."), false, false, 2000, __OprPeriod ),  // 句点
+    ExprOperator( $T("+"), true, true, 1000, __OprPlus ),  // 正号
+    ExprOperator( $T("-"), true, true, 1000, __OprMinus ), // 负号
 
-    ExprOperator( $T("!"), true, true, 1000, __Not ), // 逻辑取反
+    ExprOperator( $T("!"), true, true, 1000, __OprNot ), // 逻辑取反
     //ExprOperator( $T("!"/*"#"*/), true, false, 1000, NULL ), // 阶乘，左结合
 
-    ExprOperator( $T("++"), true, true, 1000, __Increase ),  // 左自增 右结合
-    ExprOperator( $T("++"), true, false, 1000, __Increase2 ),  // 右自增 左结合
-    ExprOperator( $T("--"), true, true, 1000, __Decrease ),  // 左自减 右结合
-    ExprOperator( $T("--"), true, false, 1000, __Decrease2 ),  // 右自减 左结合
+    ExprOperator( $T("++"), true, true, 1000, __OprIncrease ),  // 左自增 右结合
+    ExprOperator( $T("++"), true, false, 1000, __OprIncrease2 ),  // 右自增 左结合
+    ExprOperator( $T("--"), true, true, 1000, __OprDecrease ),  // 左自减 右结合
+    ExprOperator( $T("--"), true, false, 1000, __OprDecrease2 ),  // 右自减 左结合
 
-    ExprOperator( $T("**"), false, false, 400, __Power ), // 乘方
+    ExprOperator( $T("**"), false, false, 400, __OprPower ), // 乘方
 
-    ExprOperator( $T("*"), false, false, 300, __Multiply ), // 乘
-    ExprOperator( $T("/"), false, false, 300, __Divide ), // 除
+    ExprOperator( $T("*"), false, false, 300, __OprMultiply ), // 乘
+    ExprOperator( $T("/"), false, false, 300, __OprDivide ), // 除
 
-    ExprOperator( $T("%"), false, false, 300, __Mod ), // 取余
-    ExprOperator( $T("\\"), false, false, 300, __IntDivide ), // 整除
+    ExprOperator( $T("%"), false, false, 300, __OprMod ), // 取余
+    ExprOperator( $T("\\"), false, false, 300, __OprIntDivide ), // 整除
 
-    ExprOperator( $T("+"), false, false, 200, __Add ), // 加
-    ExprOperator( $T("-"), false, false, 200, __Subtract ), // 减
+    ExprOperator( $T("+"), false, false, 200, __OprAdd ), // 加
+    ExprOperator( $T("-"), false, false, 200, __OprSubtract ), // 减
 
-    ExprOperator( $T("&"), false, false, 200, __Concat ), // 连结
+    ExprOperator( $T("&"), false, false, 200, __OprConcat ), // 连结
 
-    ExprOperator( $T(">"), false, false, 180, __Greater ), // 大于
-    ExprOperator( $T("<"), false, false, 180, __Less ), // 小于
-    ExprOperator( $T(">="), false, false, 180, __GreaterEqual ), // 大于等于
-    ExprOperator( $T("<="), false, false, 180, __LessEqual ), // 小于等于
-    ExprOperator( $T("!="), false, false, 180, __NotEqual ), // 不等于
-    ExprOperator( $T("=="), false, false, 180, __Equal ), // 等于
+    ExprOperator( $T("\\\\"), false, false, 190, __OprCombinePath ), // 组合目录与名称
+    ExprOperator( $T("\\\\"), true, true, 189, __OprNormalizePath ), // 规则化路径
 
-    ExprOperator( $T("&&"), false, false, 175, __And ), // 逻辑且
-    ExprOperator( $T("||"), false, false, 170, __Or ), // 逻辑或
+    ExprOperator( $T(">"), false, false, 180, __OprGreater ), // 大于
+    ExprOperator( $T("<"), false, false, 180, __OprLess ), // 小于
+    ExprOperator( $T(">="), false, false, 180, __OprGreaterEqual ), // 大于等于
+    ExprOperator( $T("<="), false, false, 180, __OprLessEqual ), // 小于等于
+    ExprOperator( $T("!="), false, false, 180, __OprNotEqual ), // 不等于
+    ExprOperator( $T("=="), false, false, 180, __OprEqual ), // 等于
 
-    ExprOperator( $T("="), false, true, 100, __Assign ), // 赋值号，右结合
+    ExprOperator( $T("&&"), false, false, 175, __OprAnd ), // 逻辑且
+    ExprOperator( $T("||"), false, false, 170, __OprOr ), // 逻辑或
 
-    ExprOperator( $T(","), false, false, 1, __Comma ), // 逗号
+    ExprOperator( $T("="), false, true, 100, __OprAssign ), // 赋值号，右结合
+
+    ExprOperator( $T(","), false, false, 1, __OprComma ), // 逗号
 };
 
-// built-in functions ---------------------------------------------------------------------
+// built-in functions -------------------------------------------------------------------------
 
 // if( condition, true_expr[, false_expr] )，condition条件达成就执行true_expr，否则执行false_expr
 static bool __FuncIf( Expression * e, std::vector<Expression *> const & params, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
@@ -2484,6 +2521,388 @@ static bool __FuncDef( Expression * e, std::vector<Expression *> const & params,
     return false;
 }
 
+// normalize( path[, sep] ) 路径规则化
+static bool __FuncNormalize( Expression * e, std::vector<Expression *> const & params, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( params.size() > 0 ) // 至少需要1个参数
+    {
+        ExprLiteral * retVal = new ExprLiteral();
+        winux::String path = params[0]->val().to<winux::String>();
+        if ( params.size() > 1 )
+        {
+            winux::String dirSep = params[1]->val().to<winux::String>();
+            retVal->getValue().createString( winux::NormalizePath( path, dirSep.empty() ? winux::DirSep : dirSep ) );
+        }
+        else
+        {
+            retVal->getValue().createString( winux::NormalizePath(path) );
+        }
+        outRetValue->attachNew(retVal);
+        return true;
+    }
+    else
+    {
+        throw ExprError( ExprError::eeFuncParamCountError, EXPRERRSTR_NOT_ENOUGH_PARAMETERS("normalize") );
+    }
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------
+static winux::StringStringMap __HtmlCharsEntities; // HTML实体字符映射表
+static winux::StringStringMap & __HtmlCharsEntitiesInit = winux::Assign(&__HtmlCharsEntities)
+    ( $T("&"), $T("&amp;") )
+    ( $T("<"), $T("&lt;") )
+    ( $T(">"), $T("&gt;") )
+    ( $T(" "), $T("&nbsp;") )
+    ( $T("\""), $T("&quot;") )
+    ( $T("\'"), $T("&apos;") )
+;
+
+// htmlencode( str[, chrs = "&<> "] ) for Expression HTML编码 作用字符:'&', '<', '>', ' '
+static bool __FuncHtmlEncode( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 1 )
+    {
+        winux::String str = params[0]->val();
+        winux::String chrs = params[1]->val();
+        winux::StringArray chars, entities;
+        int i;
+        for ( i = 0; i < (int)chrs.length(); ++i )
+        {
+            winux::String::value_type s[2] = { chrs[i] };
+            if ( winux::isset( __HtmlCharsEntities, s ) )
+            {
+                chars.push_back(s);
+                entities.push_back(__HtmlCharsEntities[s]);
+            }
+        }
+        if ( chars.size() > 0 )
+        {
+            winux::MultiMatch mm( chars, entities );
+            outRetValue->attachNew( new eienexpr::ExprLiteral( mm.replace(str) ) );
+        }
+        else
+        {
+            outRetValue->attachNew( new eienexpr::ExprLiteral(str) );
+        }
+        return true;
+    }
+    else if ( params.size() > 0 )
+    {
+        winux::String str = params[0]->val();
+        winux::MultiMatch mm;
+        for ( winux::StringStringMap::const_iterator it = __HtmlCharsEntities.begin(); it != __HtmlCharsEntities.end(); ++it )
+        {
+            mm.addMatchReplacePair( it->first, it->second );
+        }
+
+        outRetValue->attachNew( new eienexpr::ExprLiteral( mm.replace(str) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`htmlencode()` not enough parameters" );
+    }
+    return false;
+}
+
+// htmldecode( str[, chrs = "&<> "] )
+static bool __FuncHtmlDecode( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 1 )
+    {
+        winux::String str = params[0]->val();
+        winux::String chrs = params[1]->val();
+        winux::StringArray chars, entities;
+        int i;
+        for ( i = 0; i < (int)chrs.length(); ++i )
+        {
+            winux::String::value_type s[2] = { chrs[i] };
+            if ( winux::isset( __HtmlCharsEntities, s ) )
+            {
+                chars.push_back(s);
+                entities.push_back(__HtmlCharsEntities[s]);
+            }
+        }
+        if ( chars.size() > 0 )
+        {
+            winux::MultiMatch mm( entities, chars );
+            outRetValue->attachNew( new eienexpr::ExprLiteral( mm.replace(str) ) );
+        }
+        else
+        {
+            outRetValue->attachNew( new eienexpr::ExprLiteral(str) );
+        }
+        return true;
+    }
+    else if ( params.size() > 0 )
+    {
+        winux::String str = params[0]->val();
+        winux::MultiMatch mm;
+        for ( winux::StringStringMap::const_iterator it = __HtmlCharsEntities.begin(); it != __HtmlCharsEntities.end(); ++it )
+        {
+            mm.addMatchReplacePair( it->second, it->first );
+        }
+
+        outRetValue->attachNew( new eienexpr::ExprLiteral( mm.replace(str) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`htmldecode()` not enough parameters" );
+    }
+    return false;
+}
+
+// urlencode( str[, isComponent = false] )
+static bool __FuncUrlEncode( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 1 )
+    {
+        if ( params[1]->val() )
+        {
+            outRetValue->attachNew( new eienexpr::ExprLiteral( winux::UriComponentEncode( params[0]->val() ) ) );
+        }
+        else
+        {
+            outRetValue->attachNew( new eienexpr::ExprLiteral( winux::UrlEncode( params[0]->val() ) ) );
+        }
+        return true;
+    }
+    else if ( params.size() > 0 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( winux::UrlEncode( params[0]->val() ) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`urlencode()` not enough parameters" );
+    }
+    return false;
+}
+
+// urldecode( str[, isComponent = false] )
+static bool __FuncUrlDecode( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 1 )
+    {
+        if ( params[1]->val() )
+        {
+            outRetValue->attachNew( new eienexpr::ExprLiteral( winux::UriComponentDecode( params[0]->val() ) ) );
+        }
+        else
+        {
+            outRetValue->attachNew( new eienexpr::ExprLiteral( winux::UrlDecode( params[0]->val() ) ) );
+        }
+        return true;
+    }
+    else if ( params.size() > 0 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( winux::UrlDecode( params[0]->val() ) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`urldecode()` not enough parameters" );
+    }
+    return false;
+}
+
+// base64encode(str)
+static bool __FuncBase64Encode( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 0 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( winux::Base64Encode( params[0]->val().toAnsi() ) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`base64encode()` not enough parameters" );
+    }
+    return false;
+}
+
+// base64decode(str)
+static bool __FuncBase64Decode( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 0 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( winux::Base64Decode( params[0]->val() ) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`base64decode()` not enough parameters" );
+    }
+    return false;
+}
+
+// 日期时间格式化输出%Y-%M-%DT%h:%m:%s.%i
+static winux::String __DateTimeFormat( winux::uint64 utcMillisec, winux::String const & fmt )
+{
+    winux::String r;
+    if ( log10((double)utcMillisec) < 11 )
+    {
+        utcMillisec *= 1000;
+    }
+
+    winux::DateTimeL dtl = winux::DateTimeL::MilliSec(utcMillisec);
+    size_t i = 0;
+    while ( i < fmt.length() )
+    {
+        winux::String::value_type ch = fmt[i];
+        if ( ch == '%' )
+        {
+            if ( i + 1 < fmt.length() )
+            {
+                i++; // skip '%'
+                switch ( fmt[i] )
+                {
+                case 'Y':
+                    r += winux::Format( $T("%04u"), dtl.getYear() );
+                    i++;
+                    break;
+                case 'M':
+                    r += winux::Format( $T("%02u"), dtl.getMonth() );
+                    i++;
+                    break;
+                case 'D':
+                    r += winux::Format( $T("%02u"), dtl.getDay() );
+                    i++;
+                    break;
+                case 'h':
+                    r += winux::Format( $T("%02u"), dtl.getHour() );
+                    i++;
+                    break;
+                case 'm':
+                    r += winux::Format( $T("%02u"), dtl.getMinute() );
+                    i++;
+                    break;
+                case 's':
+                    r += winux::Format( $T("%02u"), dtl.getSecond() );
+                    i++;
+                    break;
+                case 'i':
+                    r += winux::Format( $T("%03u"), dtl.getMillisec() );
+                    i++;
+                    break;
+                case '%':
+                    r += '%';
+                    i++;
+                    break;
+                }
+            }
+            else
+            {
+                r += ch;
+                i++;
+            }
+        }
+        else
+        {
+            r += ch;
+            i++;
+        }
+    }
+
+    return r;
+}
+
+// dtfmt( utctime[, fmt = '%Y-%M-%DT%h:%m:%s.%i'] )
+static bool __FuncDateTimeFormat( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 1 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( __DateTimeFormat( (winux::uint64)params[0]->val(), params[1]->val() ) ) );
+        return true;
+    }
+    else if ( params.size() > 0 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( __DateTimeFormat( (winux::uint64)params[0]->val(), $T("%Y-%M-%DT%h:%m:%s.%i") ) ) );
+        return true;
+    }
+    else
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( __DateTimeFormat( winux::GetUtcTimeMs(), $T("%Y-%M-%DT%h:%m:%s.%i") ) ) );
+        return true;
+    }
+}
+
+static winux::String __BytesUnit( winux::uint64 size, winux::String unit = $T("?") )
+{
+    if ( unit == $T("?") )
+    {
+        if ( size < 1000 )
+        {
+            return (winux::String)winux::Mixed(size) + $T("B");
+        }
+        else if ( size < (winux::uint64)1000 * (winux::uint64)1000 )
+        {
+            return (winux::String)winux::Mixed( ceil( size * 100.0 / 1024.0 ) / 100.0 ) + $T("KB");
+        }
+        else if ( size < (winux::uint64)1000 * (winux::uint64)1000 * (winux::uint64)1000 )
+        {
+            return (winux::String)winux::Mixed( ceil( size * 100.0 / ( 1024.0 * 1024.0 ) ) / 100.0 ) + $T("MB");
+        }
+        else if ( size < (winux::uint64)1000 * (winux::uint64)1000 * (winux::uint64)1000 * (winux::uint64)1000 )
+        {
+            return (winux::String)winux::Mixed( ceil( size * 100.0 / ( 1024.0 * 1024.0 * 1024.0 ) ) / 100.0 ) + $T("GB");
+        }
+        else
+        {
+            return (winux::String)winux::Mixed( ceil( size * 100.0 / ( 1024.0 * 1024.0 * 1024.0 * 1024.0 ) ) / 100.0 ) + $T("TB");
+        }
+    }
+    else
+    {
+        thread_local std::map< winux::String, double >::value_type divPairs[] = {
+            std::map< winux::String, double >::value_type( $T(""), 1 ),
+            std::map< winux::String, double >::value_type( $T("K"), 1000.0 ),
+            std::map< winux::String, double >::value_type( $T("M"), 1000.0*1000.0 ),
+            std::map< winux::String, double >::value_type( $T("G"), 1000.0*1000.0*1000.0 ),
+            std::map< winux::String, double >::value_type( $T("T"), 1000.0*1000.0*1000.0*1000.0 ),
+            std::map< winux::String, double >::value_type( $T("B"), 1 ),
+            std::map< winux::String, double >::value_type( $T("KB"), 1024.0 ),
+            std::map< winux::String, double >::value_type( $T("MB"), 1024.0*1024.0 ),
+            std::map< winux::String, double >::value_type( $T("GB"), 1024.0*1024.0*1024.0 ),
+            std::map< winux::String, double >::value_type( $T("TB"), 1024.0*1024.0*1024.0*1024.0 ),
+        };
+        thread_local std::map< winux::String, double > div( divPairs, divPairs + countof(divPairs) );
+        return (winux::String)winux::Mixed( ceil( size * 100.0 / div[unit] ) / 100.0 ) + unit;
+    }
+}
+
+// bytesunit( size[, unit = '?'] )
+static bool __FuncBytesUnit( eienexpr::Expression * e, std::vector<eienexpr::Expression *> const & params, winux::SimplePointer<eienexpr::ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(nullptr);
+    if ( params.size() > 1 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( __BytesUnit( (winux::uint64)params[0]->val(), params[1]->val() ) ) );
+        return true;
+    }
+    else if ( params.size() > 0 )
+    {
+        outRetValue->attachNew( new eienexpr::ExprLiteral( __BytesUnit( (winux::uint64)params[0]->val() ) ) );
+        return true;
+    }
+    else
+    {
+        throw eienexpr::ExprError( eienexpr::ExprError::eeFuncParamCountError, "`bytesunit()` not enough parameters" );
+    }
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------
 ExprFunc::StringFuncMap::value_type __Funcs[] = {
     ExprFunc::StringFuncMap::value_type( $T("if"), __FuncIf ),
     ExprFunc::StringFuncMap::value_type( $T("while"), __FuncWhile ),
@@ -2503,6 +2922,15 @@ ExprFunc::StringFuncMap::value_type __Funcs[] = {
     ExprFunc::StringFuncMap::value_type( $T("join"), __FuncJoin ),
     ExprFunc::StringFuncMap::value_type( $T("var"), __FuncVar ),
     ExprFunc::StringFuncMap::value_type( $T("def"), __FuncDef ),
+    ExprFunc::StringFuncMap::value_type( $T("normalize"), __FuncNormalize ),
+    ExprFunc::StringFuncMap::value_type( $T("htmlencode"), __FuncHtmlEncode ),
+    ExprFunc::StringFuncMap::value_type( $T("htmldecode"), __FuncHtmlDecode ),
+    ExprFunc::StringFuncMap::value_type( $T("urlencode"), __FuncUrlEncode ),
+    ExprFunc::StringFuncMap::value_type( $T("urldecode"), __FuncUrlDecode ),
+    ExprFunc::StringFuncMap::value_type( $T("base64encode"), __FuncBase64Encode ),
+    ExprFunc::StringFuncMap::value_type( $T("base64decode"), __FuncBase64Decode ),
+    ExprFunc::StringFuncMap::value_type( $T("dtfmt"), __FuncDateTimeFormat ),
+    ExprFunc::StringFuncMap::value_type( $T("bytesunit"), __FuncBytesUnit ),
 };
 
 // class ExprPackage ----------------------------------------------------------------------

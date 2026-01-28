@@ -82,7 +82,9 @@ public:
     ConfigureSettings & operator = ( ConfigureSettings const & other );
     ConfigureSettings & operator = ( ConfigureSettings && other );
 
-    /** \brief 加载设置文件 */
+    /** \brief 加载设置文件
+     *
+     *  \return 返回顶层KeyName数 */
     size_t load( String const & settingsFile );
 
     /** \brief 更新表达式并计算结果。（当你修改表达式后应该执行这个函数一次）
@@ -119,6 +121,9 @@ public:
     Mixed const & expr() const;
     /** \brief 表达式 */
     Mixed & expr();
+
+    /** \brief 获取设置文件目录 */
+    String getSettingsDir() const;
 
 private:
     size_t _load( String const & settingsFile, winux::Mixed * collAsVal, winux::Mixed * collAsExpr, StringArray * loadFileChains );

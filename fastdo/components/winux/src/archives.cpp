@@ -8,6 +8,7 @@
 #include "archives.hpp"
 
 #include "eienexpr.hpp"
+#include "eienexpr_errstrs.inl"
 
 #if defined(OS_WIN) // IS_WINDOWS
     #include <mbstring.h>
@@ -268,7 +269,62 @@ void Configure::clear()
     _rawParams.clear();
 }
 
-// struct ConfigureSettings_Data ----------------------------------------------------------
+// additional operators -----------------------------------------------------------------------
+// operator @ ---------------------------------------------------------------------------------
+static bool __OprFile( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( n == 1 )
+    {
+        auto & confSettings = *reinterpret_cast<ConfigureSettings *>(data);
+        String path, nl;
+        size_t i = 0;
+        // 只读取第一行作路径
+        StrGetLine( &path, arOperands[0]->val().to<String>(), &i, &nl );
+        // 基于配置文件目录计算路径
+        path = IsAbsPath(path) ? path : CombinePath( confSettings.getSettingsDir(), path );
+
+        ExprLiteral * ret = new ExprLiteral();
+        ret->getValue().createString( FileGetString( path, feMultiByte ) );
+        outRetValue->attachNew(ret);
+        return true;
+    }
+    return false;
+}
+
+// additional functions -----------------------------------------------------------------------
+// file( path[, textmode = true] ) path:文件路径，textmode:文本模式 默认true即默认文本模式
+static bool __FuncFile( Expression * e, std::vector<Expression *> const & params, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( params.size() > 0 )
+    {
+        auto & confSettings = *reinterpret_cast<ConfigureSettings *>(data);
+        String path, nl;
+        size_t i = 0;
+        // 只读取第一行作路径
+        StrGetLine( &path, params[0]->val().to<String>(), &i, &nl );
+        // 基于配置文件目录计算路径
+        path = IsAbsPath(path) ? path : CombinePath( confSettings.getSettingsDir(), path );
+        // 文本模式
+        bool textmode = params.size() > 1 ? params[1]->val().to<bool>() : true;
+
+        ExprLiteral * ret = new ExprLiteral();
+        if ( textmode )
+            ret->getValue().createString( FileGetString( path, feMultiByte ) );
+        else
+            ret->getValue().assign( FileGetContentsEx( path, false ) );
+        outRetValue->attachNew(ret);
+        return true;
+    }
+    else
+    {
+        throw ExprError( ExprError::eeFuncParamCountError, EXPRERRSTR_NOT_ENOUGH_PARAMETERS("file") );
+    }
+    return false;
+}
+
+// struct ConfigureSettings_Data --------------------------------------------------------------
 struct ConfigureSettings_Data
 {
     ExprPackage package; // 表达式语言包，包含自定义函数和算符
@@ -276,10 +332,12 @@ struct ConfigureSettings_Data
 
     ConfigureSettings_Data()
     {
+        this->package.setFunc( $T("file"), __FuncFile );
+        this->package.addOpr( $T("@"), true, true, 1000, __OprFile );
     }
 };
 
-// class ConfigureSettings ----------------------------------------------------------------
+// class ConfigureSettings --------------------------------------------------------------------
 ConfigureSettings::ConfigureSettings( String const & settingsFile )
 {
     this->_collectionVal.createCollection();
@@ -875,7 +933,7 @@ size_t ConfigureSettings::_load( String const & settingsFile, winux::Mixed * col
         if ( !collAsExpr->isCollection() ) collAsExpr->createCollection();
 
         VarContext varCtx(collAsVal);
-        Expression exprCtx( &_self->package, &varCtx, nullptr, nullptr );
+        Expression exprCtx( &_self->package, &varCtx, nullptr, this );
 
         int i = 0;
         ConfigureSettings_ParseCollection( cpc, settingsContent, i, &exprCtx, collAsVal, collAsExpr );
@@ -1052,6 +1110,11 @@ Mixed const & ConfigureSettings::expr() const
 Mixed & ConfigureSettings::expr()
 {
     return this->_collectionExpr;
+}
+
+String ConfigureSettings::getSettingsDir() const
+{
+    return FilePath(this->_settingsFile);
 }
 
 // class CsvWriter ------------------------------------------------------------------------

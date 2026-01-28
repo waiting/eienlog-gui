@@ -170,14 +170,14 @@ WINUX_FUNC_IMPL(bool) IsAbsPath( String const & path )
 #endif
 }
 
-WINUX_FUNC_IMPL(String) NormalizePath( String const & path )
+WINUX_FUNC_IMPL(String) NormalizePath( String const & path, String const & dirSep )
 {
     StringArray pathSubs;
     size_t n = StrSplit( path, $T("/\\"), &pathSubs );
     size_t i, c = n;
     for ( i = 0; i < c; )
     {
-        if ( i > 0 && pathSubs[i - 1] != $T("..") && !IsAbsPath( pathSubs[i - 1] + DirSep ) && pathSubs[i] == $T("..") )
+        if ( i > 0 && pathSubs[i - 1] != $T("..") && !IsAbsPath( pathSubs[i - 1] + dirSep ) && pathSubs[i] == $T("..") )
         {
             size_t k;
             for ( k = i + 1; k < c; k++ )
@@ -206,11 +206,11 @@ WINUX_FUNC_IMPL(String) NormalizePath( String const & path )
         r += pathSubs[i];
         if ( i != c - 1 )
         {
-            r += DirSep;
+            r += dirSep;
         }
     }
 
-    if ( r.length() > 1 && r[r.length() - 1] == DirSep[0] )
+    if ( r.length() > 1 && r[r.length() - 1] == dirSep[0] )
     {
         r = r.substr( 0, r.length() - 1 );
     }

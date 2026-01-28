@@ -370,6 +370,9 @@ int App::run()
             ImGui::RenderPlatformWindowsDefault();
         }
 
+        // 如果不是垂直同步就睡一下免得cpu占用太高
+        if ( gi.d3dpp.PresentationInterval == D3DPRESENT_INTERVAL_IMMEDIATE ) Sleep(1);
+
         HRESULT result = gi.pd3dDevice->Present(nullptr, nullptr, nullptr, nullptr);
         if (result == D3DERR_DEVICELOST)
             gi.deviceLost = true;
