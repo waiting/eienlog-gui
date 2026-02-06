@@ -28,6 +28,7 @@ target_compile_definitions(winux PUBLIC WINUX_DLL_USE PRIVATE WINUX_DLL_EXPORTS)
 
 add_library(winux_a STATIC ${winux_SRCS} ${eienexpr_SRCS} ${winux_HEADERS} ${winux_INTERNAL_HEADERS} ${eienexpr_HEADERS})
 target_include_directories(winux_a PUBLIC include PRIVATE ../eienexpr/include)
+set_property(TARGET winux_a PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Public headers
 set_target_properties(winux winux_a PROPERTIES PUBLIC_HEADER "${winux_HEADERS}")

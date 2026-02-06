@@ -34,6 +34,7 @@ add_library(eiennet_a STATIC ${eiennet_HEADERS} ${eiennet_SRCS} ${eienlog_HEADER
 target_include_directories(eiennet_a PUBLIC include PRIVATE ../eienlog/include)
 target_compile_definitions(eiennet_a PRIVATE CURL_STATICLIB)
 target_link_libraries(eiennet_a PRIVATE winux_a)
+set_property(TARGET eiennet_a PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Public headers
 set_target_properties(eiennet eiennet_a PROPERTIES PUBLIC_HEADER "${eiennet_HEADERS}")

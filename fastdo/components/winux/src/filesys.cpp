@@ -144,10 +144,10 @@ WINUX_FUNC_IMPL(String) FilePath( String const & fullPath, String * fileName )
     return path;
 }
 
-WINUX_FUNC_IMPL(String) FileTitle( String const & fileName, String * extName )
+WINUX_FUNC_IMPL(String) FileTitle( String const & fileName, String * extName, bool leftToRight )
 {
     String fileTitle;
-    String::size_type pos = fileName.rfind('.');
+    String::size_type pos = leftToRight ? fileName.find('.') : fileName.rfind('.');
     if ( pos != String::npos )
     {
         fileTitle = fileName.substr( 0, pos );

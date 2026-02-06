@@ -249,7 +249,7 @@ size_t Epoll::evtsCount() const
     return _evts.size();
 }
 
-struct epoll_event * Epoll::evts( int i )
+struct epoll_event * Epoll::evts()
 {
     return _evts.data();
 }

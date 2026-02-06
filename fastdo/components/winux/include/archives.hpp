@@ -9,15 +9,6 @@ namespace winux
 /** \brief 配置文件类 */
 class WINUX_DLL Configure
 {
-private:
-    String _configFile;
-    StringStringMap _rawParams; //!< 未StripSlashes处理的数据集合
-
-    static int _FindConfigRef( String const & str, int offset, int * length, String * name );
-    String _expandVarNoStripSlashes( String const & name, StringArray * chains ) const;
-
-    //返回加载的配置变量个数
-    int _load( String const & configFile, StringStringMap * rawParams, StringArray * loadFileChains );
 public:
     static String const ConfigVarsSlashChars;
 
@@ -63,6 +54,20 @@ public:
 
     /** \brief 取得内部StringStringMap引用 */
     StringStringMap const & getAll() const { return _rawParams; }
+
+private:
+    String _configFile; //!< 配置文件
+    StringStringMap _rawParams; //!< 未StripSlashes处理的数据集合
+
+    // 查找配置引用变量
+    static int _FindConfigRef( String const & str, int offset, int * length, String * name );
+    // 展开指定名称引用变量的值
+    String _expandVarNoStripSlashes( String const & name, StringArray * chains ) const;
+    // 展开指定值中的引用变量的值
+    String _expandValNoStripSlashes( String const & val, StringArray * chains ) const;
+
+    // 返回加载的配置变量个数
+    int _load( String const & configFile, StringStringMap * rawParams, StringArray * loadFileChains );
 };
 
 /** \brief 更强大的配置文件类

@@ -121,20 +121,26 @@ String Configure::_expandVarNoStripSlashes( String const & name, StringArray * c
 {
     if ( !this->has(name) ) return $T("");
     chains->push_back(name);
-    String configVal = _rawParams.at(name);
+    String res = _expandValNoStripSlashes( _rawParams.at(name), chains );
+    chains->pop_back();
+    return res;
+}
+
+String Configure::_expandValNoStripSlashes( String const & val, StringArray * chains ) const
+{
+    if ( val.empty() ) return $T("");
     String res;
     int len;
     String varName;
     int offset = 0;
     int pos;
-    while ( ( pos = _FindConfigRef( configVal, offset, &len, &varName ) ) != -1 )
+    while ( ( pos = _FindConfigRef( val, offset, &len, &varName ) ) != -1 )
     {
-        res += configVal.substr( offset, pos - offset );
+        res += val.substr( offset, pos - offset );
         offset = pos + len;
         res += !ValueIsInArray( *chains, varName ) ? _expandVarNoStripSlashes( varName, chains ) : $T("");
     }
-    res += configVal.substr(offset);
-    chains->pop_back();
+    res += val.substr(offset);
     return res;
 }
 
@@ -180,7 +186,9 @@ int Configure::_load( String const & configFile, StringStringMap * rawParams, St
                 if ( commandName == $T("import") ) // 导入外部配置
                 {
                     String dirPath = FilePath(configFile);
-                    String confPath = commandParam;
+                    StringArray callChains;
+                    // 展开值中引用的变量值
+                    String confPath = StripSlashes( _expandValNoStripSlashes( commandParam, &callChains ), ConfigVarsSlashChars );
                     confPath = IsAbsPath(confPath) ? confPath : CombinePath( dirPath, confPath );
                     if ( !ValueIsInArray( *loadFileChains, RealPath(confPath), true ) )
                     {

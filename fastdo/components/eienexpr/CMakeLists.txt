@@ -18,6 +18,7 @@ target_link_libraries(eienexpr PRIVATE winux)
 add_library(eienexpr_a STATIC ${eienexpr_SRCS} ${eienexpr_HEADERS})
 target_include_directories(eienexpr_a PUBLIC include)
 target_link_libraries(eienexpr_a PRIVATE winux_a)
+set_property(TARGET eienexpr_a PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Public headers
 set_target_properties(eienexpr eienexpr_a PROPERTIES PUBLIC_HEADER "${eienexpr_HEADERS}")

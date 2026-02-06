@@ -50,10 +50,11 @@ WINUX_FUNC_DECL(String) FilePath( String const & fullPath, String * fileName = N
 
 /** \brief 获取文件标题
  *
- * \param fileName String const& 文件名
- * \param extName String* 返回扩展名（不包括'.'）
+ * \param fileName 文件名
+ * \param extName 返回扩展名（不包括'.'）
+ * \param leftToRight 从左往右搜'.'，默认false从右往左搜
  * \return String */
-WINUX_FUNC_DECL(String) FileTitle( String const & fileName, String * extName = NULL );
+WINUX_FUNC_DECL(String) FileTitle( String const & fileName, String * extName = nullptr, bool leftToRight = false );
 
 /** \brief 判断是否为绝对路径 */
 WINUX_FUNC_DECL(bool) IsAbsPath( String const & path );

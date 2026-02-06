@@ -18,6 +18,7 @@ target_link_libraries(eienlog PRIVATE winux eiennet)
 add_library(eienlog_a STATIC ${eienlog_SRCS} ${eienlog_HEADERS})
 target_include_directories(eienlog_a PUBLIC include)
 target_link_libraries(eienlog_a PRIVATE winux_a eiennet_a)
+set_property(TARGET eienlog_a PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Public headers
 set_target_properties(eienlog eienlog_a PROPERTIES PUBLIC_HEADER "${eienlog_HEADERS}")

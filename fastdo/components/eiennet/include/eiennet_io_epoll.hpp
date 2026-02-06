@@ -150,7 +150,7 @@ public:
 
     size_t evtsCount() const;
 
-    struct epoll_event * evts( int i );
+    struct epoll_event * evts();
 
     struct epoll_event & evt( int i );
 
