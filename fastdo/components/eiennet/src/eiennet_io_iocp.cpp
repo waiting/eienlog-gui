@@ -41,7 +41,7 @@ namespace io
 namespace iocp
 {
 // IoSocketCtx 超时处理 ------------------------------------------------------------------------
-void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx )
+static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx )
 {
     auto * ctx = timerCtx->assocCtx;
     if ( ctx )
@@ -51,8 +51,8 @@ void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> ti
     }
 }
 
-// IoSocketCtx 断开超时事件关联，并取消超时定时器IO ------------------------------------------------
-void _IoSocketCtxResetTimerCtx( io::IoSocketCtx * ctx )
+// IoSocketCtx 清空超时事件关联，并停止超时定时器，尝试释放IoTimerCtx ------------------------------------------------
+static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
 {
     if ( ctx->timerCtx ) // 有超时处理
     {
@@ -64,7 +64,7 @@ void _IoSocketCtxResetTimerCtx( io::IoSocketCtx * ctx )
 }
 
 // 处理取消的IO操作 -----------------------------------------------------------------------------
-void _ProcessCanceledIoCtx( IoCtx * assocCtx )
+static void _ProcessCanceledIoCtx( IoCtx * assocCtx )
 {
     if ( assocCtx->state == stateTimeoutCancel ) // 超时导致的操作取消，调用超时回调函数
     {
@@ -180,7 +180,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                     case ioAccept:
                         {
                             auto * ctx = static_cast<IoAcceptCtx *>(ioCtx);
-                            _IoSocketCtxResetTimerCtx(ctx);
+                            _IoSocketCtxClearTimerCtx(ctx);
 
                             if ( ctx->cbOk )
                             {
@@ -203,7 +203,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                     case ioConnect:
                         {
                             auto * ctx = static_cast<IoConnectCtx *>(ioCtx);
-                            _IoSocketCtxResetTimerCtx(ctx);
+                            _IoSocketCtxClearTimerCtx(ctx);
 
                             ctx->costTimeMs = winux::GetUtcTimeMs() - ctx->startTime;
                             if ( ctx->cbOk )
@@ -217,7 +217,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                     case ioRecv:
                         {
                             auto * ctx = static_cast<IoRecvCtx *>(ioCtx);
-                            _IoSocketCtxResetTimerCtx(ctx);
+                            _IoSocketCtxClearTimerCtx(ctx);
 
                             // 因为是完成端口，数据自动存放到ctx->wsabuf中，不用手动接收
 
@@ -248,7 +248,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                     case ioSend:
                         {
                             auto * ctx = static_cast<IoSendCtx *>(ioCtx);
-                            _IoSocketCtxResetTimerCtx(ctx);
+                            _IoSocketCtxClearTimerCtx(ctx);
 
                             // 因为是完成端口，不用手动发送
 
@@ -288,7 +288,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                     case ioRecvFrom:
                         {
                             auto * ctx = static_cast<IoRecvFromCtx *>(ioCtx);
-                            _IoSocketCtxResetTimerCtx(ctx);
+                            _IoSocketCtxClearTimerCtx(ctx);
 
                             // 因为是完成端口，数据自动存放到ctx->wsabuf中，不用手动接收
 
@@ -319,7 +319,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                     case ioSendTo:
                         {
                             auto * ctx = static_cast<IoSendToCtx *>(ioCtx);
-                            _IoSocketCtxResetTimerCtx(ctx);
+                            _IoSocketCtxClearTimerCtx(ctx);
 
                             // 因为是完成端口，不用手动发送
 
@@ -380,7 +380,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                 {
                     // IoSocketCtx取消关联的IoTimerCtx
                     auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
-                    _IoSocketCtxResetTimerCtx(sockIoCtx);
+                    _IoSocketCtxClearTimerCtx(sockIoCtx);
                 }
 
                 if ( err == ERROR_OPERATION_ABORTED ) // 操作取消

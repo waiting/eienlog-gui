@@ -99,14 +99,14 @@ class IoService;
 class IoServiceThread;
 class Epoll;
 
-/** \brief fd到IoCtxs的映射 */
-class EIENNET_DLL FdIoCtxsMap
+/** \brief IO事件数据：fd到IoCtxs的映射 */
+class EIENNET_DLL IoEventsData
 {
 public:
     using IoMapMap = std::map< int, std::map< IoType, IoCtx * > >;
     using IoMap = IoMapMap::mapped_type;
 
-    FdIoCtxsMap( Epoll * epoll );
+    IoEventsData( Epoll * epoll );
 
     void setIoCtx( IoCtx * ioCtx );
 
@@ -177,7 +177,7 @@ public:
 
 private:
     Epoll _epoll;
-    FdIoCtxsMap _fdIoCtxsMap;
+    IoEventsData _ioEvents;
     winux::SimpleHandle<int> _stopEventFd;
     IoService * _serv;
     bool _stop;
@@ -278,7 +278,7 @@ public:
 
 private:
     Epoll _epoll;
-    FdIoCtxsMap _fdIoCtxsMap;
+    IoEventsData _ioEvents;
     winux::SimpleHandle<int> _stopEventFd;
     winux::ThreadGroup _group;
     bool _stop;

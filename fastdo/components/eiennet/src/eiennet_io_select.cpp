@@ -457,7 +457,7 @@ int Select::wait( double sec )
 namespace select
 {
 // IoSocketCtx 超时处理
-void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx, IoEventsData * ioEvents )
+static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx, IoEventsData * ioEvents )
 {
     auto * assocCtx = timerCtx->assocCtx;
     if ( assocCtx )
@@ -469,28 +469,23 @@ void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> ti
     }
 }
 
-// IoSocketCtx 取消超时事件关联，并取消超时定时器IO
-void _IoSocketCtxResetTimerCtx( io::IoSocketCtx * ctx )
+// IoSocketCtx 清空超时事件关联，并停止超时定时器
+static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
 {
     if ( ctx->timerCtx ) // 有超时处理
     {
         auto timer = ctx->timerCtx->timer; // 定时器对象
-        if ( ctx->timerCtx->assocCtx )
-        {
-            ctx->timerCtx->assocCtx = nullptr;
-        }
+        ctx->timerCtx->assocCtx = nullptr;
         timer->stop();
         ctx->timerCtx = nullptr;
     }
 }
 
-// 取消`IoMapMap`中的IoCtx
-void _CancelIoCtxs( IoEventsData::IoMapMap & ioMaps, IoEventsData::IoMapMap::iterator * pit )
+// 取消`IoMap`中的IoCtxs
+static void _CancelIoCtxs( IoEventsData::IoMap * ioMap )
 {
-    auto obj = (*pit)->first;
-    auto & ioMap = (*pit)->second;
     bool hasEraseInIoMap = false;
-    for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
+    for ( auto it = ioMap->begin(); it != ioMap->end(); hasEraseInIoMap = false )
     {
         auto ioType = it->first;
         auto * ioCtx = it->second;
@@ -523,8 +518,8 @@ void _CancelIoCtxs( IoEventsData::IoMapMap & ioMaps, IoEventsData::IoMapMap::ite
         }
 
         // 如果已经是end则不能再++it
-        if ( !hasEraseInIoMap && it != ioMap.end() ) ++it;
-    } // for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
+        if ( !hasEraseInIoMap && it != ioMap->end() ) ++it;
+    } // for ( auto it = ioMap->begin(); it != ioMap->end(); hasEraseInIoMap = false )
 }
 
 // Select工作函数
@@ -606,6 +601,16 @@ void IoEventsData::_handleIoEventsListen( io::Select & sel )
         auto obj = itMaps->first;
         auto & ioMap = itMaps->second;
 
+        if ( obj.type == IoEventsData::aotSocket && ioMap.size() > 0 )
+        {
+            auto sock = reinterpret_cast<eiennet::async::Socket *>(obj.ptr)->sharedFromThis();
+            if ( io::Select::ValidFd( sock->get() ) )
+            {
+                // 监听错误
+                sel.setExceptFd( sock->get() );
+            }
+        }
+
         // 监听IO请求
         bool hasEraseInIoMap = false;
         for ( auto it = ioMap.begin(); it != ioMap.end(); hasEraseInIoMap = false )
@@ -668,9 +673,6 @@ void IoEventsData::_handleIoEventsListen( io::Select & sel )
                     auto * sockIoCtx = dynamic_cast<IoSocketCtx*>(ioCtx);
                     if ( io::Select::ValidFd( sock->get() ) )
                     {
-                        // 监听错误
-                        sel.setExceptFd( sock->get() );
-
                         // 监听socket IO
                         switch ( ioType )
                         {
@@ -762,7 +764,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                 }
 
                 // 取消该sock的所有IO事件
-                _CancelIoCtxs( this->_ioMaps, &itMaps );
+                _CancelIoCtxs(&ioMap);
 
                 // 就绪数-1
                 rc--;
@@ -814,12 +816,10 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                                 {
                                     {
                                         winux::ScopeUnguard unguard( timer->getMutex() );
-                                        timer->unset();
+                                        // 已处理，取消这个请求
+                                        timerCtx->changeState(stateFinish);
                                     }
                                     timer->_timerCtx = nullptr;
-
-                                    // 已处理，取消这个请求
-                                    timerCtx->changeState(stateFinish);
                                 }
                                 else
                                 {
@@ -842,7 +842,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                             {
                                 auto * ctx = static_cast<IoAcceptCtx*>(sockIoCtx);
 
-                                _IoSocketCtxResetTimerCtx(ctx);
+                                _IoSocketCtxClearTimerCtx(ctx);
 
                                 // 接受客户连接
                                 auto clientSock = sock->accept(&ctx->clientEp);
@@ -872,7 +872,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                             {
                                 auto * ctx = static_cast<IoConnectCtx*>(sockIoCtx);
 
-                                _IoSocketCtxResetTimerCtx(ctx);
+                                _IoSocketCtxClearTimerCtx(ctx);
 
                                 ctx->costTimeMs = timeDiff;
                                 // 处理回调
@@ -894,7 +894,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                             {
                                 auto * ctx = static_cast<IoRecvCtx*>(sockIoCtx);
 
-                                _IoSocketCtxResetTimerCtx(ctx);
+                                _IoSocketCtxClearTimerCtx(ctx);
 
                                 size_t wantBytes = 0;
                                 if ( ctx->targetBytes > 0 )
@@ -940,7 +940,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                             {
                                 auto * ctx = static_cast<IoSendCtx*>(sockIoCtx);
 
-                                _IoSocketCtxResetTimerCtx(ctx);
+                                _IoSocketCtxClearTimerCtx(ctx);
 
                                 ctx->cnnAvail = true;
                                 ctx->costTimeMs += timeDiff;
@@ -985,7 +985,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                             {
                                 auto * ctx = static_cast<IoRecvFromCtx*>(sockIoCtx);
 
-                                _IoSocketCtxResetTimerCtx(ctx);
+                                _IoSocketCtxClearTimerCtx(ctx);
 
                                 size_t wantBytes = 0;
                                 if ( ctx->targetBytes > 0 )
@@ -1027,7 +1027,7 @@ void IoEventsData::_handleIoEventsCallback( io::Select & sel, int rc )
                             {
                                 auto * ctx = static_cast<IoSendToCtx*>(sockIoCtx);
 
-                                _IoSocketCtxResetTimerCtx(ctx);
+                                _IoSocketCtxClearTimerCtx(ctx);
 
                                 bool fail = false;
                                 ctx->costTimeMs += timeDiff;
