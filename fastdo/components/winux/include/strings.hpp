@@ -24,7 +24,7 @@ template < typename _RetChTy, typename _ChTy = _RetChTy >
 inline static XString<_RetChTy> CharToHexStr( _ChTy ch, bool padZero = false )
 {
     _RetChTy str[sizeof(ch) * 2 + 1] = { (_RetChTy)0 };
-    byte * pbyt = (byte*)&ch;
+    byte * pbyt = (byte *)&ch;
     ssize_t i = sizeof(ch) - 1;
     ssize_t j = 0;
     bool hadNonZero = padZero;
@@ -33,8 +33,8 @@ inline static XString<_RetChTy> CharToHexStr( _ChTy ch, bool padZero = false )
         if ( pbyt[i] && !hadNonZero ) hadNonZero = true;
         if ( hadNonZero )
         {
-            str[j * 2] = Literal<_RetChTy>::hexadecLowerStr[((pbyt[i] & (byte)0xF0) >> 4)];
-            str[j * 2 + 1] = Literal<_RetChTy>::hexadecLowerStr[(pbyt[i] & (byte)0xF)];
+            str[j * 2] = Literal<_RetChTy>::hexadecUpperStr[((pbyt[i] & (byte)0xF0) >> 4)];
+            str[j * 2 + 1] = Literal<_RetChTy>::hexadecUpperStr[(pbyt[i] & (byte)0xF)];
             j++;
         }
     }
@@ -953,6 +953,18 @@ WINUX_FUNC_DECL(String) UnicodeToString( UnicodeString const & unicode );
 WINUX_FUNC_DECL(AnsiString) StringToLocal( String const & str );
 /** \brief 兼容字符串与Unicode、Local字符串相互转换 */
 WINUX_FUNC_DECL(UnicodeString) StringToUnicode( String const & str );
+
+#if defined(_UNICODE) || defined(UNICODE)
+#define LOCAL_TO_STRING(s) winux::LocalToUnicode(s)
+#define UNICODE_TO_STRING(s) s
+#define STRING_TO_LOCAL(s) winux::UnicodeToLocal(s)
+#define STRING_TO_UNICODE(s) s
+#else
+#define LOCAL_TO_STRING(s) s
+#define UNICODE_TO_STRING(s) winux::UnicodeToLocal(s)
+#define STRING_TO_LOCAL(s) s
+#define STRING_TO_UNICODE(s) winux::LocalToUnicode(s)
+#endif
 
 
 WINUX_DLL AnsiString FormatExVA( size_t cch, char const * fmt, va_list args );

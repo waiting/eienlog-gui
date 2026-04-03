@@ -462,13 +462,13 @@ public:
     }
 
 #ifndef MOVE_SEMANTICS_DISABLED
-    Members( Members && other ) : _p(nullptr)
+    Members( Members && other ) noexcept : _p(nullptr)
     {
         _p = other._p;
         other._p = nullptr;
     }
     /** \brief 移动赋值，必须保证create()已经调用 */
-    Members & operator = ( Members && other )
+    Members & operator = ( Members && other ) noexcept
     {
         if ( &other != this )
         {
@@ -514,7 +514,7 @@ public:
 
 private:
     /** \brief 必须在使用者类的析构函数里最后一个调用 */
-    void _destroy()
+    void _destroy() noexcept
     {
         if ( _p )
         {
@@ -571,13 +571,13 @@ public:
     }
 
 #ifndef MOVE_SEMANTICS_DISABLED
-    PlainMembers( PlainMembers && other )
+    PlainMembers( PlainMembers && other ) noexcept
     {
         this->_create<sizeof(_TargetCls)>();
         *this->get() = std::move( *other.get() );
     }
     /** \brief 移动赋值，必须保证create()已经调用 */
-    PlainMembers & operator = ( PlainMembers && other )
+    PlainMembers & operator = ( PlainMembers && other ) noexcept
     {
         if ( &other != this )
         {
@@ -621,7 +621,7 @@ public:
 
 private:
     /** \brief 必须在使用者类的析构函数里最后一个调用 */
-    void _destroy()
+    void _destroy() noexcept
     {
         this->get()->~_TargetCls();
     }
@@ -829,6 +829,13 @@ inline bool isset( _MAP const & m, _KEY const & k )
     return m.find(k) != m.end();
 }
 
+/** \brief 检测map中是否有该键的值 */
+template < typename _MAP, typename _KEY >
+inline bool IsSet( _MAP const & m, _KEY const & k )
+{
+    return m.find(k) != m.end();
+}
+
 /** \brief 将C数组转换成vector */
 template < typename _Ty >
 inline std::vector<_Ty> ToArray( _Ty * arr, uint count )
@@ -863,11 +870,11 @@ public:
         // 错误号详见errno.h: EXXXX
     };
 
-    Error() throw() : _errType(0) { }
-    Error( int errType, AnsiString const & errStr ) throw() : _errType(errType), _errStr(errStr) { }
-    virtual ~Error() throw() { }
-    virtual int getErrType() const throw() { return _errType; }
-    virtual char const * what() const throw() { return _errStr.c_str(); }
+    Error() noexcept : _errType(0) { }
+    Error( int errType, AnsiString const & errStr ) noexcept : _errType(errType), _errStr(errStr) { }
+    virtual ~Error() noexcept { }
+    virtual int getErrType() const noexcept { return _errType; }
+    virtual char const * what() const noexcept { return _errStr.c_str(); }
 
 private:
     int _errType; // 错误类型（错误号）
@@ -966,13 +973,13 @@ public:
 
 #ifndef MOVE_SEMANTICS_DISABLED
     /** \brief 移动构造函数 */
-    Buffer( Buffer && other );
+    Buffer( Buffer && other ) noexcept;
     /** \brief 移动赋值操作 */
-    Buffer & operator = ( Buffer && other );
+    Buffer & operator = ( Buffer && other ) noexcept;
     /** \brief 移动构造函数1 */
-    Buffer( GrowBuffer && other );
+    Buffer( GrowBuffer && other ) noexcept;
     /** \brief 移动赋值操作1 */
-    Buffer & operator = ( GrowBuffer && other );
+    Buffer & operator = ( GrowBuffer && other ) noexcept;
 #endif
 
     /** \brief 设置缓冲区，当isPeek为false时拷贝数据缓冲区
@@ -1007,7 +1014,7 @@ public:
     void * detachBuf( size_t * size = nullptr );
 
     /** \brief 释放缓冲区 */
-    void free();
+    void free() noexcept;
 
     /** \brief 暴露缓冲区指针 */
     void * getBuf() const { return _buf; }
@@ -1090,7 +1097,7 @@ public:
 
 protected:
     // 零初始化
-    void _zeroInit();
+    void _zeroInit() noexcept;
     // 拷贝构造（不会判断自身原有资源情况）
     void _copyConstruct( void const * buf, size_t size, bool isPeek );
 
@@ -1132,13 +1139,13 @@ public:
 
 #ifndef MOVE_SEMANTICS_DISABLED
     /** \brief 移动构造函数 */
-    GrowBuffer( GrowBuffer && other );
+    GrowBuffer( GrowBuffer && other ) noexcept;
     /** \brief 移动赋值操作 */
-    GrowBuffer & operator = ( GrowBuffer && other );
+    GrowBuffer & operator = ( GrowBuffer && other ) noexcept;
     /** \brief 移动构造函数1 */
-    GrowBuffer( Buffer && other );
+    GrowBuffer( Buffer && other ) noexcept;
     /** \brief 移动赋值操作1 */
-    GrowBuffer & operator = ( Buffer && other );
+    GrowBuffer & operator = ( Buffer && other ) noexcept;
 #endif
 
     /** \brief 添加数据：C语言缓冲区
@@ -1213,7 +1220,7 @@ public:
         meKeyNoExist,       //!< 集合不存在指定键
     };
 
-    MixedError( int errType, AnsiString const & errStr ) throw() : Error( errType, errStr ) { }
+    MixedError( int errType, AnsiString const & errStr ) noexcept : Error( errType, errStr ) { }
 };
 
 /** \brief `Mixed`构造数组辅助类 */
@@ -1263,8 +1270,8 @@ public:
     Collection( Collection const & other );
     Collection & operator = ( Collection const & other );
 
-    Collection( Collection && other );
-    Collection & operator = ( Collection && other );
+    Collection( Collection && other ) noexcept;
+    Collection & operator = ( Collection && other ) noexcept;
 
     /** \brief 构造函数 用map构造Collection */
     template < typename _KTy, typename _VTy, typename _Pr, typename _Alloc >
@@ -1292,10 +1299,10 @@ public:
     void create( bool caseInsensitive = false );
 
     /** \brief 销毁集合 */
-    void destroy();
+    void destroy() noexcept;
 
     /** \brief 清空集合 */
-    void clear();
+    void clear() noexcept;
 
     /** \brief 获取全部键名，返回键名个数 */
     template < typename _Ty, typename _Alloc >
@@ -1402,7 +1409,7 @@ public:
 
 private:
     // 零初始化
-    void _zeroInit()
+    void _zeroInit() noexcept
     {
         memset( this, 0, sizeof(*this) );
     }
@@ -1439,7 +1446,7 @@ private:
     void _implAssign( _Fx1 fn, _Fx2 fnI, _Ty && m, bool caseInsensitive );
 
 private:
-    MixedArray * _pKeysArr; //!< 数组
+    MixedArray * _pKeysArr; //!< Key数组
     union
     {
         MixedMixedMap * _pMap;      //!< 映射表
@@ -1554,8 +1561,8 @@ public:
     // 字符串构造函数 ---------------------------------------------------------------------------
     Mixed( AnsiString const & str );                //!< 多字节字符串
     Mixed( UnicodeString const & str );             //!< Unicode字符串
-    Mixed( AnsiString && str );                //!< 多字节字符串
-    Mixed( UnicodeString && str );             //!< Unicode字符串
+    Mixed( AnsiString && str );                     //!< 多字节字符串
+    Mixed( UnicodeString && str );                  //!< Unicode字符串
     Mixed( char const * str, size_t len = npos );   //!< 多字节字符串
     Mixed( wchar const * str, size_t len = npos );  //!< Unicode字符串
 
@@ -1621,15 +1628,15 @@ public:
     Mixed & operator = ( Mixed const & other );
 
     /** \brief 移动构造函数 */
-    Mixed( Mixed && other );
+    Mixed( Mixed && other ) noexcept;
     /** \brief 移动赋值操作 */
-    Mixed & operator = ( Mixed && other );
+    Mixed & operator = ( Mixed && other ) noexcept;
 
     /** \brief 析构函数 */
     ~Mixed();
 
     /** \brief 释放相关资源 */
-    void free();
+    void free() noexcept;
 
     /** \brief 取得类型 */
     MixedType type() const { return this->_type; }
@@ -1928,17 +1935,25 @@ public:
         return ArrayAssigner(this);
     }
 
-    /** \brief 往数组里加一个元素，返回索引值，非Array类型调用此函数会抛异常 */
-    size_t add( Mixed const & v );
+    /** \brief MixedArray元素结构体，包含索引值和元素引用 */
+    struct MixedArrayElement
+    {
+        size_t index; //!< 索引值
+        Mixed & e; //!< 元素引用
+        MixedArrayElement( size_t index, Mixed & e ) : index(index), e(e) { }
+    };
 
-    /** \brief 往数组里加一个元素，返回索引值，非Array类型调用此函数会抛异常 */
-    size_t add( Mixed && v );
+    /** \brief 往数组里加一个元素，返回索引元素，非Array类型调用此函数会抛异常 */
+    MixedArrayElement add( Mixed const & v );
 
-    /** \brief 往数组里加一个唯一元素，返回索引值，非Array类型调用此函数会抛异常 */
-    size_t addUnique( Mixed const & v );
+    /** \brief 往数组里加一个元素，返回索引元素，非Array类型调用此函数会抛异常 */
+    MixedArrayElement add( Mixed && v );
 
-    /** \brief 往数组里加一个唯一元素，返回索引值，非Array类型调用此函数会抛异常 */
-    size_t addUnique( Mixed && v );
+    /** \brief 往数组里加一个唯一元素，返回索引元素，非Array类型调用此函数会抛异常 */
+    MixedArrayElement addUnique( Mixed const & v );
+
+    /** \brief 往数组里加一个唯一元素，返回索引元素，非Array类型调用此函数会抛异常 */
+    MixedArrayElement addUnique( Mixed && v );
 
     /** \brief 删除一个元素，操作类型可以是Array或Collection，k分别代表索引或键名 */
     void del( Mixed const & k );
@@ -2090,7 +2105,7 @@ public:
 
 private:
     // 零初始化
-    void _zeroInit() { memset( this, 0, sizeof(Mixed) ); }
+    void _zeroInit() noexcept { memset( this, 0, sizeof(Mixed) ); }
     // 拷贝构造（不会判断自身原有资源情况）
     void _copyConstruct( Mixed const & other );
     // 拷贝赋值

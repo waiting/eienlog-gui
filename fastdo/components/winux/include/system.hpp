@@ -14,7 +14,7 @@ public:
         sysNoError,    //!< 无错误
     };
 
-    SystemError( int errType, AnsiString const & errStr ) throw() : Error( errType, errStr ) { }
+    SystemError( int errType, AnsiString const & errStr ) noexcept : Error( errType, errStr ) { }
 };
 
 
@@ -276,7 +276,7 @@ public:
         dllModuleNoLoaded                //!< 模块没加载
     };
 
-    DllLoaderError( int errType, AnsiString const & errStr ) throw() : SystemError( errType, errStr ) { }
+    DllLoaderError( int errType, AnsiString const & errStr ) noexcept : SystemError( errType, errStr ) { }
 };
 
 /** \brief DLL动态载入器 */
@@ -366,16 +366,16 @@ public:
     ~Pipe();
 
     /** \brief 移动构造 */
-    Pipe( Pipe && other );
+    Pipe( Pipe && other ) noexcept;
 
     /** \brief 移动赋值 */
-    Pipe & operator = ( Pipe && other );
+    Pipe & operator = ( Pipe && other ) noexcept;
 
     /** \brief 关闭读端句柄 */
-    void closeRead();
+    void closeRead() noexcept;
 
     /** \brief 关闭写端句柄 */
-    void closeWrite();
+    void closeWrite() noexcept;
 
     /** \brief 读端脱离管理 */
     HPipe detachRead();

@@ -25,7 +25,7 @@
 
 namespace eienexpr
 {
-// macros definitions ---------------------------------------------------------------------
+// macros definitions -------------------------------------------------------------------------
 #define IS_OPERATOR(atom) ((atom)->getAtomType() == ExprAtom::eatOperator)
 
 #define IS_OPERAND(atom) ((atom)->getAtomType() == ExprAtom::eatOperand)
@@ -61,7 +61,7 @@ namespace eienexpr
 #define GET_C_FUNCTION(opd) (static_cast<ExprFunc const *>(opd))
 #define GET_C_EXPRESSION(opd) (static_cast<Expression const *>(opd))
 
-// helper functions -----------------------------------------------------------------------
+// helper functions ---------------------------------------------------------------------------
 #include "is_x_funcs.inl"
 
 template < typename _ChTy >
@@ -71,7 +71,7 @@ inline static _ChTy StringToChar( winux::tchar const * number, int base )
     return (_ChTy)_tcstol( number, &endptr, base );
 }
 
-// class ExprAtom -------------------------------------------------------------------------
+// class ExprAtom -----------------------------------------------------------------------------
 ExprAtom::ExprAtom() : _atomType(eatOperand)
 {
 }
@@ -80,7 +80,7 @@ ExprAtom::~ExprAtom()
 {
 }
 
-// class ExprOperator ---------------------------------------------------------------------
+// class ExprOperator -------------------------------------------------------------------------
 bool ExprOperator::Possibility( ExprPackage const * package, winux::String const & str )
 {
     return package->oprPossibility(str);
@@ -104,20 +104,21 @@ ExprAtom * ExprOperator::clone() const
 
 winux::String ExprOperator::toString() const
 {
-    if ( this->isUnary() )
-    {
-        if ( this->isRight() )
-            return this->getStr();
-        else
-            return this->getStr();
-    }
-    else
-    {
-        if ( this->isRight() )
-            return this->getStr();
-        else
-            return this->getStr();
-    }
+    return this->_oprStr;
+    //if ( this->isUnary() )
+    //{
+    //    if ( this->isRight() )
+    //        return this->getStr();
+    //    else
+    //        return this->getStr();
+    //}
+    //else
+    //{
+    //    if ( this->isRight() )
+    //        return this->getStr();
+    //    else
+    //        return this->getStr();
+    //}
 }
 
 int ExprOperator::nexus( ExprOperator const & opr ) const
@@ -181,7 +182,7 @@ int ExprOperator::nexus( ExprOperator const & opr ) const
     return -2;
 }
 
-// class ExprOperand ----------------------------------------------------------------------
+// class ExprOperand --------------------------------------------------------------------------
 ExprOperand::ExprOperand()
 {
     this->_atomType = ExprAtom::eatOperand;
@@ -266,11 +267,12 @@ bool ExprOperand::evaluateMixedPtr( winux::Mixed ** ppv ) const
     return false;
 }
 
-// class ExprLiteral ----------------------------------------------------------------------
+// class ExprLiteral --------------------------------------------------------------------------
 ExprLiteral::ExprLiteral()
 {
     this->_operandType = ExprOperand::eotLiteral;
 }
+
 ExprLiteral::ExprLiteral( winux::Mixed const & val )
 {
     this->_operandType = ExprOperand::eotLiteral;
@@ -305,51 +307,46 @@ bool ExprLiteral::evaluate( winux::SimplePointer<ExprOperand> * result ) const
     return true;
 }
 
-bool ExprLiteral::NumberPossibility( winux::String const & str, bool * isFloat, bool * isExp )
+bool ExprLiteral::NumberPossibility( winux::String const & str, bool * isPoint, bool * isExp, bool * isHex )
 {
     bool havePoint = false;
     bool haveExp = false;
-    int k;
-    for ( k = 0; k < (int)str.length(); k++ )
+    bool haveHex = false;
+    for ( size_t i = 0; i < str.length(); i++ )
     {
-        if ( !IsDigit(str[k]) ) // 如果不是数字,则看看有没有其他属于数字的字符
+        auto ch = str[i];
+        if ( !IsDigit(ch) && !( haveHex && IsHex(ch) ) ) // 如果不是数字，则看看有没有其他属于数字的字符
         {
-            if ( str[k] == '.' ) // 小数点
+            if ( ch == '.' ) // 小数点
             {
                 // 不能出现在第一个
-                if ( k == 0 ) return false;
-                // 若还没有小数点,则标记为已有
-                if ( havePoint == false )
-                {
-                    havePoint = true;
-                }
-                else
-                {
-                    // 不可能有2个以上小数点
-                    return false;
-                }
+                if ( i == 0 ) return false;
+                // 若已有小数点，则返回false。不可能有2个以上小数点
+                if ( havePoint ) return false;
+                havePoint = true;
             }
-            else if ( str[k] == 'e' || str[k] == 'E' ) // 指数符号
+            else if ( ( ch | 0x20 ) == 'e' ) // 指数符号
             {
                 // 不能出现在第一个
-                if ( k == 0 ) return false;
-                // 若还没有指数符号,则标记为已有
-                if ( haveExp == false )
-                {
-                    haveExp = true;
-                }
-                else
-                {
-                    // 不可能有2个以上指数符号
-                    return false;
-                }
+                if ( i == 0 ) return false;
+                // 若已有指数符号，则返回false。不可能有2个以上指数符号
+                if ( haveExp ) return false;
+                haveExp = true;
             }
-            else if ( str[k] == '-' ) // 负号
+            else if ( ch == '-' ) // 负号
             {
                 // 不能出现在第一个
-                if ( k == 0 ) return false;
+                if ( i == 0 ) return false;
                 // 前一个必须是指数符号
-                if ( str[k - 1] != 'e' && str[k - 1] != 'E' ) return false;
+                if ( ( str[i - 1] | 0x20 ) != 'e' ) return false;
+            }
+            else if ( ( ch | 0x20 ) == 'x' ) // x十六进制起始符号
+            {
+                // x必须在第二个位置且以0开头，否则不是数字
+                if ( !( i == 1 && str[0] == '0' ) ) return false;
+                // 若已标记为16进制串，则返回false。不可能有2个以上x
+                if ( haveHex ) return false;
+                haveHex = true;
             }
             else // 说明含有其他非数字字符
             {
@@ -357,19 +354,19 @@ bool ExprLiteral::NumberPossibility( winux::String const & str, bool * isFloat, 
             }
         }
     }
-    ASSIGN_PTR(isFloat) = havePoint;
+    ASSIGN_PTR(isPoint) = havePoint;
     ASSIGN_PTR(isExp) = haveExp;
+    ASSIGN_PTR(isHex) = haveHex;
     return str.length() > 0;
 }
 
-// class ExprIdentifier --------------------------------------------------------------------------
+// class ExprIdentifier -----------------------------------------------------------------------
 // 标识符可能性
 bool ExprIdentifier::Possibility( winux::String const & str )
 {
-    int i = 0;
-    while ( i < (int)str.length() )
+    for ( size_t i = 0; i < str.length(); ++i )
     {
-        winux::String::value_type ch = str[i];
+        auto ch = str[i];
         bool isDigit = IsDigit(ch);
         if ( IsWord(ch) || isDigit )
         {
@@ -382,9 +379,7 @@ bool ExprIdentifier::Possibility( winux::String const & str )
         {
             return false;
         }
-        ++i;
     }
-
     return true;
 }
 
@@ -422,7 +417,19 @@ bool ExprIdentifier::evaluate( winux::SimplePointer<ExprOperand> * result ) cons
     }
     else
     {
-        result->attachNew( new ExprLiteral() );
+        thread_local std::map< winux::String, winux::Mixed > constMap{
+            { $T("true"), true },
+            { $T("false"), false },
+            { $T("null"), winux::mxNull },
+        };
+        if ( winux::isset( constMap, this->_name ) )
+        {
+            result->attachNew( new ExprLiteral( constMap[this->_name] ) );
+        }
+        else
+        {
+            result->attachNew( new ExprLiteral() );
+        }
         return true;
         //throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal(this->_name).c_str() ) );
     }
@@ -444,7 +451,7 @@ VarContext * ExprIdentifier::getVarContext() const
     return this->_exprObj->getVarContext();
 }
 
-// class ExprReference --------------------------------------------------------------------
+// class ExprReference ------------------------------------------------------------------------
 ExprReference::ExprReference( winux::Mixed & ref, winux::String const & syntax ) : _ref(&ref), _syntax(syntax)
 {
     this->_operandType = ExprOperand::eotReference;
@@ -476,7 +483,7 @@ bool ExprReference::evaluate( winux::SimplePointer<ExprOperand> * result ) const
     return false;
 }
 
-// class ExprFunc -------------------------------------------------------------------------
+// class ExprFunc -----------------------------------------------------------------------------
 ExprFunc::ExprFunc( Expression * exprObj, winux::String const & funcName ) : _exprObj(exprObj), _funcName(funcName)
 {
     this->_operandType = ExprOperand::eotFunction;
@@ -561,7 +568,7 @@ bool ExprFunc::evaluate( winux::SimplePointer<ExprOperand> * result ) const
     return false;
 }
 
-// class Expression -----------------------------------------------------------------------
+// class Expression ---------------------------------------------------------------------------
 Expression::Expression( ExprPackage * package, VarContext * ctx, Expression * parent, void * data )
 {
     this->_operandType = ExprOperand::eotExpression;
@@ -647,9 +654,7 @@ struct EvalNode
     winux::String sub; // 子表达式串
     ExprOperator * opr; // 子表达式的算符
 
-    explicit EvalNode( winux::String const & sub = $T(""), ExprOperator * opr = nullptr ) :
-        sub(sub),
-        opr(opr)
+    explicit EvalNode( winux::String const & sub = $T(""), ExprOperator * opr = nullptr ) : sub(sub), opr(opr)
     {
     }
 
@@ -757,8 +762,16 @@ inline static winux::String __ExpressionToString( Expression const & e )
                 opd1 = rStack.top();
                 rStack.pop();
 
-
-                EvalNode eNode( opd1.toString( true, curOpr ) + $T(" ") + curOpr->toString() + $T(" ") + opd2.toString( false, curOpr ), curOpr );
+                winux::String oprStr;
+                if ( curOpr->getStr() == winux::Literal<winux::String::value_type>::colonStr )
+                {
+                    oprStr = curOpr->getStr();
+                }
+                else
+                {
+                    oprStr = $T(" ") + curOpr->getStr() + $T(" ");
+                }
+                EvalNode eNode( opd1.toString( true, curOpr ) + oprStr + opd2.toString( false, curOpr ), curOpr );
                 rStack.push(eNode);
             }
         }
@@ -937,15 +950,10 @@ void Expression::setVar( winux::String const & name, winux::Mixed const & val )
     }
 }
 
-// class VarContext -----------------------------------------------------------------------
+// class VarContext ---------------------------------------------------------------------------
 VarContext::VarContext( winux::Mixed * collection ) : _collection(nullptr)
 {
     this->setMixedCollection(collection);
-}
-
-VarContext::~VarContext()
-{
-    this->clear();
 }
 
 VarContext::VarContext( VarContext const & other )
@@ -965,10 +973,9 @@ VarContext & VarContext::operator = ( VarContext const & other )
             VariableStruct const & v = it->second;
             if ( v.isNewAlloc )
             {
-                VariableStruct vNew;
+                VariableStruct & vNew = this->_vars[k];
                 vNew.p = new winux::Mixed(*v.p);
                 vNew.isNewAlloc = true;
-                this->_vars[k] = vNew;
             }
             else
             {
@@ -977,6 +984,39 @@ VarContext & VarContext::operator = ( VarContext const & other )
         }
     }
     return *this;
+}
+
+VarContext::VarContext( VarContext && other ) noexcept : _collection( std::move(other._collection) ), _vars( std::move(other._vars) )
+{
+}
+
+VarContext & VarContext::operator = ( VarContext && other ) noexcept
+{
+    if ( this != &other )
+    {
+        this->clear();
+
+        _collection = std::move(other._collection);
+        _vars = std::move(other._vars);
+    }
+    return *this;
+}
+
+VarContext::~VarContext()
+{
+    this->clear();
+}
+
+void VarContext::clear() noexcept
+{
+    for ( auto it = this->_vars.begin(); it != this->_vars.end(); ++it )
+    {
+        if ( it->second.isNewAlloc )
+        {
+            delete it->second.p;
+        }
+    }
+    this->_vars.clear();
 }
 
 void VarContext::setMixedCollection( winux::Mixed * collection )
@@ -1006,20 +1046,17 @@ void VarContext::set( winux::String const & name, winux::Mixed const & v )
     }
     else
     {
+        VariableStruct & var = this->_vars[name];
         if ( this->_collection )
         {
-            VariableStruct var;
             var.p = &this->_collection->operator [] (name);
-            *var.p = v;
             var.isNewAlloc = false;
-            this->_vars[name] = var;
+            *var.p = v;
         }
         else
         {
-            VariableStruct var;
             var.p = new winux::Mixed(v);
             var.isNewAlloc = true;
-            this->_vars[name] = var;
         }
     }
 }
@@ -1032,22 +1069,18 @@ winux::Mixed & VarContext::set( winux::String const & name )
     }
     else
     {
+        VariableStruct & var = this->_vars[name];
         if ( this->_collection )
         {
-            VariableStruct var;
             var.p = &this->_collection->operator [] (name);
             var.isNewAlloc = false;
-            this->_vars[name] = var;
-            return *this->_vars[name].p;
         }
         else
         {
-            VariableStruct var;
             var.p = new winux::Mixed();
             var.isNewAlloc = true;
-            this->_vars[name] = var;
-            return *this->_vars[name].p;
         }
+        return *var.p;
     }
 }
 
@@ -1055,21 +1088,19 @@ void VarContext::setPtr( winux::String const & name, winux::Mixed * v )
 {
     this->unset(name);
 
-    VariableStruct var;
+    VariableStruct & var = this->_vars[name];
     var.p = v;
     var.isNewAlloc = false;
-    this->_vars[name] = var;
 }
 
 winux::Mixed * & VarContext::setPtr( winux::String const & name )
 {
     this->unset(name);
 
-    VariableStruct var;
+    VariableStruct & var = this->_vars[name];
     var.p = NULL;
     var.isNewAlloc = false;
-    this->_vars[name] = var;
-    return this->_vars[name].p;
+    return var.p;
 }
 
 bool VarContext::unset( winux::String const & name )
@@ -1112,18 +1143,6 @@ winux::Mixed const & VarContext::get( winux::String const & name ) const
     return inner;
 }
 
-void VarContext::clear()
-{
-    for ( auto it = this->_vars.begin(); it != this->_vars.end(); ++it )
-    {
-        if ( it->second.isNewAlloc )
-        {
-            delete it->second.p;
-        }
-    }
-    this->_vars.clear();
-}
-
 winux::Mixed VarContext::dump() const
 {
     winux::Mixed result;
@@ -1137,7 +1156,7 @@ winux::Mixed VarContext::dump() const
     return result;
 }
 
-// built-in operators ---------------------------------------------------------------------
+// built-in operators -------------------------------------------------------------------------
 
 // 句点，用于Array/Collection类型访问容器元素 `arr.0` `coll.elem` `coll."key-name"`
 static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
@@ -1148,12 +1167,12 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
         ExprOperand * opd0 = arOperands[0];
         winux::SimplePointer<ExprOperand> evalOpd0;
 
-        if ( IS_NOT_IDENTIFIER(opd0) && IS_NOT_REFERENCE(opd0) ) // 如果第一操作数不是可操作的Identifier,Reference，就尝试计算是否能得到Identifier,Reference，如果不能就抛异常
+        if ( IS_NOT_IDENTIFIER(opd0) && IS_NOT_REFERENCE(opd0) ) // 如果第一操作数不是可操作的Identifier、Reference，就尝试计算是否能得到Identifier、Reference，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
                 throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
 
-            if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier,Reference
+            if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier、Reference
                 throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) || IS_REFERENCE(evalOpd0) ) ) // 如果不能得到Identifier或Reference就抛异常
@@ -1172,7 +1191,7 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
                 throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal( v0->toString() ).c_str() ) );
                 return false;
             }
-            if ( !target->isCollection() && !target->isArray() ) // 变量值不是collect/array类型
+            if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
             {
                 throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
                 return false;
@@ -1211,7 +1230,7 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
             ExprReference * v0 = static_cast<ExprReference *>(opd0);
             winux::Mixed * target = &v0->getRef();
 
-            if ( !target->isCollection() && !target->isArray() ) // 变量值不是collect/array类型
+            if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
             {
                 throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
                 return false;
@@ -1224,7 +1243,7 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
                 ExprIdentifier * v1 = static_cast<ExprIdentifier *>(opd1);
                 key = v1->getName();
             }
-            else if ( IS_LITERAL(opd1) ) //是字面量，用其值做键值索引
+            else if ( IS_LITERAL(opd1) ) // 是字面量，用其值做键值索引
             {
                 ExprLiteral * v1 = static_cast<ExprLiteral *>(opd1);
                 key = v1->getValue();
@@ -1242,6 +1261,116 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
 
             winux::Mixed & tmp = (winux::Mixed &)target->operator [] (key);
             outRetValue->attachNew( new ExprReference( tmp, v0->toString() + $T(".") + key.json() ) );
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// 冒号，用于Array/Collection类型访问容器元素 `arr:0` `coll:elem` `coll:"key-name"`
+static bool __OprColon( Expression const * e, ExprOperand * arOperands[], short n, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( n == 2 )
+    {
+        ExprOperand * opd0 = arOperands[0];
+        winux::SimplePointer<ExprOperand> evalOpd0;
+
+        if ( IS_NOT_IDENTIFIER(opd0) && IS_NOT_REFERENCE(opd0) ) // 如果第一操作数不是可操作的Identifier、Reference，就尝试计算是否能得到Identifier、Reference，如果不能就抛异常
+        {
+            if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+
+            if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier、Reference
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+
+            if ( !( IS_IDENTIFIER(evalOpd0) || IS_REFERENCE(evalOpd0) ) ) // 如果不能得到Identifier或Reference就抛异常
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_INDEXABLE_OBJECT( winux::StringToLocal( opd0->toString() ).c_str() ) );
+
+            opd0 = evalOpd0.get();
+        }
+
+        if ( IS_IDENTIFIER(opd0) )
+        {
+            ExprIdentifier * v0 = static_cast<ExprIdentifier *>(opd0);
+
+            winux::Mixed * target = NULL;
+            if ( !e->getVar( v0->getName(), &target ) ) // 变量未定义
+            {
+                throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal( v0->toString() ).c_str() ) );
+                return false;
+            }
+            if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
+            {
+                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
+                return false;
+            }
+
+            ExprOperand * opd1 = arOperands[1]; // 句点号右边的操作数
+            winux::Mixed key;
+            if ( IS_IDENTIFIER(opd1) ) // 是标识符，只用标识符名称做键值索引
+            {
+                ExprIdentifier * v1 = static_cast<ExprIdentifier *>(opd1);
+                key = v1->getName();
+            }
+            else if ( IS_LITERAL(opd1) ) // 是字面量，用其值做键值索引
+            {
+                ExprLiteral * v1 = static_cast<ExprLiteral *>(opd1);
+                key = v1->getValue();
+            }
+            else // 若是其他，则直接求其值做键值索引
+            {
+                key = opd1->val();
+            }
+
+            if ( target->isArray() && key.toInt() >= (int)target->_pArr->size() )
+            {
+                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( winux::StringToLocal( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
+                return false;
+            }
+
+            winux::Mixed & tmp = (winux::Mixed &)target->operator [] (key);
+            outRetValue->attachNew( new ExprReference( tmp, v0->getName() + $T(":") + key.json() ) );
+            return true;
+
+        }
+        else if ( IS_REFERENCE(opd0) )
+        {
+            ExprReference * v0 = static_cast<ExprReference *>(opd0);
+            winux::Mixed * target = &v0->getRef();
+
+            if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
+            {
+                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
+                return false;
+            }
+
+            ExprOperand * opd1 = arOperands[1];
+            winux::Mixed key;
+            if ( IS_IDENTIFIER(opd1) )
+            {
+                ExprIdentifier * v1 = static_cast<ExprIdentifier *>(opd1);
+                key = v1->getName();
+            }
+            else if ( IS_LITERAL(opd1) ) // 是字面量，用其值做键值索引
+            {
+                ExprLiteral * v1 = static_cast<ExprLiteral *>(opd1);
+                key = v1->getValue();
+            }
+            else
+            {
+                key = opd1->val();
+            }
+
+            if ( target->isArray() && key.toInt() >= (int)target->_pArr->size() )
+            {
+                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( winux::StringToLocal( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
+                return false;
+            }
+
+            winux::Mixed & tmp = (winux::Mixed &)target->operator [] (key);
+            outRetValue->attachNew( new ExprReference( tmp, v0->toString() + $T(":") + key.json() ) );
             return true;
         }
     }
@@ -1910,6 +2039,7 @@ static bool __OprDecrease2( Expression const * e, ExprOperand * arOperands[], sh
 
 static ExprOperator __Operators[] = {
     ExprOperator( $T("."), false, false, 2000, __OprPeriod ),  // 句点
+    ExprOperator( $T(":"), false, false, 2000, __OprColon ),  // 冒号
     ExprOperator( $T("+"), true, true, 1000, __OprPlus ),  // 正号
     ExprOperator( $T("-"), true, true, 1000, __OprMinus ), // 负号
 
@@ -2050,6 +2180,33 @@ inline static bool ___OnlyOneLiteralInExpr( Expression * expr, ExprLiteral * * l
     {
         *literal = GET_LITERAL(opd);
         return true;
+    }
+    return false;
+}
+
+// sqrt(num)，开平方
+static bool __FuncSqrt( Expression * e, std::vector<Expression *> const & params, winux::SimplePointer<ExprOperand> * outRetValue, void * data )
+{
+    outRetValue->attachNew(NULL);
+    if ( params.size() > 0 )
+    {
+        ExprLiteral * retVal = new ExprLiteral();
+        ExprLiteral * opdLiteral = NULL;
+        if ( ___OnlyOneLiteralInExpr( params[0], &opdLiteral ) )
+        {
+            retVal->getValue().assign( sqrt( opdLiteral->getValue().to<double>() ) );
+        }
+        else
+        {
+            retVal->getValue().assign( sqrt( params[0]->val().to<double>() ) );
+        }
+
+        outRetValue->attachNew(retVal);
+        return true;
+    }
+    else
+    {
+        throw ExprError( ExprError::eeFuncParamCountError, EXPRERRSTR_NOT_ENOUGH_PARAMETERS("echo") );
     }
     return false;
 }
@@ -2907,6 +3064,7 @@ ExprFunc::StringFuncMap::value_type __Funcs[] = {
     ExprFunc::StringFuncMap::value_type( $T("if"), __FuncIf ),
     ExprFunc::StringFuncMap::value_type( $T("while"), __FuncWhile ),
     ExprFunc::StringFuncMap::value_type( $T("echo"), __FuncEcho ),
+    ExprFunc::StringFuncMap::value_type( $T("sqrt"), __FuncSqrt ),
     ExprFunc::StringFuncMap::value_type( $T("json"), __FuncJson ),
     ExprFunc::StringFuncMap::value_type( $T("tojson"), __FuncToJson ),
     ExprFunc::StringFuncMap::value_type( $T("arr"), __FuncArr ),
@@ -3095,8 +3253,9 @@ struct __JudgeContext
 {
     bool isOprPrevPossibility; // 前一次是否可能是操作符
     bool isNumPrevPossibility; // 前一次是否可能是数字
-    bool isNumFloatPrev; // 数字是否小数点
+    bool isNumPointPrev; // 数字是否含小数点
     bool isNumExpPrev; // 数字是否含指数符
+    bool isNumHexPrev; // 数字是否含十六进制数
     bool isIdPrevPossibility;  // 前一次是否可能是标识符
 
     winux::String strTmp; // 临时存下的内容
@@ -3108,8 +3267,9 @@ struct __JudgeContext
     {
         isOprPrevPossibility = false;
         isNumPrevPossibility = false;
-        isNumFloatPrev = false;
+        isNumPointPrev = false;
         isNumExpPrev = false;
+        isNumHexPrev = false;
         isIdPrevPossibility = false;
 
         prevAtom = NULL;
@@ -3119,8 +3279,9 @@ struct __JudgeContext
     {
         this->isOprPrevPossibility = false;
         this->isNumPrevPossibility = false;
-        this->isNumFloatPrev = false;
+        this->isNumPointPrev = false;
         this->isNumExpPrev = false;
+        this->isNumHexPrev = false;
         this->isIdPrevPossibility = false;
 
         this->strTmp.clear();
@@ -3184,7 +3345,7 @@ inline static void __IsOkAsOperand( __JudgeContext * ctx, winux::String const & 
     }
 }
 
-// 判断是操作符，数字，还是标识符
+// 判断当前内容是操作符，数字，还是标识符。并添加进后缀式
 inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, int pos )
 {
     ExprPackage * package = e->getPackage();
@@ -3200,14 +3361,14 @@ inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, in
             //  若是单目右结合算符或者双目算符，则当前操作符只可能是单目右结合，搜索他，找到则添加到Atom数组中，找不到，抛出eeExprParseError异常；
             //  若是单目左结合算符，则当前操作符可能是双目算符或者单目左结合算符，搜索他们，找到则添加到Atom数组中，找不到，抛出eeExprParseError异常；
 
-            ExprAtom * curOpr = NULL;
+            ExprAtom * curOprAtom = NULL;
             ExprOperator opr;
 
             if ( ctx->prevAtom == NULL )
             {
                 if ( package->findOpr( &opr, ctx->strTmp, true, true ) != -1 )
                 {
-                    curOpr = opr.clone();
+                    curOprAtom = opr.clone();
                 }
             }
             else
@@ -3220,7 +3381,7 @@ inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, in
                         package->findOpr( &opr, ctx->strTmp, false, true ) != -1
                     )
                     {
-                        curOpr = opr.clone();
+                        curOprAtom = opr.clone();
                     }
                 }
                 else if ( ctx->prevAtom->getAtomType() == ExprAtom::eatOperator )
@@ -3231,7 +3392,7 @@ inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, in
                     {
                         if ( package->findOpr( &opr, ctx->strTmp, true, true ) != -1 )
                         {
-                            curOpr = opr.clone();
+                            curOprAtom = opr.clone();
                         }
                     }
                     else if ( prevOpr->isUnary() && !prevOpr->isRight() ) // 上一次是单目左结合算符
@@ -3242,15 +3403,15 @@ inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, in
                             package->findOpr( &opr, ctx->strTmp, false, true ) != -1
                         )
                         {
-                            curOpr = opr.clone();
+                            curOprAtom = opr.clone();
                         }
                     }
                 }
             }
 
-            if ( curOpr != NULL )
+            if ( curOprAtom != NULL )
             {
-                __AddAtomToSuffix( e, ctx, curOpr );
+                __AddAtomToSuffix( e, ctx, curOprAtom );
             }
             else
             {
@@ -3261,29 +3422,34 @@ inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, in
         {
             __IsOkAsOperand( ctx, ctx->strTmp, pos );
 
-            ExprLiteral * numAtom = NULL;
-            if ( ctx->isNumFloatPrev || ctx->isNumExpPrev ) // 浮点数
+            ExprLiteral * numAtom = new ExprLiteral();
+
+            if ( ctx->isNumPointPrev || ctx->isNumExpPrev ) // 浮点数
             {
                 double dbl = 0.0;
                 winux::ParseDouble( ctx->strTmp, &dbl );
-                numAtom = new ExprLiteral(dbl);
+                numAtom->getValue().assign(dbl);
             }
             else // 整数
             {
-                winux::uint64 ui64 = 0;
-                winux::ParseUInt64( ctx->strTmp, &ui64 );
-
-                winux::Mixed val;
-                if ( ctx->strTmp.length() < 10 ) // int
+                if ( ctx->isNumHexPrev ? ctx->strTmp.length() < 11 : ctx->strTmp.length() < 10 ) // int32
                 {
-                    val.assign( (int)ui64 );
+                    winux::uint ui = 0;
+                    winux::ParseUInt( ctx->strTmp, &ui );
+                    if ( ctx->isNumHexPrev )
+                        numAtom->getValue().assign(ui);
+                    else
+                        numAtom->getValue().assign( (int)ui );
                 }
                 else // int64
                 {
-                    val.assign( (winux::int64)ui64 );
+                    winux::uint64 ui64 = 0;
+                    winux::ParseUInt64( ctx->strTmp, &ui64 );
+                    if ( ctx->isNumHexPrev )
+                        numAtom->getValue().assign(ui64);
+                    else
+                        numAtom->getValue().assign( (winux::int64)ui64 );
                 }
-
-                numAtom = new ExprLiteral(val);
             }
 
             __AddAtomToSuffix( e, ctx, numAtom );
@@ -3322,7 +3488,7 @@ void ExprParser::_parseExpr( Expression * e, winux::String const & str, int & i,
         {
             __JudgeOprOrNumOrId( e, &jctx, i - (int)jctx.strTmp.length() );
 
-            ++i;
+            ++i; // skip `space-char`
         }
         else if ( ch == '\"' || ch == '\'' ) // 字符串
         {
@@ -3333,7 +3499,7 @@ void ExprParser::_parseExpr( Expression * e, winux::String const & str, int & i,
             epc.push_back(epcString);
             _parseString( &v, str, i, epc );
 
-            __IsOkAsOperand( &jctx, str.substr( iStart, i - iStart ), iStart ); //判断当前atom是否能作为操作数
+            __IsOkAsOperand( &jctx, str.substr( iStart, i - iStart ), iStart ); // 判断当前atom是否能作为操作数
 
             ExprLiteral * strAtom = new ExprLiteral(v);
 
@@ -3357,7 +3523,7 @@ void ExprParser::_parseExpr( Expression * e, winux::String const & str, int & i,
                 ExprFunc * funcAtom = new ExprFunc( e, funcName );
                 epc.push_back(epcFuncParams);
                 ++i; // skip `(`
-                //进入函数参数解析
+                // 进入函数参数解析
                 _parseFuncParams( e, funcAtom, str, i, epc );
 
                 __AddAtomToSuffix( e, &jctx, funcAtom );
@@ -3388,11 +3554,12 @@ void ExprParser::_parseExpr( Expression * e, winux::String const & str, int & i,
         {
             bool isOprPossibility = true;
             bool isNumPossibility = true;
-            bool isNumFloat = false;
+            bool isNumPoint = false;
             bool isNumExp = false;
+            bool isNumHex = false;
             bool isIdPossibility = true;
             isOprPossibility = ExprOperator::Possibility( e->_package, jctx.strTmp + ch );
-            isNumPossibility = ExprLiteral::NumberPossibility( jctx.strTmp + ch, &isNumFloat, &isNumExp );
+            isNumPossibility = ExprLiteral::NumberPossibility( jctx.strTmp + ch, &isNumPoint, &isNumExp, &isNumHex );
             isIdPossibility = ExprIdentifier::Possibility( jctx.strTmp + ch );
 
             if ( !isOprPossibility && !isNumPossibility && !isIdPossibility )
@@ -3410,8 +3577,9 @@ void ExprParser::_parseExpr( Expression * e, winux::String const & str, int & i,
             {
                 jctx.isOprPrevPossibility = isOprPossibility;
                 jctx.isNumPrevPossibility = isNumPossibility;
-                jctx.isNumFloatPrev = isNumFloat;
+                jctx.isNumPointPrev = isNumPoint;
                 jctx.isNumExpPrev = isNumExp;
+                jctx.isNumHexPrev = isNumHex;
                 jctx.isIdPrevPossibility = isIdPossibility;
 
                 jctx.strTmp += ch;
@@ -3496,6 +3664,7 @@ void ExprParser::_parseFuncParams( Expression * exprOwner, ExprFunc * funcAtom, 
                 ExprFunc * funcAtom = new ExprFunc( eParam, funcName );
                 epc.push_back(epcFuncParams);
                 ++i; // skip `(`
+                // 进入函数参数解析
                 _parseFuncParams( eParam, funcAtom, str, i, epc );
 
                 __AddAtomToSuffix( eParam, &jctx, funcAtom );
@@ -3526,11 +3695,12 @@ void ExprParser::_parseFuncParams( Expression * exprOwner, ExprFunc * funcAtom, 
         {
             bool isOprPossibility = true;
             bool isNumPossibility = true;
-            bool isNumFloat = false;
+            bool isNumPoint = false;
             bool isNumExp = false;
+            bool isNumHex = false;
             bool isIdPossibility = true;
             isOprPossibility = ExprOperator::Possibility( exprOwner->_package, jctx.strTmp + ch );
-            isNumPossibility = ExprLiteral::NumberPossibility( jctx.strTmp + ch, &isNumFloat, &isNumExp );
+            isNumPossibility = ExprLiteral::NumberPossibility( jctx.strTmp + ch, &isNumPoint, &isNumExp, &isNumHex );
             isIdPossibility = ExprIdentifier::Possibility( jctx.strTmp + ch );
 
             if ( !isOprPossibility && !isNumPossibility && !isIdPossibility )
@@ -3548,8 +3718,9 @@ void ExprParser::_parseFuncParams( Expression * exprOwner, ExprFunc * funcAtom, 
             {
                 jctx.isOprPrevPossibility = isOprPossibility;
                 jctx.isNumPrevPossibility = isNumPossibility;
-                jctx.isNumFloatPrev = isNumFloat;
+                jctx.isNumPointPrev = isNumPoint;
                 jctx.isNumExpPrev = isNumExp;
+                jctx.isNumHexPrev = isNumHex;
                 jctx.isIdPrevPossibility = isIdPossibility;
 
                 jctx.strTmp += ch;
@@ -3587,7 +3758,7 @@ void ExprParser::_parseString( winux::String * v, winux::String const & str, int
         ch = str[i];
         if ( ch == quote )
         {
-            ++i;
+            ++i; // skip quote
 
             epc.pop_back(); // 弹出解析字符串场景标记`epcString`
 

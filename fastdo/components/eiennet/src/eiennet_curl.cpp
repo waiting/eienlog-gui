@@ -103,12 +103,20 @@ CUrl::CUrl( bool isInit ) : _curl(NULL), _errNo(0)
 
 CUrl::CUrl( CUrl const & other ) : _curl(NULL), _errNo(0)
 {
-    this->operator = (other);
-}
-
-CUrl::~CUrl()
-{
-    this->cleanup();
+    // 复制curl对象
+    _curl = curl_easy_duphandle(other._curl);
+    _errNo = other._errNo;
+    _errBuf = other._errBuf;
+    // 重新设置错误缓冲区
+    this->setErrorBuffer(&_errBuf[0]);
+    // 重新设置'写'响应函数的自定义参数
+    this->setWriteHandlerData(this);
+    // 重新设置'读'响应函数的自定义参数
+    this->setReadHandlerData(this);
+    // 重新设置'头部'响应自定义参数
+    this->setHeaderHandlerData(this);
+    // 重新设置'进度'响应自定义参数
+    this->setProgressHandlerData(this);
 }
 
 CUrl & CUrl::operator = ( CUrl const & other )
@@ -118,8 +126,9 @@ CUrl & CUrl::operator = ( CUrl const & other )
         this->cleanup();
         // 复制curl对象
         _curl = curl_easy_duphandle(other._curl);
+        _errNo = other._errNo;
+        _errBuf = other._errBuf;
         // 重新设置错误缓冲区
-        _errBuf.resize(CURL_ERROR_SIZE);
         this->setErrorBuffer(&_errBuf[0]);
         // 重新设置'写'响应函数的自定义参数
         this->setWriteHandlerData(this);
@@ -131,6 +140,56 @@ CUrl & CUrl::operator = ( CUrl const & other )
         this->setProgressHandlerData(this);
     }
     return *this;
+}
+
+CUrl::CUrl( CUrl && other ) noexcept : _curl( std::move(other._curl) ), _errNo( std::move(other._errNo) ), _errBuf( std::move(other._errBuf) )
+{
+    // 重新设置错误缓冲区
+    this->setErrorBuffer(&_errBuf[0]);
+    // 重新设置'写'响应函数的自定义参数
+    this->setWriteHandlerData(this);
+    // 重新设置'读'响应函数的自定义参数
+    this->setReadHandlerData(this);
+    // 重新设置'头部'响应自定义参数
+    this->setHeaderHandlerData(this);
+    // 重新设置'进度'响应自定义参数
+    this->setProgressHandlerData(this);
+
+    other._curl = nullptr;
+    other._errNo = 0;
+    // other._errBuf.clear();
+}
+
+CUrl & CUrl::operator = ( CUrl && other ) noexcept
+{
+    if ( this != &other )
+    {
+        this->cleanup();
+
+        _curl = std::move(other._curl);
+        _errNo = std::move(other._errNo);
+        _errBuf = std::move(other._errBuf);
+        // 重新设置错误缓冲区
+        this->setErrorBuffer(&_errBuf[0]);
+        // 重新设置'写'响应函数的自定义参数
+        this->setWriteHandlerData(this);
+        // 重新设置'读'响应函数的自定义参数
+        this->setReadHandlerData(this);
+        // 重新设置'头部'响应自定义参数
+        this->setHeaderHandlerData(this);
+        // 重新设置'进度'响应自定义参数
+        this->setProgressHandlerData(this);
+
+        other._curl = nullptr;
+        other._errNo = 0;
+        // other._errBuf.clear();
+    }
+    return *this;
+}
+
+CUrl::~CUrl()
+{
+    this->cleanup();
 }
 
 void CUrl::init()
@@ -156,7 +215,7 @@ void CUrl::init()
     this->setProgressHandlerData(this);
 }
 
-void CUrl::cleanup()
+void CUrl::cleanup() noexcept
 {
     if ( _curl )
     {

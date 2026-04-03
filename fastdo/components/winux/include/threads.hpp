@@ -20,9 +20,9 @@ typedef int pid_t;
 class ThreadSysError : public Error
 {
 public:
-    ThreadSysError( int errCode, AnsiString const & errStr ) throw() : Error( errCode, errStr ) {  }
+    ThreadSysError( int errCode, AnsiString const & errStr ) noexcept : Error( errCode, errStr ) {  }
     /** \brief 获取错误代码 */
-    int getErrCode() const throw() { return this->getErrType(); }
+    int getErrCode() const noexcept { return this->getErrType(); }
 };
 
 //=============================================================================================
@@ -68,14 +68,14 @@ public:
     explicit ThreadAttr( bool isCreate = true );
     ~ThreadAttr();
 
-    ThreadAttr( ThreadAttr && other );
-    ThreadAttr & operator = ( ThreadAttr && other );
+    ThreadAttr( ThreadAttr && other ) noexcept;
+    ThreadAttr & operator = ( ThreadAttr && other ) noexcept;
 
     /** \brief 创建并初始化一个线程属性 */
     int create();
 
     /** \brief 销毁一个线程属性 */
-    int destroy();
+    int destroy() noexcept;
 
     /** \brief 判断是否创建了attr */
     operator bool() const;
@@ -132,8 +132,8 @@ public:
     ~ThreadId();
     ThreadId( ThreadId const & other );
     ThreadId & operator = ( ThreadId const & other );
-    ThreadId( ThreadId && other );
-    ThreadId & operator = ( ThreadId && other );
+    ThreadId( ThreadId && other ) noexcept;
+    ThreadId & operator = ( ThreadId && other ) noexcept;
 
     bool operator == ( ThreadId const & other ) const;
     bool operator != ( ThreadId const & other ) const { return !this->operator == (other); }
@@ -201,10 +201,10 @@ public:
     virtual ~Thread();
 
     /** \brief 移动构造 */
-    Thread( Thread && other );
+    Thread( Thread && other ) noexcept;
 
     /** \brief 移动赋值 */
-    Thread & operator = ( Thread && other );
+    Thread & operator = ( Thread && other ) noexcept;
 
     /** \brief 实际创建一个线程
      *
@@ -313,14 +313,14 @@ public:
     explicit MutexAttr( bool isCreate = true );
     ~MutexAttr();
 
-    MutexAttr( MutexAttr && other );
-    MutexAttr & operator = ( MutexAttr && other );
+    MutexAttr( MutexAttr && other ) noexcept;
+    MutexAttr & operator = ( MutexAttr && other ) noexcept;
 
     /** \brief 创建并初始化 */
     int create();
 
     /** \brief 销毁 */
-    int destroy();
+    int destroy() noexcept;
 
     /** \brief 判断是否创建了attr */
     operator bool() const;
@@ -352,14 +352,14 @@ public:
     explicit Mutex( bool isCreate = false );
     ~Mutex();
 
-    Mutex( Mutex && other );
-    Mutex & operator = ( Mutex && other );
+    Mutex( Mutex && other ) noexcept;
+    Mutex & operator = ( Mutex && other ) noexcept;
 
     /** \brief 创建并初始化 */
     virtual int create();
 
     /** \brief 销毁 */
-    int destroy();
+    int destroy() noexcept;
 
     bool lock();
     bool tryLock();
@@ -391,14 +391,14 @@ public:
     explicit ConditionAttr( bool isCreate = true );
     ~ConditionAttr();
 
-    ConditionAttr( ConditionAttr && other );
-    ConditionAttr & operator = ( ConditionAttr && other );
+    ConditionAttr( ConditionAttr && other ) noexcept;
+    ConditionAttr & operator = ( ConditionAttr && other ) noexcept;
 
     /** \brief 创建并初始化 */
     int create();
 
     /** \brief 销毁 */
-    int destroy();
+    int destroy() noexcept;
 
     /** \brief 判断是否创建了attr */
     operator bool() const;
@@ -417,27 +417,27 @@ public:
     explicit Condition( bool isCreate = false );
     ~Condition();
 
-    Condition( Condition && other );
-    Condition & operator = ( Condition && other );
+    Condition( Condition && other ) noexcept;
+    Condition & operator = ( Condition && other ) noexcept;
 
     /** \brief 创建并初始化 */
     int create();
 
     /** \brief 销毁 */
-    int destroy();
+    int destroy() noexcept;
 
     /** \brief 等待被通知
      *
      *  sec<1表示小于1秒的时间，sec<0表示无限等待。eg: sec=1.5表示等待1500ms
      *  在mutex锁定之间调用，超时返回false。不满足条件请循环wait()。eg: while ( !条件 ) wait(); */
-    bool wait( Mutex & mutex, double sec = -1 );
+    bool wait( Mutex & mutex, double sec = -1 ) noexcept;
 
     /** \brief 等待谓词条件达成
      *
      *  sec<1表示小于1秒的时间，sec<0表示无限等待。eg: sec=1.5表示等待1500ms
      *  在mutex锁定之间调用，给定一个谓词描述条件达成，条件不达成就循环wait()，直到达成或超时，超时返回pred()。 */
     template < typename _Predicate >
-    bool waitUntil( _Predicate pred, Mutex & mutex, double sec = -1 )
+    bool waitUntil( _Predicate pred, Mutex & mutex, double sec = -1 ) noexcept
     {
         while ( !pred() )
             if ( !this->wait( mutex, sec ) )
@@ -467,14 +467,14 @@ public:
     explicit TlsKey( void (*destructor)( void *pv ) = NULL );
     ~TlsKey();
 
-    TlsKey( TlsKey && other );
-    TlsKey & operator = ( TlsKey && other );
+    TlsKey( TlsKey && other ) noexcept;
+    TlsKey & operator = ( TlsKey && other ) noexcept;
 
     /** \brief 创建并初始化 */
     int create( void (*destructor)( void *pv ) = NULL );
 
     /** \brief 销毁 */
-    int destroy();
+    int destroy() noexcept;
 
     /** \brief 获取Key值 */
     void * get() const;
@@ -493,8 +493,8 @@ public:
     explicit TlsVar( TlsKey & tlsKey );
     ~TlsVar();
 
-    TlsVar( TlsVar && other );
-    TlsVar & operator = ( TlsVar && other );
+    TlsVar( TlsVar && other ) noexcept;
+    TlsVar & operator = ( TlsVar && other ) noexcept;
 
     void * get();
     void * get() const;
@@ -547,11 +547,11 @@ public:
     {
     }
 
-    ThreadGroup( ThreadGroup && other ) : _mtxGroup( std::move(other._mtxGroup) ), _cdtGroup( std::move(other._cdtGroup) ), _threads( std::move(other._threads) )
+    ThreadGroup( ThreadGroup && other ) noexcept : _mtxGroup( std::move(other._mtxGroup) ), _cdtGroup( std::move(other._cdtGroup) ), _threads( std::move(other._threads) )
     {
     }
 
-    ThreadGroup & operator = ( ThreadGroup && other )
+    ThreadGroup & operator = ( ThreadGroup && other ) noexcept
     {
         if ( this != &other )
         {
@@ -566,7 +566,7 @@ public:
     }
 
     /** \brief 销毁所有线程 */
-    ThreadGroup & destroy();
+    ThreadGroup & destroy() noexcept;
 
     /** \brief 按指定的线程处理例程，创建一定数量的线程 */
     template < typename _Fx, typename... _ArgType >
@@ -604,7 +604,7 @@ public:
     /** \brief 等待所有线程运行完毕
      *
      *  返回false表示超时，返回true表示运行线程全部正常退出 */
-    bool wait( double sec = -1 );
+    bool wait( double sec = -1 ) noexcept;
 
     /** \brief 线程数量 */
     size_t count() const { return _threads.size(); }
@@ -627,5 +627,6 @@ private:
 
 
 } // namespace winux
+
 
 #endif // __THREADS_HPP__

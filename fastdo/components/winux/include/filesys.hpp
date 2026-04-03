@@ -257,7 +257,7 @@ public:
         fsePermissionDenied, //!< 文件系统错误：无权限拒绝访问
         fseInvalidArgument, //!< 文件系统错误：无效参数
     };
-    FileSysError( int errType, AnsiString const & s ) throw() : Error( errType, s ) { }
+    FileSysError( int errType, AnsiString const & s ) noexcept : Error( errType, s ) { }
 };
 
 /** \brief 目录文件枚举器 */
@@ -517,6 +517,8 @@ protected:
     DISABLE_OBJECT_COPY(BlockInFile)
 };
 
+
 } // namespace winux
+
 
 #endif //__FILESYS_HPP__

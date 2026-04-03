@@ -174,7 +174,7 @@ WINUX_FUNC_DECL(uint64) GetUtcTimeUs( void );
 WINUX_FUNC_DECL(time_t) GetUtcTime( void );
 
 
-
 } // namespace winux
+
 
 #endif // __TIME_HPP__

@@ -1028,7 +1028,7 @@ Pipe::~Pipe()
     this->closeWrite();
 }
 
-Pipe::Pipe( Pipe && other )
+Pipe::Pipe( Pipe && other ) noexcept
 {
     _pipeHandle[0] = other._pipeHandle[0];
     _pipeHandle[1] = other._pipeHandle[1];
@@ -1037,7 +1037,7 @@ Pipe::Pipe( Pipe && other )
     other.detachWrite();
 }
 
-Pipe & Pipe::operator = ( Pipe && other )
+Pipe & Pipe::operator = ( Pipe && other ) noexcept
 {
     if ( this != &other )
     {
@@ -1053,7 +1053,7 @@ Pipe & Pipe::operator = ( Pipe && other )
     return *this;
 }
 
-void Pipe::closeRead()
+void Pipe::closeRead() noexcept
 {
 #if defined(OS_WIN)
     if ( _pipeHandle[0] != INVALID_HANDLE_VALUE )
@@ -1070,7 +1070,7 @@ void Pipe::closeRead()
 #endif
 }
 
-void Pipe::closeWrite()
+void Pipe::closeWrite() noexcept
 {
 #if defined(OS_WIN)
     if ( _pipeHandle[1] != INVALID_HANDLE_VALUE )

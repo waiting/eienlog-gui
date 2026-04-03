@@ -6,6 +6,7 @@
     sc( zero, "0" ) sc( one, "1" ) sc( two, "2" ) sc( three, "3" ) sc( four, "4" ) sc( five, "5" ) sc( six, "6" ) sc( seven, "7" ) sc( eight, "8" ) sc( nine, "9" ) \
     sc( nul, "" ) sc( empty, "" ) sc( bel, "\a" ) sc( bs, "\b" ) sc( ht, "\t" ) sc( lf, "\n" ) sc( vt, "\v" ) sc( ff, "\f" ) sc( cr, "\r" ) \
     sc( space, " " ) \
+    sc( grave, "`" ) \
     sc( under, "_" ) \
     sc( dollar, "$" ) \
     sc( slash, "\\" ) \
@@ -26,9 +27,9 @@
     sc( gt, ">" ) \
     sc( eq, "=" ) \
     sc( question, "?" ) \
-    sc( LBRK, "(" ) sc( RBRK, ")" ) \
-    sc( LSquareBRK, "[" ) sc( RSquareBRK, "]" ) \
-    sc( LCurlyBRK, "{" ) sc( RCurlyBRK, "}" ) \
+    sc( lBrk, "(" ) sc( rBrk, ")" ) \
+    sc( lSBrk, "[" ) sc( rSBrk, "]" ) \
+    sc( lCBrk, "{" ) sc( rCBrk, "}" ) \
     s( dbldivide, "//" ) \
     s( crlf, "\r\n" ) \
     s( slash_a, "\\a" ) \
@@ -44,6 +45,7 @@
     s( hexadecLower, "0123456789abcdef" ) \
     s( alphabetUpper, "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ) \
     s( alphabetLower, "abcdefghijklmnopqrstuvwxyz" ) \
+    s( base64, "base64" ) \
     s( boolFalse, "false" ) s( boolTrue, "true" ) s( boolNo, "no" ) s( boolYes, "yes" ) s( boolOff, "off" ) s( boolOn, "on" ) \
     s( nullValue, "null" )
 

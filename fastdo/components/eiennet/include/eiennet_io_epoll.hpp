@@ -106,22 +106,50 @@ public:
     using IoMapMap = std::map< int, std::map< IoType, IoCtx * > >;
     using IoMap = IoMapMap::mapped_type;
 
+    /** \brief 构造函数
+     *
+     *  \param epoll epoll实例 */
     IoEventsData( Epoll * epoll );
 
+    /** \brief 设置与`sock/timer fd`相关的`IoCtx`
+     *
+     *  \param ioCtx IoCtx实例 */
     void setIoCtx( IoCtx * ioCtx );
 
+    /** \brief 获取与`sock/timer fd`相关的指定类型的`IoCtx`
+     *
+     *  \param fd sock/timer fd
+     *  \param type IO类型（ioAccept, ioConnect, ioRecv, ioSend, ioRecvFrom, ioSendTo, ioTimer）
+     *  \return IoCtx实例 */
     IoCtx * getIoCtx( int fd, IoType type );
 
+    /** \brief 删除与`sock/timer fd`相关的指定`IoCtx`
+     *
+     *  \param ioCtx IoCtx实例 */
+    void delIoCtx( IoCtx * ioCtx );
+
+    /** \brief 是否存在与`sock/timer fd`相关的`IoCtxs`
+     *
+     *  \param fd sock/timer fd
+     *  \return 是否存在 */
     bool hasIoCtxs( int fd ) const;
 
+    /** \brief 获取与`sock/timer fd`相关的所有`IoCtxs`
+     *
+     *  \param fd sock/timer fd
+     *  \return IoCtx映射 */
     IoMap & getIoCtxs( int fd );
 
+    /** \brief 删除与`sock/timer fd`相关的所有`IoCtxs`
+     *
+     *  \param fd sock/timer fd */
     void delIoCtxs( int fd );
 
 private:
-    IoMapMap _fdToIoCtxs;
-    winux::Mutex _mtx;
-    Epoll * _epoll;
+    IoMapMap _fdToIoCtxs; //!< fd到IoCtxs的映射
+    std::map< int, uint32_t > _fdToEvents; //!< fd到epoll事件掩码的映射
+    winux::Mutex _mtx; //!< 互斥锁
+    Epoll * _epoll; //!< epoll实例
 
     friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
 };
@@ -138,12 +166,32 @@ public:
 
     ~Epoll();
 
+    /** \brief 添加fd到epoll
+     *
+     *  \param fd sock/timer fd
+     *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT）
+     *  \param data 关联数据
+     *  \return 成功返回0，失败返回-1 */
     int add( int fd, uint32_t events, void * data = nullptr );
 
+    /** \brief 修改fd的epoll事件
+     *
+     *  \param fd sock/timer fd
+     *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT）
+     *  \param data 关联数据
+     *  \return 成功返回0，失败返回-1 */
     int mod( int fd, uint32_t events, void * data = nullptr );
 
+    /** \brief 从epoll删除fd
+     *
+     *  \param fd sock/timer fd
+     *  \return 成功返回0，失败返回-1 */
     int del( int fd );
 
+    /** \brief 等待事件发生
+     *
+     *  \param timeout 超时时间（毫秒），-1表示无限等待
+     *  \return 成功返回事件数量，失败返回-1 */
     int wait( int timeout = -1 );
 
     int get() const { return _epollFd; }

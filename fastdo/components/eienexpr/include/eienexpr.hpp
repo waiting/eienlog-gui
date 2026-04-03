@@ -48,7 +48,7 @@ public:
         eeOutOfArrayBound      //!< 超出数组边界
     };
 
-    ExprError( int errNo, winux::AnsiString const & err ) throw() : winux::Error( errNo, err ) { }
+    ExprError( int errNo, winux::AnsiString const & err ) noexcept : winux::Error( errNo, err ) { }
 };
 
 /** \brief 表达式原子 */
@@ -94,7 +94,7 @@ public:
     /** \brief 仅是文本上判断是否有解析为操作符的可能性 */
     static bool Possibility( ExprPackage const * package, winux::String const & str );
 
-    ExprOperator( winux::String const & oprStr = $T(""), bool isUnary = false, bool isRight = false, short level = 0, OperatorFunction oprFn = NULL );
+    ExprOperator( winux::String const & oprStr = $T(""), bool isUnary = false, bool isRight = false, short level = 0, OperatorFunction oprFn = nullptr );
     virtual ~ExprOperator();
 
     virtual ExprAtom * clone() const override;
@@ -187,7 +187,7 @@ public:
     void setValue( winux::Mixed const & val ) { this->_val = val; }
 
     /** \brief 判断是否有解析为数字的可能性 */
-    static bool NumberPossibility( winux::String const & str, bool * isFloat = NULL, bool * isExp = NULL );
+    static bool NumberPossibility( winux::String const & str, bool * isPoint = nullptr, bool * isExp = nullptr, bool * isHex = nullptr );
 
 protected:
     winux::Mixed _val;
@@ -342,18 +342,25 @@ public:
         winux::Mixed * p;
         bool isNewAlloc; //!< 是否为新分配的Mixed变量
 
-        VariableStruct() : p(NULL), isNewAlloc(false)
+        VariableStruct() : p(nullptr), isNewAlloc(false)
         {
         }
     };
 
     VarContext( winux::Mixed * collection = nullptr );
 
-    virtual ~VarContext();
-
     VarContext( VarContext const & other );
 
     VarContext & operator = ( VarContext const & other );
+
+    VarContext( VarContext && other ) noexcept;
+
+    VarContext & operator = ( VarContext && other ) noexcept;
+
+    virtual ~VarContext();
+
+    /** \brief 清空所有变量 */
+    void clear() noexcept;
 
     /** \brief 设置一个Mixed(Collection)作为变量场景 */
     void setMixedCollection( winux::Mixed * collection );
@@ -389,9 +396,6 @@ public:
     bool get( winux::String const & name, winux::Mixed * * outVarPtr ) const;
 
     winux::Mixed const & get( winux::String const & name ) const;
-
-    /** \brief 清空所有变量 */
-    void clear();
 
     /** \brief 倾泻出所有变量 */
     winux::Mixed dump() const;

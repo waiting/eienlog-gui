@@ -74,16 +74,17 @@ public:
     /** \brief isInit为true将自动调用init()，否则不调用。 */
     CUrl( bool isInit = true );
     CUrl( CUrl const & other );
-    virtual ~CUrl();
-
     /** \brief 释放清理自身curl，复制其他curl，并且拷贝选项设置，并设置自己的一些选项：譬如回调函数对象指针 */
     CUrl & operator = ( CUrl const & other );
+    CUrl( CUrl && other ) noexcept;
+    CUrl & operator = ( CUrl && other ) noexcept;
+    virtual ~CUrl();
 
     /** \brief 初始化curl */
     void init();
 
     /** \brief 释放清理curl */
-    void cleanup();
+    void cleanup() noexcept;
 
     /** \brief 执行操作 */
     bool perform();

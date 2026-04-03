@@ -665,7 +665,7 @@ inline static bool IsKeyNameUseString( XString<_ChTy> const & key )
 }
 
 template < typename _ChTy >
-inline static XString<_ChTy> Impl_Recursive_MixedToJsonEx( int level, Mixed const & v, bool autoKeyQuotes, XString<_ChTy> const & spacer, XString<_ChTy> const & newline )
+inline static XString<_ChTy> Impl_RecursiveMixedToJsonEx( int level, Mixed const & parent, Mixed const & v, bool autoKeyQuotes, XString<_ChTy> const & spacer, XString<_ChTy> const & newline )
 {
     XString<_ChTy> s;
     switch ( v._type )
@@ -684,22 +684,41 @@ inline static XString<_ChTy> Impl_Recursive_MixedToJsonEx( int level, Mixed cons
         s += Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>( v.toString<_ChTy>() ) + Literal<_ChTy>::quoteStr;
         break;
     case Mixed::MT_BINARY:
-        s += Literal<_ChTy>::quoteStr + Base64EncodeBuffer<_ChTy>(*v._pBuf) + Literal<_ChTy>::quoteStr;
+        s += Literal<_ChTy>::aposStr + XString<_ChTy>(Literal<_ChTy>::base64Str) + Literal<_ChTy>::colonStr + Base64EncodeBuffer<_ChTy>(*v._pBuf) + Literal<_ChTy>::aposStr;
         break;
     case Mixed::MT_ARRAY:
         {
-            s += Literal<_ChTy>::LSquareBRKStr + ( newline.empty() || v._pArr->size() == 0 ? Literal<_ChTy>::spaceStr : newline );
-            for ( size_t i = 0; i < v._pArr->size(); ++i )
+            if ( parent.isArray() )
             {
-                if ( i != 0 ) s += Literal<_ChTy>::commaStr + ( newline.empty() ? Literal<_ChTy>::spaceStr : newline );
-                s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + Impl_Recursive_MixedToJsonEx( level + 1, v[i], autoKeyQuotes, spacer, newline );
+                s += Literal<_ChTy>::lSBrkStr;
+                s += Literal<_ChTy>::spaceStr;
+                for ( size_t i = 0; i < v._pArr->size(); ++i )
+                {
+                    if ( i != 0 )
+                    {
+                        s += Literal<_ChTy>::commaStr;
+                        s += Literal<_ChTy>::spaceStr;
+                    }
+                    s += Impl_RecursiveMixedToJsonEx( level + 1, v, v._pArr->at(i), autoKeyQuotes, spacer, newline );
+                }
+                s += Literal<_ChTy>::spaceStr;
+                s += Literal<_ChTy>::rSBrkStr;
             }
-            s += ( newline.empty() || v._pArr->size() == 0 ? Literal<_ChTy>::spaceStr : newline ) + ( spacer.empty() || v._pArr->size() == 0 ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level ) ) + Literal<_ChTy>::RSquareBRKStr;
+            else
+            {
+                s += Literal<_ChTy>::lSBrkStr + ( newline.empty() || v._pArr->size() == 0 ? Literal<_ChTy>::spaceStr : newline );
+                for ( size_t i = 0; i < v._pArr->size(); ++i )
+                {
+                    if ( i != 0 ) s += Literal<_ChTy>::commaStr + ( newline.empty() ? Literal<_ChTy>::spaceStr : newline );
+                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + Impl_RecursiveMixedToJsonEx( level + 1, v, v._pArr->at(i), autoKeyQuotes, spacer, newline );
+                }
+                s += ( newline.empty() || v._pArr->size() == 0 ? Literal<_ChTy>::spaceStr : newline ) + ( spacer.empty() || v._pArr->size() == 0 ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level ) ) + Literal<_ChTy>::rSBrkStr;
+            }
         }
         break;
     case Mixed::MT_COLLECTION:
         {
-            s += Literal<_ChTy>::LCurlyBRKStr + ( newline.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::spaceStr : newline );
+            s += Literal<_ChTy>::lCBrkStr + ( newline.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::spaceStr : newline );
             for ( auto it = v._pColl->refKeysArray().begin(); it != v._pColl->refKeysArray().end(); ++it )
             {
                 if ( it != v._pColl->refKeysArray().begin() ) s += Literal<_ChTy>::commaStr + ( newline.empty() ? Literal<_ChTy>::spaceStr : newline );
@@ -711,13 +730,13 @@ inline static XString<_ChTy> Impl_Recursive_MixedToJsonEx( int level, Mixed cons
                 }
                 else
                 {
-                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + Impl_Recursive_MixedToJsonEx( level + 1, *it, autoKeyQuotes, spacer, newline );
+                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + Impl_RecursiveMixedToJsonEx( level + 1, v, *it, autoKeyQuotes, spacer, newline );
                 }
                 s += Literal<_ChTy>::colonStr + XString<_ChTy>( newline.empty() ? Literal<_ChTy>::nulStr : Literal<_ChTy>::spaceStr );
                 // value
-                s += Impl_Recursive_MixedToJsonEx( level + 1, v._pColl->at(*it), autoKeyQuotes, spacer, newline );
+                s += Impl_RecursiveMixedToJsonEx( level + 1, v, v._pColl->at(*it), autoKeyQuotes, spacer, newline );
             }
-            s += ( newline.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::spaceStr : newline ) + ( spacer.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level ) ) + Literal<_ChTy>::RCurlyBRKStr;
+            s += ( newline.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::spaceStr : newline ) + ( spacer.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level ) ) + Literal<_ChTy>::rCBrkStr;
         }
         break;
     default:
@@ -729,136 +748,98 @@ inline static XString<_ChTy> Impl_Recursive_MixedToJsonEx( int level, Mixed cons
 
 WINUX_FUNC_IMPL(AnsiString) MixedToJsonExA( Mixed const & v, bool autoKeyQuotes, AnsiString const & spacer, AnsiString const & newline )
 {
-    return Impl_Recursive_MixedToJsonEx( 0, v, autoKeyQuotes, spacer, newline );
+    return Impl_RecursiveMixedToJsonEx( 0, mxNull, v, autoKeyQuotes, spacer, newline );
 }
 
 WINUX_FUNC_IMPL(UnicodeString) MixedToJsonExW( Mixed const & v, bool autoKeyQuotes, UnicodeString const & spacer, UnicodeString const & newline )
 {
-    return Impl_Recursive_MixedToJsonEx( 0, v, autoKeyQuotes, spacer, newline );
+    return Impl_RecursiveMixedToJsonEx( 0, mxNull, v, autoKeyQuotes, spacer, newline );
+}
+
+template < typename _ChTy >
+inline static XString<_ChTy> Impl_RecursiveMixedToJson( int level, Mixed const & parent, Mixed const & v, bool autoKeyQuotes )
+{
+    XString<_ChTy> s;
+    switch ( v._type )
+    {
+    case Mixed::MT_NULL:
+        s += Literal<_ChTy>::nullValueStr;
+        break;
+    case Mixed::MT_BOOLEAN:
+        s += v._boolVal ? Literal<_ChTy>::boolTrueStr : Literal<_ChTy>::boolFalseStr;
+        break;
+    case Mixed::MT_CHAR:
+        s += Literal<_ChTy>::aposStr + XString<_ChTy>( 1, (_ChTy)v._chVal ) + Literal<_ChTy>::aposStr;
+        break;
+    case Mixed::MT_ANSI:
+    case Mixed::MT_UNICODE:
+        s += Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>( v.toString<_ChTy>() ) + Literal<_ChTy>::quoteStr;
+        break;
+    case Mixed::MT_BINARY:
+        s += Literal<_ChTy>::aposStr + XString<_ChTy>(Literal<_ChTy>::base64Str) + Literal<_ChTy>::colonStr + Base64EncodeBuffer<_ChTy>(*v._pBuf) + Literal<_ChTy>::aposStr;
+        break;
+    case Mixed::MT_ARRAY:
+        {
+            s += Literal<_ChTy>::lSBrkStr;
+            s += Literal<_ChTy>::spaceStr;
+            for ( size_t i = 0; i < v._pArr->size(); ++i )
+            {
+                if ( i != 0 )
+                {
+                    s += Literal<_ChTy>::commaStr;
+                    s += Literal<_ChTy>::spaceStr;
+                }
+                s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, v._pArr->at(i), autoKeyQuotes );
+            }
+            s += Literal<_ChTy>::spaceStr;
+            s += Literal<_ChTy>::rSBrkStr;
+        }
+        break;
+    case Mixed::MT_COLLECTION:
+        {
+            s += Literal<_ChTy>::lCBrkStr;
+            s += Literal<_ChTy>::spaceStr;
+            for ( auto it = v._pColl->refKeysArray().begin(); it != v._pColl->refKeysArray().end(); ++it )
+            {
+                if ( it != v._pColl->refKeysArray().begin() )
+                {
+                    s += Literal<_ChTy>::commaStr;
+                    s += Literal<_ChTy>::spaceStr;
+                }
+                // key
+                if ( it->isString() )
+                {
+                    XString<_ChTy> k = *it;
+                    s += autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(k) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(k) + Literal<_ChTy>::quoteStr );
+                }
+                else
+                {
+                    s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, *it, autoKeyQuotes );
+                }
+                s += Literal<_ChTy>::colonStr;
+                // value
+                s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, v._pColl->at(*it), autoKeyQuotes );
+            }
+            s += Literal<_ChTy>::spaceStr;
+            s += Literal<_ChTy>::rCBrkStr;
+        }
+        break;
+    default:
+        s += v.toString<_ChTy>();
+        break;
+    }
+    return s;
 }
 
 WINUX_FUNC_IMPL(AnsiString) MixedToJsonA( Mixed const & v, bool autoKeyQuotes )
 {
-    AnsiString s;
-    switch ( v._type )
-    {
-    case Mixed::MT_NULL:
-        s += "null";
-        break;
-    case Mixed::MT_BOOLEAN:
-        s += v._boolVal ? "true" : "false";
-        break;
-    case Mixed::MT_CHAR:
-        s += "'" + AnsiString( 1, v._chVal ) + "'";
-        break;
-    case Mixed::MT_ANSI:
-    case Mixed::MT_UNICODE:
-        s += "\"" + AddCSlashes<char>( v.toAnsi() ) + "\"";
-        break;
-    case Mixed::MT_BINARY:
-        s += "\"" + Base64EncodeBuffer<char>(*v._pBuf) + "\"";
-        break;
-    case Mixed::MT_ARRAY:
-        {
-            s += "[ ";
-            for ( size_t i = 0; i < v.getCount(); ++i )
-            {
-                if ( i != 0 ) s += ", ";
-                s += MixedToJsonA( v[i] , autoKeyQuotes );
-            }
-            s += " ]";
-        }
-        break;
-    case Mixed::MT_COLLECTION:
-        {
-            s += "{ ";
-            for ( auto it = v._pColl->refKeysArray().begin(); it != v._pColl->refKeysArray().end(); ++it )
-            {
-                if ( it != v._pColl->refKeysArray().begin() ) s += ", ";
-                // key
-                if ( it->isString() )
-                {
-                    AnsiString k = *it;
-                    s += autoKeyQuotes ? ( IsKeyNameUseString(k) ? "\"" + AddCSlashes<char>(k) + "\"" : k ) : ( "\"" + AddCSlashes<char>(k) + "\"" );
-                }
-                else
-                {
-                    s += MixedToJsonA( *it, autoKeyQuotes );
-                }
-                s += ":";
-                // value
-                s += MixedToJsonA( v._pColl->at(*it), autoKeyQuotes );
-            }
-            s += " }";
-        }
-        break;
-    default:
-        s += v.toAnsi();
-        break;
-    }
-    return s;
+    return Impl_RecursiveMixedToJson<char>( 0, mxNull, v, autoKeyQuotes );
 }
 
 WINUX_FUNC_IMPL(UnicodeString) MixedToJsonW( Mixed const & v, bool autoKeyQuotes )
 {
-    UnicodeString s;
-    switch ( v._type )
-    {
-    case Mixed::MT_NULL:
-        s += L"null";
-        break;
-    case Mixed::MT_BOOLEAN:
-        s += v._boolVal ? L"true" : L"false";
-        break;
-    case Mixed::MT_CHAR:
-        s += L"'" + UnicodeString( 1, v._chVal ) + L"'";
-        break;
-    case Mixed::MT_ANSI:
-    case Mixed::MT_UNICODE:
-        s += L"\"" + AddCSlashes<wchar>( v.toUnicode() ) + L"\"";
-        break;
-    case Mixed::MT_BINARY:
-        s += L"\"" + Base64EncodeBuffer<wchar>(*v._pBuf) + L"\"";
-        break;
-    case Mixed::MT_ARRAY:
-        {
-            s += L"[ ";
-            for ( size_t i = 0; i < v.getCount(); ++i )
-            {
-                if ( i != 0 ) s += L", ";
-                s += MixedToJsonW( v[i], autoKeyQuotes );
-            }
-            s += L" ]";
-        }
-        break;
-    case Mixed::MT_COLLECTION:
-        {
-            s += L"{ ";
-            for ( auto it = v._pColl->refKeysArray().begin(); it != v._pColl->refKeysArray().end(); ++it )
-            {
-                if ( it != v._pColl->refKeysArray().begin() ) s += L", ";
-                // key
-                if ( it->isString() )
-                {
-                    UnicodeString k = *it;
-                    s += autoKeyQuotes ? ( IsKeyNameUseString(k) ? L"\"" + AddCSlashes<wchar>(k) + L"\"" : k ): ( L"\"" + AddCSlashes<wchar>(k) + L"\"" );
-                }
-                else
-                {
-                    s += MixedToJsonW( *it, autoKeyQuotes );
-                }
-                s += L":";
-                // value
-                s += MixedToJsonW( v._pColl->at(*it), autoKeyQuotes );
-            }
-            s += L" }";
-        }
-        break;
-    default:
-        s += v.toUnicode();
-        break;
-    }
-    return s;
+    return Impl_RecursiveMixedToJson<wchar>( 0, mxNull, v, autoKeyQuotes );
 }
+
 
 } // namespace winux

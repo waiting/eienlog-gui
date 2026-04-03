@@ -21,7 +21,7 @@ private:
 class SocketError : public winux::Error
 {
 public:
-    SocketError( int errType, winux::AnsiString const & errStr ) : winux::Error( errType, errStr ) { }
+    SocketError( int errType, winux::AnsiString const & errStr ) noexcept : winux::Error( errType, errStr ) { }
 };
 
 class EndPoint;
@@ -183,9 +183,9 @@ public:
 
 #ifndef MOVE_SEMANTICS_DISABLED
     /** \brief 移动构造函数 */
-    Socket( Socket && other );
+    Socket( Socket && other ) noexcept;
     /** \brief 移动赋值操作 */
-    Socket & operator = ( Socket && other );
+    Socket & operator = ( Socket && other ) noexcept;
 #endif
 
     /** \brief 析构函数 */
@@ -225,7 +225,7 @@ public:
 
 public:
     /** \brief 关闭socket描述符 */
-    int close();
+    int close() noexcept;
 
     /** \brief 关掉socket的相应操作，但并不会close套接字。
      *
@@ -527,7 +527,7 @@ protected:
     }
 
     // 重置socket资源管理相关变量
-    void _resetManaged()
+    void _resetManaged() noexcept
     {
         this->_sock = -1;
         this->_isNewSock = false;
@@ -757,8 +757,8 @@ public:
     EndPoint & operator = ( EndPoint const & other );
 
 #ifndef MOVE_SEMANTICS_DISABLED
-    EndPoint( EndPoint && other );
-    EndPoint & operator = ( EndPoint && other );
+    EndPoint( EndPoint && other ) noexcept;
+    EndPoint & operator = ( EndPoint && other ) noexcept;
 #endif
 
     virtual ~EndPoint();

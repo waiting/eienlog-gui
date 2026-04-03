@@ -328,7 +328,7 @@ Socket::Socket( AddrFamily af, SockType sockType, Protocol proto )
 }
 
 #ifndef MOVE_SEMANTICS_DISABLED
-Socket::Socket( Socket && other ) :
+Socket::Socket( Socket && other ) noexcept :
     _addrFamily( std::move(other._addrFamily) ),
     _sockType( std::move(other._sockType) ),
     _protocol( std::move(other._protocol) ),
@@ -347,7 +347,7 @@ Socket::Socket( Socket && other ) :
     other._resetManaged();
 }
 
-Socket & Socket::operator = ( Socket && other )
+Socket & Socket::operator = ( Socket && other ) noexcept
 {
     if ( this != &other )
     {
@@ -508,7 +508,7 @@ bool Socket::_tryCreate( AddrFamily af, bool hasAf, SockType sockType, bool hasS
     return true;
 }
 
-int Socket::close()
+int Socket::close() noexcept
 {
     int rc = 0;
     if ( this->_isNewSock )
@@ -1773,11 +1773,11 @@ EndPoint & EndPoint::operator = ( EndPoint const & other )
 }
 
 #ifndef MOVE_SEMANTICS_DISABLED
-EndPoint::EndPoint( EndPoint && other ) : _self( std::move(other._self) )
+EndPoint::EndPoint( EndPoint && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-EndPoint & EndPoint::operator = ( EndPoint && other )
+EndPoint & EndPoint::operator = ( EndPoint && other ) noexcept
 {
     if ( this != &other )
     {

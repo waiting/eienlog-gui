@@ -397,7 +397,7 @@ Buffer & Buffer::operator = ( Buffer const & other )
 
 #ifndef MOVE_SEMANTICS_DISABLED
 
-Buffer::Buffer( Buffer && other ) :
+Buffer::Buffer( Buffer && other ) noexcept :
     _buf( std::move(other._buf) ),
     _dataSize( std::move(other._dataSize) ),
     _capacity( std::move(other._capacity) ),
@@ -406,7 +406,7 @@ Buffer::Buffer( Buffer && other ) :
     other._zeroInit();
 }
 
-Buffer & Buffer::operator = ( Buffer && other )
+Buffer & Buffer::operator = ( Buffer && other ) noexcept
 {
     if ( this != &other )
     {
@@ -422,7 +422,7 @@ Buffer & Buffer::operator = ( Buffer && other )
     return *this;
 }
 
-Buffer::Buffer( GrowBuffer && other ) :
+Buffer::Buffer( GrowBuffer && other ) noexcept :
     _buf( std::move(other._buf) ),
     _dataSize( std::move(other._dataSize) ),
     _capacity( std::move(other._capacity) ),
@@ -431,7 +431,7 @@ Buffer::Buffer( GrowBuffer && other ) :
     other._zeroInit();
 }
 
-Buffer & Buffer::operator = ( GrowBuffer && other )
+Buffer & Buffer::operator = ( GrowBuffer && other ) noexcept
 {
     if ( this != &other )
     {
@@ -531,7 +531,7 @@ void * Buffer::detachBuf( size_t * size )
     return buf;
 }
 
-void Buffer::free()
+void Buffer::free() noexcept
 {
     if ( this->_buf != NULL && !this->_isPeek )
     {
@@ -540,7 +540,7 @@ void Buffer::free()
     }
 }
 
-void Buffer::_zeroInit()
+void Buffer::_zeroInit() noexcept
 {
     this->_buf = nullptr;
     this->_dataSize = 0U;
@@ -599,11 +599,11 @@ GrowBuffer & GrowBuffer::operator = ( Buffer const & other )
 
 #ifndef MOVE_SEMANTICS_DISABLED
 
-GrowBuffer::GrowBuffer( GrowBuffer && other ) : Buffer( std::move(other) )
+GrowBuffer::GrowBuffer( GrowBuffer && other ) noexcept : Buffer( std::move(other) )
 {
 }
 
-GrowBuffer & GrowBuffer::operator = ( GrowBuffer && other )
+GrowBuffer & GrowBuffer::operator = ( GrowBuffer && other ) noexcept
 {
     if ( this != &other )
     {
@@ -612,11 +612,11 @@ GrowBuffer & GrowBuffer::operator = ( GrowBuffer && other )
     return *this;
 }
 
-GrowBuffer::GrowBuffer( Buffer && other ) : Buffer( std::move(other) )
+GrowBuffer::GrowBuffer( Buffer && other ) noexcept : Buffer( std::move(other) )
 {
 }
 
-GrowBuffer & GrowBuffer::operator = ( Buffer && other )
+GrowBuffer & GrowBuffer::operator = ( Buffer && other ) noexcept
 {
     if ( this != &other )
     {
@@ -805,13 +805,13 @@ Collection & Collection::operator = ( Collection const & other )
     return *this;
 }
 
-Collection::Collection( Collection && other )
+Collection::Collection( Collection && other ) noexcept
 {
     memcpy( this, &other, sizeof(*this) );
     other._zeroInit();
 }
 
-Collection & Collection::operator = ( Collection && other )
+Collection & Collection::operator = ( Collection && other ) noexcept
 {
     if ( this == &other ) return *this;
     if ( this->_pKeysArr && ( this->_pMap || this->_pMapI ) ) // 当前已经存在分配的数组和映射表
@@ -910,7 +910,7 @@ void Collection::create( bool caseInsensitive )
         this->_pMap = new MixedMixedMap();
 }
 
-void Collection::destroy()
+void Collection::destroy() noexcept
 {
     if ( this->_pKeysArr ) delete this->_pKeysArr;
     if ( this->_caseInsensitive )
@@ -924,7 +924,7 @@ void Collection::destroy()
     this->_zeroInit();
 }
 
-void Collection::clear()
+void Collection::clear() noexcept
 {
     if ( this->_pKeysArr ) this->_pKeysArr->clear();
     if ( this->_caseInsensitive )
@@ -1284,13 +1284,13 @@ Mixed & Mixed::operator = ( Mixed const & other )
     return *this;
 }
 
-Mixed::Mixed( Mixed && other )
+Mixed::Mixed( Mixed && other ) noexcept
 {
     memcpy( this, &other, sizeof(Mixed) );
     other._zeroInit();
 }
 
-Mixed & Mixed::operator = ( Mixed && other )
+Mixed & Mixed::operator = ( Mixed && other ) noexcept
 {
     if ( this != &other )
     {
@@ -1307,7 +1307,7 @@ Mixed::~Mixed()
     this->free();
 }
 
-void Mixed::free()
+void Mixed::free() noexcept
 {
     switch ( this->_type )
     {
@@ -3353,14 +3353,14 @@ Mixed & Mixed::addPair( Mixed const & k, Mixed const & v )
 }
 
 template < typename _Ty >
-inline static size_t __MixedAdd( Mixed * thisMx, _Ty && v )
+inline static Mixed::MixedArrayElement __MixedAdd( Mixed * thisMx, _Ty && v )
 {
     size_t i = thisMx->_pArr->size();
     thisMx->_pArr->push_back( std::forward<_Ty>(v) );
-    return i;
+    return Mixed::MixedArrayElement( i, thisMx->_pArr->at(i) );
 }
 
-size_t Mixed::add( Mixed const & v )
+Mixed::MixedArrayElement Mixed::add( Mixed const & v )
 {
     if ( this->isArray() )
     {
@@ -3372,7 +3372,7 @@ size_t Mixed::add( Mixed const & v )
     }
 }
 
-size_t Mixed::add( Mixed && v )
+Mixed::MixedArrayElement Mixed::add( Mixed && v )
 {
     if ( this->isArray() )
     {
@@ -3384,19 +3384,18 @@ size_t Mixed::add( Mixed && v )
     }
 }
 
-size_t Mixed::addUnique( Mixed const & v )
+Mixed::MixedArrayElement Mixed::addUnique( Mixed const & v )
 {
     if ( this->isArray() )
     {
         size_t i;
         for ( i = 0; i < this->_pArr->size(); ++i )
         {
-            if ( (*this->_pArr)[i] == v )
+            if ( this->_pArr->at(i) == v )
             {
-                return i;
+                return Mixed::MixedArrayElement( i, this->_pArr->at(i) );
             }
         }
-
         return __MixedAdd( this, v );
     }
     else
@@ -3405,19 +3404,18 @@ size_t Mixed::addUnique( Mixed const & v )
     }
 }
 
-size_t Mixed::addUnique( Mixed && v )
+Mixed::MixedArrayElement Mixed::addUnique( Mixed && v )
 {
     if ( this->isArray() )
     {
         size_t i;
         for ( i = 0; i < this->_pArr->size(); ++i )
         {
-            if ( (*this->_pArr)[i] == v )
+            if ( this->_pArr->at(i) == v )
             {
-                return i;
+                return Mixed::MixedArrayElement( i, this->_pArr->at(i) );
             }
         }
-
         return __MixedAdd( this, std::move(v) );
     }
     else

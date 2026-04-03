@@ -100,11 +100,11 @@ ThreadAttr::~ThreadAttr()
     this->destroy();
 }
 
-ThreadAttr::ThreadAttr( ThreadAttr && other ) : _self( std::move(other._self) )
+ThreadAttr::ThreadAttr( ThreadAttr && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-ThreadAttr & ThreadAttr::operator = ( ThreadAttr && other )
+ThreadAttr & ThreadAttr::operator = ( ThreadAttr && other ) noexcept
 {
     if ( this != &other )
     {
@@ -126,7 +126,7 @@ int ThreadAttr::create()
     return rc;
 }
 
-int ThreadAttr::destroy()
+int ThreadAttr::destroy() noexcept
 {
     if ( _self && _self->pThreadAttr != NULL )
     {
@@ -288,11 +288,11 @@ ThreadId & ThreadId::operator = ( ThreadId const & other )
     return *this;
 }
 
-ThreadId::ThreadId( ThreadId && other ) : _self( std::move(other._self) )
+ThreadId::ThreadId( ThreadId && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-ThreadId & ThreadId::operator = ( ThreadId && other )
+ThreadId & ThreadId::operator = ( ThreadId && other ) noexcept
 {
     if ( this != &other )
     {
@@ -380,7 +380,7 @@ Thread::~Thread()
 
 }
 
-Thread::Thread( Thread && other ) :
+Thread::Thread( Thread && other ) noexcept :
     _attr( std::move(other._attr) ),
     _exitVal( std::move(other._exitVal) ),
     _deleter( std::move(other._deleter) ),
@@ -394,7 +394,7 @@ Thread::Thread( Thread && other ) :
     other._param = nullptr;
 }
 
-Thread & Thread::operator = ( Thread && other )
+Thread & Thread::operator = ( Thread && other ) noexcept
 {
     if ( this != &other )
     {
@@ -536,11 +536,11 @@ MutexAttr::~MutexAttr()
     this->destroy();
 }
 
-MutexAttr::MutexAttr( MutexAttr && other ) : _self( std::move(other._self) )
+MutexAttr::MutexAttr( MutexAttr && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-MutexAttr & MutexAttr::operator = ( MutexAttr && other )
+MutexAttr & MutexAttr::operator = ( MutexAttr && other ) noexcept
 {
     if ( this != &other )
     {
@@ -562,7 +562,7 @@ int MutexAttr::create()
     return rc;
 }
 
-int MutexAttr::destroy()
+int MutexAttr::destroy() noexcept
 {
     if ( _self && _self->pMutexAttr != NULL )
     {
@@ -653,11 +653,11 @@ Mutex::~Mutex()
     this->destroy();
 }
 
-Mutex::Mutex( Mutex && other ) : _attr( std::move(other._attr) ), _self( std::move(other._self) )
+Mutex::Mutex( Mutex && other ) noexcept : _attr( std::move(other._attr) ), _self( std::move(other._self) )
 {
 }
 
-Mutex & Mutex::operator = ( Mutex && other )
+Mutex & Mutex::operator = ( Mutex && other ) noexcept
 {
     if ( this != &other )
     {
@@ -680,7 +680,7 @@ int Mutex::create()
     return rc;
 }
 
-int Mutex::destroy()
+int Mutex::destroy() noexcept
 {
     if ( _self && _self->pMutex != NULL )
     {
@@ -771,11 +771,11 @@ ConditionAttr::~ConditionAttr()
     this->destroy();
 }
 
-ConditionAttr::ConditionAttr( ConditionAttr && other ) : _self( std::move(other._self) )
+ConditionAttr::ConditionAttr( ConditionAttr && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-ConditionAttr & ConditionAttr::operator = ( ConditionAttr && other )
+ConditionAttr & ConditionAttr::operator = ( ConditionAttr && other ) noexcept
 {
     if ( this != &other )
     {
@@ -797,7 +797,7 @@ int ConditionAttr::create()
     return rc;
 }
 
-int ConditionAttr::destroy()
+int ConditionAttr::destroy() noexcept
 {
     if ( _self && _self->pCondAttr != NULL )
     {
@@ -841,11 +841,11 @@ Condition::~Condition()
     this->destroy();
 }
 
-Condition::Condition( Condition && other ) : _attr( std::move(other._attr) ), _self( std::move(other._self) )
+Condition::Condition( Condition && other ) noexcept : _attr( std::move(other._attr) ), _self( std::move(other._self) )
 {
 }
 
-Condition & Condition::operator = ( Condition && other )
+Condition & Condition::operator = ( Condition && other ) noexcept
 {
     if ( this != &other )
     {
@@ -868,7 +868,7 @@ int Condition::create()
     return rc;
 }
 
-int Condition::destroy()
+int Condition::destroy() noexcept
 {
     if ( _self && _self->pCond != NULL )
     {
@@ -882,7 +882,7 @@ int Condition::destroy()
     return -1;
 }
 
-bool Condition::wait( Mutex & mutex, double sec )
+bool Condition::wait( Mutex & mutex, double sec ) noexcept
 {
     int rc;
     if ( sec < 0 )
@@ -954,11 +954,11 @@ TlsKey::~TlsKey()
     this->destroy();
 }
 
-TlsKey::TlsKey( TlsKey && other ) : _self( std::move(other._self) )
+TlsKey::TlsKey( TlsKey && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-TlsKey & TlsKey::operator = ( TlsKey && other )
+TlsKey & TlsKey::operator = ( TlsKey && other ) noexcept
 {
     if ( this != &other )
     {
@@ -977,7 +977,7 @@ int TlsKey::create( void (*destructor)( void *pv ) )
     return rc;
 }
 
-int TlsKey::destroy()
+int TlsKey::destroy() noexcept
 {
     if ( _self && _self->_key )
     {
@@ -1005,11 +1005,11 @@ TlsVar::~TlsVar()
 {
 }
 
-TlsVar::TlsVar( TlsVar && other ) : _tlsKey( std::move(other._tlsKey) )
+TlsVar::TlsVar( TlsVar && other ) noexcept : _tlsKey( std::move(other._tlsKey) )
 {
 }
 
-TlsVar & TlsVar::operator = ( TlsVar && other )
+TlsVar & TlsVar::operator = ( TlsVar && other ) noexcept
 {
     if ( this != &other )
     {
@@ -1060,7 +1060,7 @@ void * ThreadGroup::_ThreadGroupDefaultFunc( void * param )
 }
 
 
-ThreadGroup & ThreadGroup::destroy()
+ThreadGroup & ThreadGroup::destroy() noexcept
 {
     _threads.clear();
     return *this;
@@ -1079,7 +1079,7 @@ ThreadGroup & ThreadGroup::startup()
     return *this;
 }
 
-bool ThreadGroup::wait( double sec )
+bool ThreadGroup::wait( double sec ) noexcept
 {
     // 检测所有线程运行状态为false
     ScopeGuard guard(_mtxGroup);

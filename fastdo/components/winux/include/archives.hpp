@@ -76,16 +76,19 @@ private:
 class WINUX_DLL ConfigureSettings
 {
 public:
+    static String ValToString( Mixed const & v, String const & spacer = $T("  "), String const & newline = $T("\n") );
+    static Mixed Parse( String const & valStr );
+
     /** \brief 构造函数1
      *
      *  如果需要设置配置文件的外部变量，必须先调用set()，然后才load()配置文件。
      *  \param settingsFile 配置文件路径 */
-    ConfigureSettings( String const & settingsFile = $T("") );
-    ~ConfigureSettings();
+    explicit ConfigureSettings( String const & settingsFile = $T("") );
     ConfigureSettings( ConfigureSettings const & other );
-    ConfigureSettings( ConfigureSettings && other );
     ConfigureSettings & operator = ( ConfigureSettings const & other );
-    ConfigureSettings & operator = ( ConfigureSettings && other );
+    ConfigureSettings( ConfigureSettings && other ) noexcept;
+    ConfigureSettings & operator = ( ConfigureSettings && other ) noexcept;
+    ~ConfigureSettings();
 
     /** \brief 加载设置文件
      *
@@ -130,8 +133,15 @@ public:
     /** \brief 获取设置文件目录 */
     String getSettingsDir() const;
 
+    /** \brief 转换为字符串 */
+    String toString( String const & spacer = $T("  "), String const & newline = $T("\n") ) const;
+
+    /** \brief 值转换为字符串 */
+    String valToString( String const & spacer = $T("  "), String const & newline = $T("\n") ) const;
+
 private:
-    size_t _load( String const & settingsFile, winux::Mixed * collAsVal, winux::Mixed * collAsExpr, StringArray * loadFileChains );
+    // 加载配置文件
+    size_t _load( String const & settingsFile, winux::Mixed * collVal, winux::Mixed * collExpr, StringArray * loadFileChains );
 
     String _settingsFile; // 设置文件
     Mixed _collectionVal; // 存储值

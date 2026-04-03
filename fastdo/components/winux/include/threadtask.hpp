@@ -372,7 +372,6 @@ public:
             taskCtx->updateStatus( TaskCtx::taskStop, true );
 
         }, prevTaskCtx, _taskCtx.get() ) );
-
     }
 
     /** \brief Ctor2-2 给一个任务创建一个后续任务 - 类方法执行 */
@@ -399,7 +398,6 @@ public:
             taskCtx->updateStatus( TaskCtx::taskStop, true );
 
         }, prevTaskCtx, _taskCtx.get() ) );
-
     }
 
     /** \brief Ctor3-1 给一个任务创建一个后续任务，并把上一个任务返回值移动给后续任务 */
@@ -427,7 +425,6 @@ public:
             taskCtx->updateStatus( TaskCtx::taskStop, true );
 
         }, prevTaskCtx, _taskCtx.get() ) );
-
     }
 
     /** \brief Ctor3-2 给一个任务创建一个后续任务，并把上一个任务返回值移动给后续任务 - 类方法执行 */
@@ -455,7 +452,6 @@ public:
             taskCtx->updateStatus( TaskCtx::taskStop, true );
 
         }, prevTaskCtx, _taskCtx.get() ) );
-
     }
 
     virtual ~Task()
@@ -526,5 +522,6 @@ private:
     template < typename _Ty0 >
     friend class Task;
 };
+
 
 } // namespace winux
