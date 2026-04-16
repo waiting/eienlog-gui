@@ -19,7 +19,7 @@ WINPLUS_FUNC_IMPL(String) Utf8ToString( AnsiString const & utf8 )
         0
     );
     unicode.resize( cch + 1 );
-    MultiByteToWideChar(
+    INT cchRet = MultiByteToWideChar(
         CP_UTF8,
         0,
         utf8.c_str(),
@@ -27,12 +27,12 @@ WINPLUS_FUNC_IMPL(String) Utf8ToString( AnsiString const & utf8 )
         &unicode[0],
         cch
     );
-    return UnicodeToString( unicode.c_str() );
+    return UNICODE_TO_STRING( unicode.c_str() );
 }
 
 WINPLUS_FUNC_IMPL(AnsiString) StringToUtf8( String const & str )
 {
-    UnicodeString unicode = StringToUnicode(str);
+    UnicodeString unicode = STRING_TO_UNICODE(str);
     AnsiString utf8;
     INT length = WideCharToMultiByte(
         CP_UTF8,
@@ -111,7 +111,7 @@ WINPLUS_FUNC_IMPL(UnicodeString) LoadStringExW( HMODULE hModule, UINT id )
 
 WINPLUS_FUNC_IMPL(String) LoadStringEx( HMODULE hModule, UINT id )
 {
-    return UnicodeToString( LoadStringExW( hModule, id ) );
+    return UNICODE_TO_STRING( LoadStringExW( hModule, id ) );
 }
 
 WINPLUS_FUNC_IMPL(String) LoadString( UINT id )

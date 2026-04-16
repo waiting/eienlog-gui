@@ -373,7 +373,7 @@ WINUX_FUNC_IMPL(int) ExecCommand(
     if ( !stdinStr.empty() )
     {
         DWORD bytes;
-        AnsiString stdinData = StringToLocal(stdinStr);
+        AnsiString stdinData = STRING_TO_LOCAL(stdinStr);
         WriteFile( hStdinWrite, stdinData.c_str(), (DWORD)stdinData.length(), &bytes, NULL );
         CloseHandle(hStdinWrite);
     }
@@ -388,7 +388,7 @@ WINUX_FUNC_IMPL(int) ExecCommand(
             stdoutData.append( buf, bytes );
         }
         CloseHandle(hStdoutRead);
-        *stdoutStr = LocalToString(stdoutData);
+        *stdoutStr = LOCAL_TO_STRING(stdoutData);
     }
     if ( stderrStr != NULL )
     {
@@ -401,7 +401,7 @@ WINUX_FUNC_IMPL(int) ExecCommand(
             stderrData.append( buf, bytes );
         }
         CloseHandle(hStderrRead);
-        *stderrStr = LocalToString(stderrData);
+        *stderrStr = LOCAL_TO_STRING(stderrData);
     }
 
     WaitForSingleObject( hChildProcess, INFINITE );
@@ -969,7 +969,7 @@ DllLoader::DllLoader( String const & dllName ) : _hDllModule(NULL), dllModuleFil
     if ( !_hDllModule )
     {
         DWORD err = GetLastError();
-        _errStr = StringToLocal( __GetErrorStr(err) );
+        _errStr = STRING_TO_LOCAL( __GetErrorStr(err) );
     }
 #else
     _hDllModule = dlopen( dllName.c_str(), RTLD_LAZY );
@@ -1002,7 +1002,7 @@ void (* DllLoader::funcAddr( AnsiString const & funcName ) )()
 {
     if ( !_hDllModule )
     {
-        throw DllLoaderError( DllLoaderError::dllModuleNoLoaded, "`" + StringToLocal(dllModuleFile) + "` module is not loaded" );
+        throw DllLoaderError( DllLoaderError::dllModuleNoLoaded, "`" + STRING_TO_LOCAL(dllModuleFile) + "` module is not loaded" );
     }
 
 #if defined(OS_WIN)

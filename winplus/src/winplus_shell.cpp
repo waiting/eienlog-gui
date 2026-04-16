@@ -120,7 +120,7 @@ WINPLUS_FUNC_IMPL(LPITEMIDLIST) ItemIdListFromPath( String const & filePath )
         return NULL;
     }
 
-    UnicodeString olestr = StringToUnicode(filePath);
+    UnicodeString olestr = STRING_TO_UNICODE(filePath);
     // 得到文件路径对应的ItemIDList
     LPITEMIDLIST pItemIDList = NULL;
     hr = pDesktopFolder->ParseDisplayName( NULL, NULL, (LPOLESTR)&olestr[0], NULL, &pItemIDList, NULL );
@@ -135,7 +135,7 @@ WINPLUS_FUNC_IMPL(LPITEMIDLIST) ItemIdListFromPath( String const & filePath )
 WINPLUS_FUNC_IMPL(LPITEMIDLIST) ItemIdListFromPathSimple( String const & filePath )
 {
     LPITEMIDLIST pItemIDList = NULL;
-    HRESULT hr = ItemIdListFromPathCustom( (LPWSTR)StringToUnicode(filePath).c_str(), NULL, &pItemIDList );
+    HRESULT hr = ItemIdListFromPathCustom( (LPWSTR)STRING_TO_UNICODE(filePath).c_str(), NULL, &pItemIDList );
     return pItemIDList;
 }
 

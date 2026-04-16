@@ -945,15 +945,6 @@ WINUX_FUNC_DECL(AnsiString) UnicodeToLocal( UnicodeString const & unicode );
 /** \brief 本地Ansi转到Unicode */
 WINUX_FUNC_DECL(UnicodeString) LocalToUnicode( AnsiString const & local );
 
-/** \brief 兼容字符串与Unicode、Local字符串相互转换 */
-WINUX_FUNC_DECL(String) LocalToString( AnsiString const & local );
-/** \brief 兼容字符串与Unicode、Local字符串相互转换 */
-WINUX_FUNC_DECL(String) UnicodeToString( UnicodeString const & unicode );
-/** \brief 兼容字符串与Unicode、Local字符串相互转换 */
-WINUX_FUNC_DECL(AnsiString) StringToLocal( String const & str );
-/** \brief 兼容字符串与Unicode、Local字符串相互转换 */
-WINUX_FUNC_DECL(UnicodeString) StringToUnicode( String const & str );
-
 #if defined(_UNICODE) || defined(UNICODE)
 #define LOCAL_TO_STRING(s) winux::LocalToUnicode(s)
 #define UNICODE_TO_STRING(s) s
@@ -1137,10 +1128,10 @@ private:
 
     void const * _p;
     enum {
-        ucUtf8,
-        ucUnicode,
-        ucUtf16,
-        ucUtf32
+        ucUtf8,     //< UTF-8编码
+        ucUnicode,  //< UNICODE编码（以默认字节序）
+        ucUtf16,    //< UTF-16编码（以默认字节序）
+        ucUtf32,    //< UTF-32编码（以默认字节序）
     } _type;
 };
 

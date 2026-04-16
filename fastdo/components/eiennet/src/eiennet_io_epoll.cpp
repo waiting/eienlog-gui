@@ -132,10 +132,10 @@ void IoEventsData::setIoCtx( IoCtx * ioCtx )
 IoCtx * IoEventsData::getIoCtx( int fd, IoType type )
 {
     winux::ScopeGuard guard(this->_mtx);
-    if ( winux::isset( this->_fdToIoCtxs, fd ) )
+    if ( winux::IsSet( this->_fdToIoCtxs, fd ) )
     {
         auto & ioMap = this->_fdToIoCtxs[fd];
-        if ( winux::isset( ioMap, type ) )
+        if ( winux::IsSet( ioMap, type ) )
         {
             return ioMap[type];
         }
@@ -230,7 +230,7 @@ void IoEventsData::delIoCtx( IoCtx * ioCtx )
 bool IoEventsData::hasIoCtxs( int fd ) const
 {
     winux::ScopeGuard guard( const_cast<winux::Mutex &>(this->_mtx) );
-    return winux::isset( this->_fdToIoCtxs, fd );
+    return winux::IsSet( this->_fdToIoCtxs, fd );
 }
 
 IoEventsData::IoMap & IoEventsData::getIoCtxs( int fd )
@@ -244,7 +244,7 @@ void IoEventsData::delIoCtxs( int fd )
     winux::ScopeGuard guard(this->_mtx);
     // 应该先从epoll中DEL相应的fd
     this->_epoll->del(fd);
-    if ( winux::isset( this->_fdToIoCtxs, fd ) )
+    if ( winux::IsSet( this->_fdToIoCtxs, fd ) )
     {
         std::vector<int> wantRemoveTimerFds;
         auto & ioMap = this->_fdToIoCtxs[fd];

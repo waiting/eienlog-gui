@@ -90,10 +90,10 @@ int IoService::run()
                 winux::ColorOutput(
                     winux::fgWhite,
                     winux::DateTimeL::Current(),
-                    ", Total socks:", this->_ioMaps.size(),
-                    ", Current tasks:", this->_pool.getTaskCount(),
+                    $T(", Total socks:"), this->_ioMaps.size(),
+                    $T(", Current tasks:"), this->_pool.getTaskCount(),
                     winux::String( 20, ' ' ),
-                    "\r"
+                    $T("\r")
                 );
             }
 
@@ -142,7 +142,7 @@ int IoService::run()
             this->onRunAfterWait(rc);
             if ( rc < 0 )
             {
-                winux::ColorOutputLine( winux::fgRed, "select err:", Socket::ErrNo() );
+                winux::ColorOutputLine( winux::fgRed, $T("select err:"), Socket::ErrNo() );
             }
             else
             {

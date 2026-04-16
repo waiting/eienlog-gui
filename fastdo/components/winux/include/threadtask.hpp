@@ -253,6 +253,9 @@ public:
         this->wait();
     }
 
+    /** \brief 获取线程组中的线程数 */
+    size_t getThreadCount() const { return _group.count(); }
+
     /** \brief 队列里的任务数 */
     size_t getTaskCount() const
     {

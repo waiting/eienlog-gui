@@ -35,10 +35,10 @@ namespace eienlog
 /** \brief 日志编码。`Local`表示本地多字节编码，不同国家可能不同 */
 enum LogEncoding
 {
-    leLocal,
-    leUtf8,
-    leUtf16Le,
-    leUtf16Be,
+    leLocal,    //< 本地编码
+    leUtf8,     //< UTF-8编码
+    leUtf16Le,  //< UTF-16 Little Endian编码
+    leUtf16Be,  //< UTF-16 Big Endian编码
 };
 
 //! 前景色: R5G5B5

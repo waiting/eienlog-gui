@@ -824,13 +824,6 @@ WINUX_FUNC_DECL(bool) CollectionEqual( Collection const & coll1, Collection cons
 
 /** \brief 检测map中是否有该键的值 */
 template < typename _MAP, typename _KEY >
-inline bool isset( _MAP const & m, _KEY const & k )
-{
-    return m.find(k) != m.end();
-}
-
-/** \brief 检测map中是否有该键的值 */
-template < typename _MAP, typename _KEY >
 inline bool IsSet( _MAP const & m, _KEY const & k )
 {
     return m.find(k) != m.end();

@@ -41,6 +41,7 @@
     s( slash_r, "\\r" ) \
     s( slash_x, "\\x" ) \
     s( cslashes, "\n\r\t\v\a\\\'\"" ) \
+    s( jsonSlashes, "\n\r\t\v\a\\\"" ) \
     s( hexadecUpper, "0123456789ABCDEF" ) \
     s( hexadecLower, "0123456789abcdef" ) \
     s( alphabetUpper, "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ) \

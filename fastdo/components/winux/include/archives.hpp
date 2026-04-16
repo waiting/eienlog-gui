@@ -73,7 +73,7 @@ private:
 /** \brief 更强大的配置文件类
  *
  *  支持表达式 */
-class WINUX_DLL ConfigureSettings
+class WINUX_DLL EvalSettings
 {
 public:
     static String ValToString( Mixed const & v, String const & spacer = $T("  "), String const & newline = $T("\n") );
@@ -83,12 +83,12 @@ public:
      *
      *  如果需要设置配置文件的外部变量，必须先调用set()，然后才load()配置文件。
      *  \param settingsFile 配置文件路径 */
-    explicit ConfigureSettings( String const & settingsFile = $T("") );
-    ConfigureSettings( ConfigureSettings const & other );
-    ConfigureSettings & operator = ( ConfigureSettings const & other );
-    ConfigureSettings( ConfigureSettings && other ) noexcept;
-    ConfigureSettings & operator = ( ConfigureSettings && other ) noexcept;
-    ~ConfigureSettings();
+    explicit EvalSettings( String const & settingsFile = $T("") );
+    EvalSettings( EvalSettings const & other );
+    EvalSettings & operator = ( EvalSettings const & other );
+    EvalSettings( EvalSettings && other ) noexcept;
+    EvalSettings & operator = ( EvalSettings && other ) noexcept;
+    ~EvalSettings();
 
     /** \brief 加载设置文件
      *
@@ -118,7 +118,7 @@ public:
     Mixed const & get( String const & name ) const;
 
     /** \brief 设置此名字的设置 */
-    ConfigureSettings & set( String const & name, Mixed const & value );
+    EvalSettings & set( String const & name, Mixed const & value );
 
     /** \brief 值 */
     Mixed const & val() const;
@@ -147,11 +147,13 @@ private:
     Mixed _collectionVal; // 存储值
     Mixed _collectionExpr; // 存储表达式串
 #if defined(OS_WIN)
-    PlainMembers<struct ConfigureSettings_Data, 96> _self;
+    PlainMembers<struct EvalSettings_Data, 96> _self;
 #else
-    PlainMembers<struct ConfigureSettings_Data, 136> _self;
+    PlainMembers<struct EvalSettings_Data, 136> _self;
 #endif
 };
+
+using ConfigureSettings = EvalSettings;
 
 /** \brief CSV文件写入器 */
 class WINUX_DLL CsvWriter

@@ -332,7 +332,7 @@ static bool __OprFile( Expression const * e, ExprOperand * arOperands[], short n
     outRetValue->attachNew(NULL);
     if ( n == 1 )
     {
-        String settingsDir = data ? reinterpret_cast<ConfigureSettings *>(data)->getSettingsDir() : Literal<String::value_type>::emptyStr;
+        String settingsDir = data ? reinterpret_cast<EvalSettings *>(data)->getSettingsDir() : Literal<String::value_type>::emptyStr;
         String path, nl;
         size_t i = 0;
         // 只读取第一行作路径
@@ -355,7 +355,7 @@ static bool __FuncFile( Expression * e, std::vector<Expression *> const & params
     outRetValue->attachNew(NULL);
     if ( params.size() > 0 )
     {
-        String settingsDir = data ? reinterpret_cast<ConfigureSettings *>(data)->getSettingsDir() : Literal<String::value_type>::emptyStr;
+        String settingsDir = data ? reinterpret_cast<EvalSettings *>(data)->getSettingsDir() : Literal<String::value_type>::emptyStr;
         String path, nl;
         size_t i = 0;
         // 只读取第一行作路径
@@ -380,13 +380,13 @@ static bool __FuncFile( Expression * e, std::vector<Expression *> const & params
     return false;
 }
 
-// struct ConfigureSettings_Data --------------------------------------------------------------
-struct ConfigureSettings_Data
+// struct EvalSettings_Data -------------------------------------------------------------------
+struct EvalSettings_Data
 {
     ExprPackage package; // 表达式语言包，包含自定义函数和算符
     VarContext rootCtx; // 根变量场景
 
-    ConfigureSettings_Data()
+    EvalSettings_Data()
     {
         // 注册自定义函数和算符
         this->package.setFunc( $T("file"), __FuncFile );
@@ -437,7 +437,7 @@ struct ConfigureSettings_Data
 
 // --------------------------------------------------------------------------------------------
 // 配置解析场景标记flag
-enum ConfigureSettings_ParseContext
+enum EvalSettings_ParseContext
 {
     cspcName,
     cspcValue,
@@ -450,10 +450,10 @@ enum ConfigureSettings_ParseContext
     cspcBinary,
 };
 
-static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * collVal,  Mixed * collExpr );
+static void EvalSettings_ParseCollection( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * collVal,  Mixed * collExpr );
 
 // 解析反斜杠转义字符
-static void ConfigureSettings_ParseStrAntiSlashes( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, String * v )
+static void EvalSettings_ParseStrAntiSlashes( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, String * v )
 {
     String & result = *v;
     i++; // skip '\\'
@@ -549,7 +549,7 @@ static void ConfigureSettings_ParseStrAntiSlashes( std::vector<ConfigureSettings
 }
 
 // 解析一个字符串'...' or "..."
-static void ConfigureSettings_ParseString( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, String * v, String * vExpr )
+static void EvalSettings_ParseString( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, String * v, String * vExpr )
 {
     auto quote = str[i];
     v->clear();
@@ -565,7 +565,7 @@ static void ConfigureSettings_ParseString( std::vector<ConfigureSettings_ParseCo
         else if ( ch == '\\' )
         {
             cspc.push_back(cspcStrAntiSlashes);
-            ConfigureSettings_ParseStrAntiSlashes( cspc, str, i, v );
+            EvalSettings_ParseStrAntiSlashes( cspc, str, i, v );
             cspc.pop_back();
         }
         else
@@ -578,7 +578,7 @@ static void ConfigureSettings_ParseString( std::vector<ConfigureSettings_ParseCo
 }
 
 // 解析一个Key名称
-static void ConfigureSettings_ParseName( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, String * name )
+static void EvalSettings_ParseName( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, String * name )
 {
     int start = i;
     name->clear();
@@ -592,7 +592,7 @@ static void ConfigureSettings_ParseName( std::vector<ConfigureSettings_ParseCont
         else if ( i == start && ( ch == '\'' || ch == '\"' ) )
         {
             cspc.push_back(cspcString);
-            ConfigureSettings_ParseString( cspc, str, i, name, nullptr );
+            EvalSettings_ParseString( cspc, str, i, name, nullptr );
             cspc.pop_back();
             break;
         }
@@ -605,7 +605,7 @@ static void ConfigureSettings_ParseName( std::vector<ConfigureSettings_ParseCont
 }
 
 // 解析一个表达式(...)
-static void ConfigureSettings_ParseExpr( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * v, Mixed * vExpr )
+static void EvalSettings_ParseExpr( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * v, Mixed * vExpr )
 {
     String vStr;
     i++; // skip '('
@@ -621,7 +621,7 @@ static void ConfigureSettings_ParseExpr( std::vector<ConfigureSettings_ParseCont
         {
             String tmp;
             cspc.push_back(cspcString);
-            ConfigureSettings_ParseString( cspc, str, i, &tmp, nullptr );
+            EvalSettings_ParseString( cspc, str, i, &tmp, nullptr );
             cspc.pop_back();
 
             vStr += ch + AddCSlashes(tmp) + ch;
@@ -667,7 +667,7 @@ static void ConfigureSettings_ParseExpr( std::vector<ConfigureSettings_ParseCont
 }
 
 // 解析二进制数据`...`
-static void ConfigureSettings_ParseBinary( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, Mixed * v, Mixed * vExpr )
+static void EvalSettings_ParseBinary( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, Mixed * v, Mixed * vExpr )
 {
     thread_local String const prefix = String(Literal<String::value_type>::base64Str) + Literal<String::value_type>::colonStr;
 
@@ -799,11 +799,11 @@ static void _StoreAutoValue( String const & oneValueStr, Mixed * arr, Mixed * ar
         else if ( IsIdentifierString(oneValueStr) ) // 标识符
         {
             thread_local std::map< String, Mixed > constMap{
-                { $T("true"), true },
                 { $T("false"), false },
+                { $T("true"), true },
                 { $T("null"), winux::mxNull },
             };
-            if ( winux::isset( constMap, oneValueStr ) )
+            if ( winux::IsSet( constMap, oneValueStr ) )
             {
                 arr->add(constMap[oneValueStr]);
                 arrExpr->add(oneValueStr);
@@ -823,7 +823,7 @@ static void _StoreAutoValue( String const & oneValueStr, Mixed * arr, Mixed * ar
 }
 
 // 解析值并返回解析到的值个数
-static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * value, Mixed * valExpr )
+static size_t EvalSettings_ParseValue( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * value, Mixed * valExpr )
 {
     Mixed arr; // 值数组，可能含有多个
     Mixed arrExpr; // 表达式数组，可能含有多个
@@ -881,7 +881,7 @@ static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseC
             Mixed & tValExpr = arrExpr.add(mxNull).e.createString<String::value_type>();  // 存值表达式串
 
             cspc.push_back(cspcString);
-            ConfigureSettings_ParseString( cspc, str, i, &tValue.ref<String>(), &tValExpr.ref<String>() );
+            EvalSettings_ParseString( cspc, str, i, &tValue.ref<String>(), &tValExpr.ref<String>() );
             cspc.pop_back();
 
             oneValueStr.clear();
@@ -895,7 +895,7 @@ static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseC
             Mixed & tValExpr = arrExpr.add(mxNull).e;  // 存值表达式串
 
             cspc.push_back(cspcExpr);
-            ConfigureSettings_ParseExpr( cspc, str, i, exprObj, &tValue, &tValExpr );
+            EvalSettings_ParseExpr( cspc, str, i, exprObj, &tValue, &tValExpr );
             cspc.pop_back();
 
             oneValueStr.clear();
@@ -909,7 +909,7 @@ static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseC
             Mixed & tValExpr = arrExpr.add(mxNull).e;  // 存值表达式串
 
             cspc.push_back(cspcBinary);
-            ConfigureSettings_ParseBinary( cspc, str, i, &tValue, &tValExpr );
+            EvalSettings_ParseBinary( cspc, str, i, &tValue, &tValExpr );
             cspc.pop_back();
 
             oneValueStr.clear();
@@ -928,7 +928,7 @@ static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseC
             Expression exprSubScope( exprObj->getPackage(), &varCtx, exprObj, nullptr );
 
             cspc.push_back(cspcCollection);
-            ConfigureSettings_ParseCollection( cspc, str, i, &exprSubScope, &tValue, &tValExpr );
+            EvalSettings_ParseCollection( cspc, str, i, &exprSubScope, &tValue, &tValExpr );
             cspc.pop_back();
 
             oneValueStr.clear();
@@ -959,7 +959,7 @@ static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseC
             Mixed tValExpr1;
 
             cspc.push_back(cspcArray);
-            size_t n = ConfigureSettings_ParseValue( cspc, str, i, exprObj, &tValue1, &tValExpr1 );
+            size_t n = EvalSettings_ParseValue( cspc, str, i, exprObj, &tValue1, &tValExpr1 );
             cspc.pop_back();
 
             if ( tValExpr1.isArray() )
@@ -1038,7 +1038,7 @@ static size_t ConfigureSettings_ParseValue( std::vector<ConfigureSettings_ParseC
     return n;
 }
 
-static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * collVal,  Mixed * collExpr )
+static void EvalSettings_ParseCollection( std::vector<EvalSettings_ParseContext> & cspc, String const & str, int & i, Expression * exprObj, Mixed * collVal,  Mixed * collExpr )
 {
     String name;       // 存名字
     Mixed value;       // 存值
@@ -1070,7 +1070,7 @@ static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_Par
             if ( currIsName )
             {
                 cspc.push_back(cspcName);
-                ConfigureSettings_ParseName( cspc, str, i, &name );
+                EvalSettings_ParseName( cspc, str, i, &name );
                 cspc.pop_back();
 
                 hasName = true;
@@ -1079,7 +1079,7 @@ static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_Par
             else
             {
                 cspc.push_back(cspcValue);
-                ConfigureSettings_ParseValue( cspc, str, i, exprObj, &value, &valExpr );
+                EvalSettings_ParseValue( cspc, str, i, exprObj, &value, &valExpr );
                 cspc.pop_back();
 
                 hasValue = true;
@@ -1127,7 +1127,7 @@ static void ConfigureSettings_ParseCollection( std::vector<ConfigureSettings_Par
 // --------------------------------------------------------------------------------------------
 
 template < typename _ChTy >
-inline static XString<_ChTy> Impl_RecursiveConfigureSettingsToStringEx(
+inline static XString<_ChTy> Impl_RecursiveEvalSettingsToStringEx(
     int level,
     Mixed const & parentCollVal,
     Mixed const & parentCollExpr,
@@ -1233,7 +1233,7 @@ inline static XString<_ChTy> Impl_RecursiveConfigureSettingsToStringEx(
                 for ( size_t i = 0; i < collExpr._pArr->size(); i++ )
                 {
                     if ( i != 0 ) s += Literal<_ChTy>::spaceStr;
-                    s += Impl_RecursiveConfigureSettingsToStringEx( level + 1, collVal, collExpr, collVal[i], collExpr[i], spacer, newline );
+                    s += Impl_RecursiveEvalSettingsToStringEx( level + 1, collVal, collExpr, collVal[i], collExpr[i], spacer, newline );
                 }
                 if ( parentCollExpr.isArray() ) s += Literal<_ChTy>::rSBrkStr;
             }
@@ -1259,7 +1259,7 @@ inline static XString<_ChTy> Impl_RecursiveConfigureSettingsToStringEx(
                     s += Literal<_ChTy>::spaceStr;
                     // 值的表达式
                     auto & expr = collExpr[k];
-                    s += Impl_RecursiveConfigureSettingsToStringEx( level + 1, collVal, collExpr, collVal[k], expr, spacer, newline );
+                    s += Impl_RecursiveEvalSettingsToStringEx( level + 1, collVal, collExpr, collVal[k], expr, spacer, newline );
                     // 如果值表达式是集合或是数组且最后一个元素是集合，且换行，那么不加分号
                     if ( ( expr.isCollection() || ( expr.getCount() > 0 && expr[expr.getCount() - 1].isCollection() ) ) && newline.find('\n') != npos )
                     {
@@ -1300,7 +1300,7 @@ inline static XString<_ChTy> Impl_RecursiveConfigureSettingsToStringEx(
 }
 
 template < typename _ChTy >
-inline static XString<_ChTy> Impl_RecursiveConfigureSettingsValueToStringEx(
+inline static XString<_ChTy> Impl_RecursiveEvalSettingsValueToStringEx(
     int level,
     Mixed const & parentVal,
     Mixed const & curVal,
@@ -1336,7 +1336,7 @@ inline static XString<_ChTy> Impl_RecursiveConfigureSettingsValueToStringEx(
             for ( size_t i = 0; i < curVal._pArr->size(); i++ )
             {
                 if ( i != 0 ) s += Literal<_ChTy>::spaceStr;
-                s += Impl_RecursiveConfigureSettingsValueToStringEx( level + 1, curVal, curVal[i], spacer, newline );
+                s += Impl_RecursiveEvalSettingsValueToStringEx( level + 1, curVal, curVal[i], spacer, newline );
             }
             if ( parentVal.isArray() ) s += Literal<_ChTy>::rSBrkStr;
         }
@@ -1355,7 +1355,7 @@ inline static XString<_ChTy> Impl_RecursiveConfigureSettingsValueToStringEx(
                 s += Literal<_ChTy>::spaceStr;
                 // 值
                 auto & val = curVal[k];
-                s += Impl_RecursiveConfigureSettingsValueToStringEx( level + 1, curVal, val, spacer, newline );
+                s += Impl_RecursiveEvalSettingsValueToStringEx( level + 1, curVal, val, spacer, newline );
                 // 如果值是集合或是数组且最后一个元素是集合，且换行，那么不加分号
                 if ( ( val.isCollection() || ( val.getCount() > 0 && val[val.getCount() - 1].isCollection() ) ) && newline.find('\n') != npos )
                 {
@@ -1377,10 +1377,10 @@ inline static XString<_ChTy> Impl_RecursiveConfigureSettingsValueToStringEx(
     return s;
 }
 
-// class ConfigureSettings --------------------------------------------------------------------
-String ConfigureSettings::ValToString( Mixed const & v, String const & spacer, String const & newline )
+// class EvalSettings -------------------------------------------------------------------------
+String EvalSettings::ValToString( Mixed const & v, String const & spacer, String const & newline )
 {
-    return Impl_RecursiveConfigureSettingsValueToStringEx<String::value_type>(
+    return Impl_RecursiveEvalSettingsValueToStringEx<String::value_type>(
         0,
         mxNull,
         v,
@@ -1389,20 +1389,20 @@ String ConfigureSettings::ValToString( Mixed const & v, String const & spacer, S
     );
 }
 
-Mixed ConfigureSettings::Parse( String const & valStr )
+Mixed EvalSettings::Parse( String const & valStr )
 {
     Mixed v, vExpr;
-    std::vector<ConfigureSettings_ParseContext> cspc;
+    std::vector<EvalSettings_ParseContext> cspc;
     int i = 0;
-    ConfigureSettings cs;
+    EvalSettings cs;
     VarContext varCtx(&cs._collectionVal);
     Expression exprObj( &cs._self->package, &varCtx, nullptr, &cs );
-    ConfigureSettings_ParseValue( cspc, valStr, i, &exprObj, &v, &vExpr );
+    EvalSettings_ParseValue( cspc, valStr, i, &exprObj, &v, &vExpr );
     return v;
 }
 
 // Constructors
-ConfigureSettings::ConfigureSettings( String const & settingsFile )
+EvalSettings::EvalSettings( String const & settingsFile )
 {
     this->_collectionVal.createCollection();
     this->_collectionExpr.createCollection();
@@ -1414,12 +1414,12 @@ ConfigureSettings::ConfigureSettings( String const & settingsFile )
     }
 }
 
-ConfigureSettings::ConfigureSettings( ConfigureSettings const & other )
+EvalSettings::EvalSettings( EvalSettings const & other )
 {
     _self = other._self;
 }
 
-ConfigureSettings & ConfigureSettings::operator = ( ConfigureSettings const & other )
+EvalSettings & EvalSettings::operator = ( EvalSettings const & other )
 {
     if ( this != &other )
     {
@@ -1428,11 +1428,11 @@ ConfigureSettings & ConfigureSettings::operator = ( ConfigureSettings const & ot
     return *this;
 }
 
-ConfigureSettings::ConfigureSettings( ConfigureSettings && other ) noexcept : _self( std::move(other._self) )
+EvalSettings::EvalSettings( EvalSettings && other ) noexcept : _self( std::move(other._self) )
 {
 }
 
-ConfigureSettings & ConfigureSettings::operator = ( ConfigureSettings && other ) noexcept
+EvalSettings & EvalSettings::operator = ( EvalSettings && other ) noexcept
 {
     if ( this != &other )
     {
@@ -1441,18 +1441,18 @@ ConfigureSettings & ConfigureSettings::operator = ( ConfigureSettings && other )
     return *this;
 }
 
-ConfigureSettings::~ConfigureSettings()
+EvalSettings::~EvalSettings()
 {
 }
 
-size_t ConfigureSettings::_load( String const & settingsFile, Mixed * collVal, Mixed * collExpr, StringArray * loadFileChains )
+size_t EvalSettings::_load( String const & settingsFile, Mixed * collVal, Mixed * collExpr, StringArray * loadFileChains )
 {
     String settingsFileRealPath = RealPath(settingsFile);
     loadFileChains->push_back(settingsFileRealPath);
 
     String settingsContent = FileGetString( settingsFileRealPath, feMultiByte );
     {
-        std::vector<ConfigureSettings_ParseContext> cspc;
+        std::vector<EvalSettings_ParseContext> cspc;
 
         if ( !collVal->isCollection() ) collVal->createCollection();
         if ( !collExpr->isCollection() ) collExpr->createCollection();
@@ -1462,7 +1462,7 @@ size_t ConfigureSettings::_load( String const & settingsFile, Mixed * collVal, M
 
         int i = 0;
         cspc.push_back(cspcRootCollection);
-        ConfigureSettings_ParseCollection( cspc, settingsContent, i, &exprObj, collVal, collExpr );
+        EvalSettings_ParseCollection( cspc, settingsContent, i, &exprObj, collVal, collExpr );
         cspc.pop_back();
     }
 
@@ -1473,14 +1473,14 @@ size_t ConfigureSettings::_load( String const & settingsFile, Mixed * collVal, M
     return this->_collectionVal.getCount();
 }
 
-size_t ConfigureSettings::load( String const & settingsFile )
+size_t EvalSettings::load( String const & settingsFile )
 {
     this->_settingsFile = settingsFile;
     StringArray loadFileChains;
     return this->_load( settingsFile, &this->_collectionVal, &this->_collectionExpr, &loadFileChains );
 }
 
-Mixed & ConfigureSettings::update( String const & multiname, String const & updateExprStr )
+Mixed & EvalSettings::update( String const & multiname, String const & updateExprStr )
 {
     StringArray names;
 
@@ -1510,7 +1510,7 @@ Mixed & ConfigureSettings::update( String const & multiname, String const & upda
     return *v;
 }
 
-Mixed & ConfigureSettings::execRef( String const & exprStr ) const
+Mixed & EvalSettings::execRef( String const & exprStr ) const
 {
     thread_local Mixed inner;
     try
@@ -1530,7 +1530,7 @@ Mixed & ConfigureSettings::execRef( String const & exprStr ) const
     return inner;
 }
 
-Mixed ConfigureSettings::execVal( String const & exprStr, Mixed const & defval ) const
+Mixed EvalSettings::execVal( String const & exprStr, Mixed const & defval ) const
 {
     try
     {
@@ -1544,61 +1544,61 @@ Mixed ConfigureSettings::execVal( String const & exprStr, Mixed const & defval )
     return defval;
 }
 
-Mixed const & ConfigureSettings::operator [] ( String const & name ) const
+Mixed const & EvalSettings::operator [] ( String const & name ) const
 {
     return this->get(name);
 }
 
-Mixed & ConfigureSettings::operator [] ( String const & name )
+Mixed & EvalSettings::operator [] ( String const & name )
 {
     return this->_collectionVal[name];
 }
 
-bool ConfigureSettings::has( String const & name ) const
+bool EvalSettings::has( String const & name ) const
 {
     return this->_collectionVal.has(name);
 }
 
-Mixed const & ConfigureSettings::get( String const & name ) const
+Mixed const & EvalSettings::get( String const & name ) const
 {
     thread_local Mixed const inner;
     return this->_collectionVal.has(name) ? this->_collectionVal[name] : inner;
 }
 
-ConfigureSettings & ConfigureSettings::set( String const & name, Mixed const & value )
+EvalSettings & EvalSettings::set( String const & name, Mixed const & value )
 {
     this->_collectionVal[name] = value;
     return *this;
 }
 
-Mixed const & ConfigureSettings::val() const
+Mixed const & EvalSettings::val() const
 {
     return this->_collectionVal;
 }
 
-Mixed & ConfigureSettings::val()
+Mixed & EvalSettings::val()
 {
     return this->_collectionVal;
 }
 
-Mixed const & ConfigureSettings::expr() const
+Mixed const & EvalSettings::expr() const
 {
     return this->_collectionExpr;
 }
 
-Mixed & ConfigureSettings::expr()
+Mixed & EvalSettings::expr()
 {
     return this->_collectionExpr;
 }
 
-String ConfigureSettings::getSettingsDir() const
+String EvalSettings::getSettingsDir() const
 {
     return FilePath(this->_settingsFile);
 }
 
-String ConfigureSettings::toString( String const & spacer, String const & newline ) const
+String EvalSettings::toString( String const & spacer, String const & newline ) const
 {
-    return Impl_RecursiveConfigureSettingsToStringEx<String::value_type>(
+    return Impl_RecursiveEvalSettingsToStringEx<String::value_type>(
         0,
         mxNull,
         mxNull,
@@ -1609,9 +1609,9 @@ String ConfigureSettings::toString( String const & spacer, String const & newlin
     );
 }
 
-String ConfigureSettings::valToString( String const & spacer, String const & newline ) const
+String EvalSettings::valToString( String const & spacer, String const & newline ) const
 {
-    return Impl_RecursiveConfigureSettingsValueToStringEx<String::value_type>(
+    return Impl_RecursiveEvalSettingsValueToStringEx<String::value_type>(
         0,
         mxNull,
         this->_collectionVal,
@@ -1817,7 +1817,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
     {
     case feMultiByte:
         {
-            Conv conv{ encoding, this->_mbsEncoding };
+            Conv conv( encoding, this->_mbsEncoding );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             output->appendString( NewlineToFile( buf, n, false ) );
@@ -1826,7 +1826,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
         break;
     case feUtf8:
         {
-            Conv conv{ encoding, "UTF-8" };
+            Conv conv( encoding, "UTF-8" );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             output->appendString( NewlineToFile( buf, n, false ) );
@@ -1835,7 +1835,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
         break;
     case feUtf8Bom:
         {
-            Conv conv{ encoding, "UTF-8" };
+            Conv conv( encoding, "UTF-8" );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
@@ -1846,7 +1846,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
         break;
     case feUtf16Le:
         {
-            Conv conv{ encoding, "UTF-16LE" };
+            Conv conv( encoding, "UTF-16LE" );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
@@ -1858,7 +1858,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
         break;
     case feUtf16Be:
         {
-            Conv conv{ encoding, "UTF-16BE" };
+            Conv conv( encoding, "UTF-16BE" );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
@@ -1870,7 +1870,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
         break;
     case feUtf32Le:
         {
-            Conv conv{ encoding, "UTF-32LE" };
+            Conv conv( encoding, "UTF-32LE" );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
@@ -1882,7 +1882,7 @@ void TextArchive::saveEx( Buffer const & content, AnsiString const & encoding, G
         break;
     case feUtf32Be:
         {
-            Conv conv{ encoding, "UTF-32BE" };
+            Conv conv( encoding, "UTF-32BE" );
             char * buf;
             size_t n = conv.convert( content.getBuf<char>(), content.getSize(), &buf );
             // write BOM
@@ -1904,7 +1904,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char> strContent = NewlineFromFile( content.get<char>(), content.size(), false );
             if ( isConvert )
             {
-                Conv conv{ this->_mbsEncoding, encoding };
+                Conv conv( this->_mbsEncoding, encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char), &buf );
                 this->_pureContent.setBuf( buf, n, false );
@@ -1923,7 +1923,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char> strContent = NewlineFromFile( content.get<char>(), content.size(), false );
             if ( isConvert )
             {
-                Conv conv{ "UTF-8", encoding };
+                Conv conv( "UTF-8", encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char), &buf );
                 this->_pureContent.setBuf( buf, n, false );
@@ -1942,7 +1942,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char> strContent = NewlineFromFile( content.get<char>(), content.size(), false );
             if ( isConvert )
             {
-                Conv conv{ "UTF-8", encoding };
+                Conv conv( "UTF-8", encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char), &buf );
                 this->_pureContent.setBuf( buf, n, false );
@@ -1961,7 +1961,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char16> strContent = NewlineFromFile( content.get<char16>(), content.size() / sizeof(char16), IsBigEndian() );
             if ( isConvert )
             {
-                Conv conv{ "UTF-16LE", encoding };
+                Conv conv( "UTF-16LE", encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char16), &buf );
                 this->_pureContent.setBuf( buf, n, false );
@@ -1980,7 +1980,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char16> strContent = NewlineFromFile( content.get<char16>(), content.size() / sizeof(char16), IsLittleEndian() );
             if ( isConvert )
             {
-                Conv conv{ "UTF-16BE", encoding };
+                Conv conv( "UTF-16BE", encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char16), &buf );
                 this->_pureContent.setBuf( buf, n, false );
@@ -1999,7 +1999,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char32> strContent = NewlineFromFile( content.get<char32>(), content.size() / sizeof(char32), IsBigEndian() );
             if ( isConvert )
             {
-                Conv conv{ "UTF-32LE", encoding };
+                Conv conv( "UTF-32LE", encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char32), &buf );
                 this->_pureContent.setBuf( buf, n, false );
@@ -2018,7 +2018,7 @@ void TextArchive::_processContent( Buffer const & content, bool isConvert, AnsiS
             XString<char32> strContent = NewlineFromFile( content.get<char32>(), content.size() / sizeof(char32), IsLittleEndian() );
             if ( isConvert )
             {
-                Conv conv{ "UTF-32BE", encoding };
+                Conv conv( "UTF-32BE", encoding );
                 char * buf;
                 size_t n = conv.convert( (char const *)strContent.c_str(), strContent.length() * sizeof(char32), &buf );
                 this->_pureContent.setBuf( buf, n, false );

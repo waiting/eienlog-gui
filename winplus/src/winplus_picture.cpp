@@ -156,7 +156,7 @@ WINPLUS_FUNC_IMPL(bool) Picture_Load( String const & picFile, MemDC * memDC )
 
 WINPLUS_FUNC_IMPL(bool) Picture_Load( String const & picFile, MemImage * memImg )
 {
-    Gdiplus::Bitmap bmp( StringToUnicode(picFile).c_str() );
+    Gdiplus::Bitmap bmp( STRING_TO_UNICODE(picFile).c_str() );
     memImg->create( bmp.GetWidth(), bmp.GetHeight() );
     memImg->copyFrom(&bmp);
     return true;
@@ -240,7 +240,7 @@ WINPLUS_FUNC_IMPL(INT) ImageEncoderFromMIME( String const & mime_type, CLSID * e
     for( i = 0; i < num; ++i )
     {
         ImageCodecInfo & info = pImageCodecInfo[i];
-        String strMimeType = UnicodeToString( info.MimeType ? info.MimeType : L"" );
+        String strMimeType = UNICODE_TO_STRING( info.MimeType ? info.MimeType : L"" );
         if ( strMimeType == mime_type )
         {
             *encoder_clsid = info.Clsid;
@@ -271,7 +271,7 @@ WINPLUS_FUNC_IMPL(INT) ImageEncoderFromExtName( String const & extname, CLSID * 
     for( i = 0; i < num; ++i )
     {
         ImageCodecInfo & info = pImageCodecInfo[i];
-        String strFilenameExtension = UnicodeToString( info.FilenameExtension ? info.FilenameExtension : L"" );
+        String strFilenameExtension = UNICODE_TO_STRING( info.FilenameExtension ? info.FilenameExtension : L"" );
         StringArray arrExtName;
         INT nExtNameCount = (INT)StrSplit( strFilenameExtension.c_str(), TEXT(";"), &arrExtName );
         INT j;

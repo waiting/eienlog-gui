@@ -36,7 +36,7 @@ WordsLib::WordsLib( AnsiString const & filename ) throw(WordsLibException) :
     if ( _file == INVALID_HANDLE_VALUE )
     {
         DWORD dwErr = GetLastError();
-        throw WordsLibException( StringToLocal( GetErrorStr(dwErr) ) + "词库文件`" + filename + "`未找到" );
+        throw WordsLibException( STRING_TO_LOCAL( GetErrorStr(dwErr) ) + "词库文件`" + filename + "`未找到" );
     }
 
     filesize = (uint)GetFileSize( _file, NULL );
@@ -116,7 +116,7 @@ void WordsLib::readHeaders()
         }
     }
     // 检测编码
-    this->encoding = isset( tmpHeader, "encoding" ) ? tmpHeader["encoding"] : "";
+    this->encoding = IsSet( tmpHeader, "encoding" ) ? tmpHeader["encoding"] : "";
     if ( this->encoding.length() > 0 ) _strlwr(&this->encoding[0]);
     if ( this->encoding == "utf-8" )
     {
@@ -147,7 +147,7 @@ void WordsLib::readHeaders()
 
 AnsiString WordsLib::getHeader( AnsiString const & key, AnsiString const & defval )
 {
-    return isset( this->header, key ) && this->header[key] != "" ? this->header[key] : defval;
+    return IsSet( this->header, key ) && this->header[key] != "" ? this->header[key] : defval;
 }
 
 AnsiString WordsLib::prev() const

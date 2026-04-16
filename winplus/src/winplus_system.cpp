@@ -320,7 +320,7 @@ WINPLUS_FUNC_IMPL(UINT) CommandArgumentArray( StringArray * argArr )
     LPWSTR * argsArr = ::CommandLineToArgvW( cmdLine, &numArgs );
     for ( i = 0; i < numArgs; ++i )
     {
-        argArr->push_back( UnicodeToString(argsArr[i]) );
+        argArr->push_back( UNICODE_TO_STRING(argsArr[i]) );
     }
     GlobalFree( (HGLOBAL)argsArr );
     return numArgs;

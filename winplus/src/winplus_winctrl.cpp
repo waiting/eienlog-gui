@@ -414,7 +414,7 @@ WINPLUS_FUNC_IMPL(int) ImageList_AddAlphaImage( HIMAGELIST hImageList, UINT nId,
 
 WINPLUS_FUNC_IMPL(int) ImageList_AddAlphaImage( HIMAGELIST hImageList, String const & imagePath )
 {
-    return ImageList_AddAlphaImage( hImageList, Gdiplus::Bitmap( StringToUnicode(imagePath).c_str() ) );
+    return ImageList_AddAlphaImage( hImageList, Gdiplus::Bitmap( STRING_TO_UNICODE(imagePath).c_str() ) );
 }
 #endif
 

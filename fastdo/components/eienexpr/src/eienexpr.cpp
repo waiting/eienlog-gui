@@ -214,7 +214,7 @@ winux::Mixed ExprOperand::val() const
 
     if ( !evalSuccess )
     {
-        throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd->toString() ).c_str() ) );
+        throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd->toString() ).c_str() ) );
     }
 
     return GET_C_LITERAL(opd)->getValue();
@@ -422,7 +422,7 @@ bool ExprIdentifier::evaluate( winux::SimplePointer<ExprOperand> * result ) cons
             { $T("false"), false },
             { $T("null"), winux::mxNull },
         };
-        if ( winux::isset( constMap, this->_name ) )
+        if ( winux::IsSet( constMap, this->_name ) )
         {
             result->attachNew( new ExprLiteral( constMap[this->_name] ) );
         }
@@ -561,10 +561,10 @@ bool ExprFunc::evaluate( winux::SimplePointer<ExprOperand> * result ) const
 {
     result->attachNew(NULL);
     StringFuncMap & funcsMap = this->_exprObj->_package->_funcsMap;
-    if ( winux::isset( funcsMap, this->_funcName ) )
+    if ( winux::IsSet( funcsMap, this->_funcName ) )
         return funcsMap[this->_funcName]( this->_exprObj, this->_params, result, this->_exprObj->getDataPtr() );
     else
-        throw ExprError( ExprError::eeFuncNotFound, EXPRERRSTR_FUNCTION_NOT_DEFINED( winux::StringToLocal(this->_funcName).c_str() ) );
+        throw ExprError( ExprError::eeFuncNotFound, EXPRERRSTR_FUNCTION_NOT_DEFINED( STRING_TO_LOCAL(this->_funcName).c_str() ) );
     return false;
 }
 
@@ -945,7 +945,7 @@ void Expression::setVar( winux::String const & name, winux::Mixed const & val )
         }
         else
         {
-            throw ExprError( ExprError::eeVarCtxNotFound, EXPRERRSTR_NOT_ASSOC_VARCTX( winux::StringToLocal( this->toString() ).c_str() ) );
+            throw ExprError( ExprError::eeVarCtxNotFound, EXPRERRSTR_NOT_ASSOC_VARCTX( STRING_TO_LOCAL( this->toString() ).c_str() ) );
         }
     }
 }
@@ -1120,7 +1120,7 @@ bool VarContext::unset( winux::String const & name )
 
 bool VarContext::has( winux::String const & name ) const
 {
-    return winux::isset( this->_vars, name );
+    return winux::IsSet( this->_vars, name );
 }
 
 bool VarContext::get( winux::String const & name, winux::Mixed * * outVarPtr ) const
@@ -1170,13 +1170,13 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
         if ( IS_NOT_IDENTIFIER(opd0) && IS_NOT_REFERENCE(opd0) ) // 如果第一操作数不是可操作的Identifier、Reference，就尝试计算是否能得到Identifier、Reference，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier、Reference
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) || IS_REFERENCE(evalOpd0) ) ) // 如果不能得到Identifier或Reference就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_INDEXABLE_OBJECT( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_INDEXABLE_OBJECT( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -1188,12 +1188,12 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
             winux::Mixed * target = NULL;
             if ( !e->getVar( v0->getName(), &target ) ) // 变量未定义
             {
-                throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal( v0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( STRING_TO_LOCAL( v0->toString() ).c_str() ) );
                 return false;
             }
             if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
             {
-                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
+                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( STRING_TO_LOCAL( v0->toString() ).c_str(), "Collection/Array" ) );
                 return false;
             }
 
@@ -1216,7 +1216,7 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
 
             if ( target->isArray() && key.toInt() >= (int)target->_pArr->size() )
             {
-                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( winux::StringToLocal( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
+                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( STRING_TO_LOCAL( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
                 return false;
             }
 
@@ -1232,7 +1232,7 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
 
             if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
             {
-                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
+                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( STRING_TO_LOCAL( v0->toString() ).c_str(), "Collection/Array" ) );
                 return false;
             }
 
@@ -1255,7 +1255,7 @@ static bool __OprPeriod( Expression const * e, ExprOperand * arOperands[], short
 
             if ( target->isArray() && key.toInt() >= (int)target->_pArr->size() )
             {
-                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( winux::StringToLocal( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
+                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( STRING_TO_LOCAL( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
                 return false;
             }
 
@@ -1280,13 +1280,13 @@ static bool __OprColon( Expression const * e, ExprOperand * arOperands[], short 
         if ( IS_NOT_IDENTIFIER(opd0) && IS_NOT_REFERENCE(opd0) ) // 如果第一操作数不是可操作的Identifier、Reference，就尝试计算是否能得到Identifier、Reference，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier、Reference
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) || IS_REFERENCE(evalOpd0) ) ) // 如果不能得到Identifier或Reference就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_INDEXABLE_OBJECT( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_INDEXABLE_OBJECT( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -1298,12 +1298,12 @@ static bool __OprColon( Expression const * e, ExprOperand * arOperands[], short 
             winux::Mixed * target = NULL;
             if ( !e->getVar( v0->getName(), &target ) ) // 变量未定义
             {
-                throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal( v0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( STRING_TO_LOCAL( v0->toString() ).c_str() ) );
                 return false;
             }
             if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
             {
-                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
+                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( STRING_TO_LOCAL( v0->toString() ).c_str(), "Collection/Array" ) );
                 return false;
             }
 
@@ -1326,7 +1326,7 @@ static bool __OprColon( Expression const * e, ExprOperand * arOperands[], short 
 
             if ( target->isArray() && key.toInt() >= (int)target->_pArr->size() )
             {
-                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( winux::StringToLocal( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
+                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( STRING_TO_LOCAL( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
                 return false;
             }
 
@@ -1342,7 +1342,7 @@ static bool __OprColon( Expression const * e, ExprOperand * arOperands[], short 
 
             if ( !target->isCollection() && !target->isArray() ) // 变量值不是Collection/Array类型
             {
-                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( winux::StringToLocal( v0->toString() ).c_str(), "Collection/Array" ) );
+                throw ExprError( ExprError::eeValueTypeError, EXPRERRSTR_ERROR_VALUE_TYPE( STRING_TO_LOCAL( v0->toString() ).c_str(), "Collection/Array" ) );
                 return false;
             }
 
@@ -1365,7 +1365,7 @@ static bool __OprColon( Expression const * e, ExprOperand * arOperands[], short 
 
             if ( target->isArray() && key.toInt() >= (int)target->_pArr->size() )
             {
-                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( winux::StringToLocal( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
+                throw ExprError( ExprError::eeOutOfArrayBound, EXPRERRSTR_OUT_OF_ARRAY_BOUND( STRING_TO_LOCAL( v0->toString() ).c_str(), (int)target->_pArr->size(), key ) );
                 return false;
             }
 
@@ -1576,13 +1576,13 @@ static bool __OprAssign( Expression const * e, ExprOperand * arOperands[], short
         if ( IS_NOT_IDENTIFIER(opd0) && IS_NOT_REFERENCE(opd0) ) // 如果赋值号左边不是可赋值的Identifier,Reference，就尝试计算是否能得到Identifier,Reference，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier,Reference
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) || IS_REFERENCE(evalOpd0) ) ) // 如果不能得到Identifier或Reference就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -1907,13 +1907,13 @@ static bool __OprIncrease( Expression const * e, ExprOperand * arOperands[], sho
         if ( IS_NOT_IDENTIFIER(opd0) ) // 如果操作数不是可赋值的Identifier，就尝试计算是否能得到Identifier，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) ) ) // 如果不能得到Identifier就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -1940,13 +1940,13 @@ static bool __OprDecrease( Expression const * e, ExprOperand * arOperands[], sho
         if ( IS_NOT_IDENTIFIER(opd0) ) // 如果操作数不是可赋值的Identifier，就尝试计算是否能得到Identifier，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) ) ) // 如果不能得到Identifier就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -1973,13 +1973,13 @@ static bool __OprIncrease2( Expression const * e, ExprOperand * arOperands[], sh
         if ( IS_NOT_IDENTIFIER(opd0) ) // 如果操作数不是可赋值的Identifier，就尝试计算是否能得到Identifier，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) ) ) // 如果不能得到Identifier就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -2006,13 +2006,13 @@ static bool __OprDecrease2( Expression const * e, ExprOperand * arOperands[], sh
         if ( IS_NOT_IDENTIFIER(opd0) ) // 如果操作数不是可赋值的Identifier，就尝试计算是否能得到Identifier，如果不能就抛异常
         {
             if ( IS_LITERAL(opd0) ) // 如果是不能计算的字面值，抛出异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_NOT_VARIABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !opd0->evaluate(&evalOpd0) ) // 尝试计算是否能得到Identifier
-                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeEvaluateFailed, EXPRERRSTR_EVALUATE_FAILED( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             if ( !( IS_IDENTIFIER(evalOpd0) ) ) // 如果不能得到Identifier就抛异常
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( winux::StringToLocal( opd0->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_EXPR_NOT_WRITEABLE( STRING_TO_LOCAL( opd0->toString() ).c_str() ) );
 
             opd0 = evalOpd0.get();
         }
@@ -2555,7 +2555,7 @@ static bool __FuncVar( Expression * e, std::vector<Expression *> const & params,
             }
             else // 是操作符
             {
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_OPERATOR_WRONG_PLACE_IN( "var", winux::StringToLocal( atom->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_OPERATOR_WRONG_PLACE_IN( "var", STRING_TO_LOCAL( atom->toString() ).c_str() ) );
             }
         }
         else
@@ -2579,7 +2579,7 @@ static bool __FuncVar( Expression * e, std::vector<Expression *> const & params,
                 }
                 else
                 {
-                    throw ExprError( ExprError::eeVarCtxNotFound, EXPRERRSTR_NOT_ASSOC_VARCTX( winux::StringToLocal( e->toString() ).c_str() ) );
+                    throw ExprError( ExprError::eeVarCtxNotFound, EXPRERRSTR_NOT_ASSOC_VARCTX( STRING_TO_LOCAL( e->toString() ).c_str() ) );
                 }
             }
         }
@@ -2633,7 +2633,7 @@ static bool __FuncDef( Expression * e, std::vector<Expression *> const & params,
             }
             else
             {
-                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_OPERATOR_WRONG_PLACE_IN( "def", winux::StringToLocal( atom->toString() ).c_str() ) );
+                throw ExprError( ExprError::eeOperandTypeError, EXPRERRSTR_OPERATOR_WRONG_PLACE_IN( "def", STRING_TO_LOCAL( atom->toString() ).c_str() ) );
             }
         }
         else
@@ -2660,7 +2660,7 @@ static bool __FuncDef( Expression * e, std::vector<Expression *> const & params,
                 }
                 else
                 {
-                    throw ExprError( ExprError::eeVarCtxNotFound, EXPRERRSTR_NOT_ASSOC_VARCTX( winux::StringToLocal( e->toString() ).c_str() ) );
+                    throw ExprError( ExprError::eeVarCtxNotFound, EXPRERRSTR_NOT_ASSOC_VARCTX( STRING_TO_LOCAL( e->toString() ).c_str() ) );
                 }
             }
         }
@@ -2729,7 +2729,7 @@ static bool __FuncHtmlEncode( eienexpr::Expression * e, std::vector<eienexpr::Ex
         for ( i = 0; i < (int)chrs.length(); ++i )
         {
             winux::String::value_type s[2] = { chrs[i] };
-            if ( winux::isset( __HtmlCharsEntities, s ) )
+            if ( winux::IsSet( __HtmlCharsEntities, s ) )
             {
                 chars.push_back(s);
                 entities.push_back(__HtmlCharsEntities[s]);
@@ -2778,7 +2778,7 @@ static bool __FuncHtmlDecode( eienexpr::Expression * e, std::vector<eienexpr::Ex
         for ( i = 0; i < (int)chrs.length(); ++i )
         {
             winux::String::value_type s[2] = { chrs[i] };
-            if ( winux::isset( __HtmlCharsEntities, s ) )
+            if ( winux::IsSet( __HtmlCharsEntities, s ) )
             {
                 chars.push_back(s);
                 entities.push_back(__HtmlCharsEntities[s]);
@@ -3196,7 +3196,7 @@ void ExprPackage::setFunc( winux::String const & funcName, ExprFunc::FuncFunctio
 
 bool ExprPackage::delFunc( winux::String const & funcName )
 {
-    if ( winux::isset( _funcsMap, funcName ) )
+    if ( winux::IsSet( _funcsMap, funcName ) )
     {
         _funcsMap.erase(funcName);
         return true;
@@ -3206,7 +3206,7 @@ bool ExprPackage::delFunc( winux::String const & funcName )
 
 bool ExprPackage::modifyFunc( winux::String const & funcName, winux::String const & newFuncName, ExprFunc::FuncFunction newFn )
 {
-    if ( winux::isset( _funcsMap, funcName ) )
+    if ( winux::IsSet( _funcsMap, funcName ) )
     {
         _funcsMap.erase(funcName);
         this->setFunc( newFuncName, newFn );
@@ -3217,7 +3217,7 @@ bool ExprPackage::modifyFunc( winux::String const & funcName, winux::String cons
 
 bool ExprPackage::findFunc( winux::String const & funcName, ExprFunc::FuncFunction * fn ) const
 {
-    if ( winux::isset( _funcsMap, funcName ) )
+    if ( winux::IsSet( _funcsMap, funcName ) )
     {
         ASSIGN_PTR(fn) = _funcsMap.at(funcName);
         return true;
@@ -3331,7 +3331,7 @@ inline static void __IsOkAsOperand( __JudgeContext * ctx, winux::String const & 
     {
         if ( ctx->prevAtom->getAtomType() == ExprAtom::eatOperand )
         {
-            throw ExprError( ExprError::eeExprParseError, EXPRERRSTR_OPERAND_WRONG_PLACE_IMPOSSIBLE_CONTINUOUS_OPERAND( winux::StringToLocal(tmp).c_str(), pos ) );
+            throw ExprError( ExprError::eeExprParseError, EXPRERRSTR_OPERAND_WRONG_PLACE_IMPOSSIBLE_CONTINUOUS_OPERAND( STRING_TO_LOCAL(tmp).c_str(), pos ) );
         }
         else if ( ctx->prevAtom->getAtomType() == ExprAtom::eatOperator )
         {
@@ -3339,7 +3339,7 @@ inline static void __IsOkAsOperand( __JudgeContext * ctx, winux::String const & 
             if ( prevOpr->isUnary() && !prevOpr->isRight() )
             {
                 // 单目左结合算符右边不可能是操作数
-                throw ExprError( ExprError::eeExprParseError, EXPRERRSTR_OPERAND_WRONG_PLACE_IMPOSSIBLE_OPERAND_ATRIGHTOF_UNARYLEFTASSOC_OPR( winux::StringToLocal(tmp).c_str(), pos ) );
+                throw ExprError( ExprError::eeExprParseError, EXPRERRSTR_OPERAND_WRONG_PLACE_IMPOSSIBLE_OPERAND_ATRIGHTOF_UNARYLEFTASSOC_OPR( STRING_TO_LOCAL(tmp).c_str(), pos ) );
             }
         }
     }
@@ -3415,7 +3415,7 @@ inline static void __JudgeOprOrNumOrId( Expression * e, __JudgeContext * ctx, in
             }
             else
             {
-                throw ExprError( ExprError::eeExprParseError, EXPRERRSTR_OPERATOR_WRONG_PLACE( winux::StringToLocal(ctx->strTmp).c_str(), pos ) );
+                throw ExprError( ExprError::eeExprParseError, EXPRERRSTR_OPERATOR_WRONG_PLACE( STRING_TO_LOCAL(ctx->strTmp).c_str(), pos ) );
             }
         }
         else if ( ctx->isNumPrevPossibility )

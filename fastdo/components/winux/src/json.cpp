@@ -25,7 +25,41 @@
 
 namespace winux
 {
+#include "is_x_funcs.inl"
 
+inline static tchar NumberStringToChar( String const & number, int base )
+{
+    tchar * endptr;
+    return (tchar)_tcstol( number.c_str(), &endptr, base );
+}
+
+inline static winux::ulong NumberStringToNumber( String const & number, int base )
+{
+    tchar * endptr;
+    return (winux::ulong)_tcstoul( number.c_str(), &endptr, base );
+}
+
+thread_local bool __byteOrderForUtf16 = true;
+WINUX_FUNC_IMPL(bool) JsonSetByteOrderForUtf16( bool isLittleEndian )
+{
+    auto old = __byteOrderForUtf16;
+    __byteOrderForUtf16 = isLittleEndian;
+    return old;
+}
+
+#if defined(_UNICODE) || defined(UNICODE)
+thread_local String __convertToCharsetForUtf16 = IsBigEndian() ? $T("UTF-16BE") : $T("UTF-16LE");
+#else
+thread_local String __convertToCharsetForUtf16 = $T("");
+#endif
+WINUX_FUNC_IMPL(String) JsonSetConvertToCharsetForUtf16( String const & charset )
+{
+    auto old = __convertToCharsetForUtf16;
+    __convertToCharsetForUtf16 = charset;
+    return old;
+}
+
+// JSON解析场景
 enum JsonParseContext
 {
     jsonData,
@@ -36,24 +70,10 @@ enum JsonParseContext
     jsonIdentifier,
 };
 
-bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * val );
-
-#include "is_x_funcs.inl"
-
-inline static tchar NumberStringToChar( const tchar * number, int base )
-{
-    tchar * endptr;
-    return (tchar)_tcstol( number, &endptr, base );
-}
-
-inline static winux::ulong NumberStringToNumber( const tchar * number, int base )
-{
-    tchar * endptr;
-    return (winux::ulong)_tcstoul( number, &endptr, base );
-}
+static bool Json_ParseData( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * val );
 
 // 解析数字
-bool JsonParseNumber( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * numVal )
+static bool Json_ParseNumber( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * numVal )
 {
     String numStr;
     bool isFloat = false; // check include '.'
@@ -108,31 +128,10 @@ bool JsonParseNumber( std::vector<JsonParseContext> & jpc, String const & json, 
         }
     }
     return true;
-
-}
-
-thread_local bool __byteOrderForUtf16 = true;
-WINUX_FUNC_IMPL(bool) JsonSetByteOrderForUtf16( bool isLittleEndian )
-{
-    auto old = __byteOrderForUtf16;
-    __byteOrderForUtf16 = isLittleEndian;
-    return old;
-}
-
-#if defined(_UNICODE) || defined(UNICODE)
-thread_local String __convertToCharsetForUtf16 = IsBigEndian() ? $T("UTF-16BE") : $T("UTF-16LE");
-#else
-thread_local String __convertToCharsetForUtf16 = $T("");
-#endif
-WINUX_FUNC_IMPL(String) JsonSetConvertToCharsetForUtf16( String const & charset )
-{
-    auto old = __convertToCharsetForUtf16;
-    __convertToCharsetForUtf16 = charset;
-    return old;
 }
 
 // 解析转义字符
-bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const & json, int & i, String * str )
+static bool Json_ParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const & json, int & i, String * str )
 {
     ++i; // skip '\'
     while ( i < (int)json.length() )
@@ -196,7 +195,7 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
                 }
             }
 
-            *str += NumberStringToChar( octStr.c_str(), 8 );
+            *str += NumberStringToChar( octStr, 8 );
 
             break;
         }
@@ -217,7 +216,7 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
                 }
             }
 
-            *str += NumberStringToChar( hexStr.c_str(), 16 );
+            *str += NumberStringToChar( hexStr, 16 );
 
             break;
         }
@@ -239,7 +238,7 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
             }
 
             // 编码处理
-            winux::uint16 code0 = (winux::uint16)NumberStringToNumber( hexStr.c_str(), 16 );
+            winux::uint16 code0 = (winux::uint16)NumberStringToNumber( hexStr, 16 );
             UnicodeString16 chars;
             chars += (UnicodeString16::value_type)code0;
             if ( code0 >= 0xD800 && code0 <= 0xDBFF ) // 是UTF16代理对，尝试读取下一'\uHHHH'。若失败则退回原位
@@ -268,7 +267,7 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
                                         break;
                                     }
                                 }
-                                winux::uint16 code1 = (winux::uint16)NumberStringToNumber( hexStr.c_str(), 16 );
+                                winux::uint16 code1 = (winux::uint16)NumberStringToNumber( hexStr, 16 );
                                 if ( code1 >= 0xDC00 && code1 <= 0xDFFF )
                                 {
                                     chars += (UnicodeString16::value_type)code1;
@@ -294,7 +293,7 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
                     }
                 }
             }
-            AnsiString convertToCharsetForUtf16 = StringToLocal(__convertToCharsetForUtf16);
+            AnsiString convertToCharsetForUtf16 = STRING_TO_LOCAL(__convertToCharsetForUtf16);
             Conv conv( ( __byteOrderForUtf16 ? "UTF-16LE" : "UTF-16BE" ), convertToCharsetForUtf16 );
         #if defined(_UNICODE) || defined(UNICODE)
             *str += UnicodeConverter( conv.convert< UnicodeString16, UnicodeString16 >(chars) ).toUnicode();
@@ -314,14 +313,14 @@ bool JsonParseStrAntiSlashes( std::vector<JsonParseContext> & jpc, String const 
 }
 
 // 解析字符串
-bool JsonParseString( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * strVal )
+static bool Json_ParseString( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * strVal )
 {
     String::value_type quote = json[i]; // 记下是什么引号
 
+    ++i; // skip quote
     strVal->assign( $T("") ); // 初始化字符串
 
     String * str = &strVal->ref<String>();
-    ++i; // skip quote
 
     while ( i < (int)json.length() )
     {
@@ -334,7 +333,7 @@ bool JsonParseString( std::vector<JsonParseContext> & jpc, String const & json, 
         else if ( ch == '\\' ) // 进入转义字符解析
         {
             jpc.push_back(jsonStrAntiSlashes);
-            JsonParseStrAntiSlashes( jpc, json, i, str );
+            Json_ParseStrAntiSlashes( jpc, json, i, str );
             jpc.pop_back();
         }
         else
@@ -347,12 +346,10 @@ bool JsonParseString( std::vector<JsonParseContext> & jpc, String const & json, 
 }
 
 // 解析数组
-bool JsonParseArray( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * arrVal )
+static bool Json_ParseArray( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * arrVal )
 {
     ++i; // skip '['
-
     arrVal->createArray(); // 创建数组
-
     jpc.push_back(jsonArrElem);
 
     Mixed elem; // 解析到的数据
@@ -383,7 +380,7 @@ bool JsonParseArray( std::vector<JsonParseContext> & jpc, String const & json, i
         {
             if ( !hasElem )
             {
-                JsonParseData( jpc, json, i, &elem );
+                Json_ParseData( jpc, json, i, &elem );
                 hasElem = true;
             }
             else // 跳过多余数据
@@ -405,7 +402,7 @@ bool JsonParseArray( std::vector<JsonParseContext> & jpc, String const & json, i
 }
 
 // 解析一个对象(map)
-bool JsonParseObject( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * objVal )
+static bool Json_ParseObject( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * objVal )
 {
     ++i; // skip '{'
     objVal->createCollection();
@@ -454,7 +451,7 @@ bool JsonParseObject( std::vector<JsonParseContext> & jpc, String const & json, 
                 jpc.push_back(jsonObjAttrKey);
                 if ( ch == '\"' || ch == '\'' ) // 是字符串
                 {
-                    JsonParseString( jpc, json, i, &key );
+                    Json_ParseString( jpc, json, i, &key );
                 }
                 else
                 {
@@ -479,7 +476,7 @@ bool JsonParseObject( std::vector<JsonParseContext> & jpc, String const & json, 
             else
             {
                 jpc.push_back(jsonObjAttrVal);
-                JsonParseData( jpc, json, i, &val );
+                Json_ParseData( jpc, json, i, &val );
                 jpc.pop_back();
                 hasVal = true;
             }
@@ -503,7 +500,7 @@ bool JsonParseObject( std::vector<JsonParseContext> & jpc, String const & json, 
 }
 
 // 解析一个标识符，这个标识符可能是个常量或者未定义
-bool JsonParseIdentifier( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * val )
+static bool Json_ParseIdentifier( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * val )
 {
     String identifier;
     while ( i < (int)json.length() )
@@ -520,14 +517,13 @@ bool JsonParseIdentifier( std::vector<JsonParseContext> & jpc, String const & js
         }
     }
 
-    // 常量辨别
-    if ( identifier == $T("false") )
+    thread_local std::map< String, Mixed > constMap{
+        { $T("false"), false },
+        { $T("true"), true },
+    };
+    if ( IsSet( constMap, identifier ) ) // 常量辨别
     {
-        *val = false;
-    }
-    else if ( identifier == $T("true") )
-    {
-        *val = true;
+        *val = constMap[identifier];
     }
     else // 其他未定义常量通通设定为MT_NULL
     {
@@ -538,7 +534,7 @@ bool JsonParseIdentifier( std::vector<JsonParseContext> & jpc, String const & js
 }
 
 // 解析一个json数据
-bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * val )
+static bool Json_ParseData( std::vector<JsonParseContext> & jpc, String const & json, int & i, Mixed * val )
 {
     val->free();
 
@@ -552,7 +548,7 @@ bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, in
         else if ( IsDigit(ch) || ch == '-' || ch == '.' ) // 可能是数字，进入数字解析
         {
             jpc.push_back(jsonNumber);
-            JsonParseNumber( jpc, json, i, val );
+            Json_ParseNumber( jpc, json, i, val );
             jpc.pop_back();
             return true;
             break;
@@ -560,7 +556,7 @@ bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, in
         else if ( ch == '\"' || ch == '\'' ) // 是字符串，进入字符串解析
         {
             jpc.push_back(jsonString);
-            JsonParseString( jpc, json, i, val );
+            Json_ParseString( jpc, json, i, val );
             jpc.pop_back();
             return true;
             break;
@@ -568,7 +564,7 @@ bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, in
         else if ( ch == '[' ) // 进入数组解析
         {
             jpc.push_back(jsonArray);
-            JsonParseArray( jpc, json, i, val );
+            Json_ParseArray( jpc, json, i, val );
             jpc.pop_back();
             return true;
             break;
@@ -576,7 +572,7 @@ bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, in
         else if ( ch == '{' ) // 进入对象解析
         {
             jpc.push_back(jsonObject);
-            JsonParseObject( jpc, json, i, val );
+            Json_ParseObject( jpc, json, i, val );
             jpc.pop_back();
             return true;
             break;
@@ -584,7 +580,7 @@ bool JsonParseData( std::vector<JsonParseContext> & jpc, String const & json, in
         else if ( IsWord(ch) ) // 进入标识符解析
         {
             jpc.push_back(jsonIdentifier);
-            JsonParseIdentifier( jpc, json, i, val );
+            Json_ParseIdentifier( jpc, json, i, val );
             jpc.pop_back();
             return true;
             break;
@@ -639,7 +635,7 @@ WINUX_FUNC_IMPL(bool) ParseJson( String const & json, Mixed * val )
     std::vector<JsonParseContext> jpc; // 解析场景
     jpc.push_back(jsonData);
     int i = 0; // 起始位置
-    return JsonParseData( jpc, json, i, val );
+    return Json_ParseData( jpc, json, i, val );
 }
 
 WINUX_FUNC_IMPL(Mixed) Json( String const & json )
@@ -677,11 +673,11 @@ inline static XString<_ChTy> Impl_RecursiveMixedToJsonEx( int level, Mixed const
         s += v._boolVal ? Literal<_ChTy>::boolTrueStr : Literal<_ChTy>::boolFalseStr;
         break;
     case Mixed::MT_CHAR:
-        s += Literal<_ChTy>::aposStr + XString<_ChTy>( 1, (_ChTy)v._chVal ) + Literal<_ChTy>::aposStr;
+        s += Literal<_ChTy>::quoteStr + XString<_ChTy>( 1, (_ChTy)v._chVal ) + Literal<_ChTy>::quoteStr;
         break;
     case Mixed::MT_ANSI:
     case Mixed::MT_UNICODE:
-        s += Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>( v.toString<_ChTy>() ) + Literal<_ChTy>::quoteStr;
+        s += Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( v.toString<_ChTy>(), Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr;
         break;
     case Mixed::MT_BINARY:
         s += Literal<_ChTy>::aposStr + XString<_ChTy>(Literal<_ChTy>::base64Str) + Literal<_ChTy>::colonStr + Base64EncodeBuffer<_ChTy>(*v._pBuf) + Literal<_ChTy>::aposStr;
@@ -726,7 +722,7 @@ inline static XString<_ChTy> Impl_RecursiveMixedToJsonEx( int level, Mixed const
                 if ( it->isString() )
                 {
                     XString<_ChTy> k = *it;
-                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + ( autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(k) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(k) + Literal<_ChTy>::quoteStr ) );
+                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + ( autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr ) );
                 }
                 else
                 {
@@ -769,11 +765,11 @@ inline static XString<_ChTy> Impl_RecursiveMixedToJson( int level, Mixed const &
         s += v._boolVal ? Literal<_ChTy>::boolTrueStr : Literal<_ChTy>::boolFalseStr;
         break;
     case Mixed::MT_CHAR:
-        s += Literal<_ChTy>::aposStr + XString<_ChTy>( 1, (_ChTy)v._chVal ) + Literal<_ChTy>::aposStr;
+        s += Literal<_ChTy>::quoteStr + XString<_ChTy>( 1, (_ChTy)v._chVal ) + Literal<_ChTy>::quoteStr;
         break;
     case Mixed::MT_ANSI:
     case Mixed::MT_UNICODE:
-        s += Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>( v.toString<_ChTy>() ) + Literal<_ChTy>::quoteStr;
+        s += Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( v.toString<_ChTy>(), Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr;
         break;
     case Mixed::MT_BINARY:
         s += Literal<_ChTy>::aposStr + XString<_ChTy>(Literal<_ChTy>::base64Str) + Literal<_ChTy>::colonStr + Base64EncodeBuffer<_ChTy>(*v._pBuf) + Literal<_ChTy>::aposStr;
@@ -810,7 +806,7 @@ inline static XString<_ChTy> Impl_RecursiveMixedToJson( int level, Mixed const &
                 if ( it->isString() )
                 {
                     XString<_ChTy> k = *it;
-                    s += autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(k) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(k) + Literal<_ChTy>::quoteStr );
+                    s += autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr );
                 }
                 else
                 {

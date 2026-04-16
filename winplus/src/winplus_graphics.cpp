@@ -134,7 +134,7 @@ void Graphics::FillRectangle( Gdiplus::Brush const * brush, Gdiplus::RectF const
 
 void Graphics::DrawShadowString( winplus::String const & str, Gdiplus::Font const & font, Gdiplus::Brush const * brushLight, Gdiplus::Brush const * brushDark, Gdiplus::RectF const & layoutRect, Gdiplus::StringFormat const & fmt, Gdiplus::RectF * boundingRect )
 {
-    winplus::UnicodeString sU = winplus::StringToUnicode(str);
+    winplus::UnicodeString sU = STRING_TO_UNICODE(str);
     if ( boundingRect )
     {
         this->MeasureString(
@@ -741,7 +741,7 @@ BOOL MemImage::create( int nWidth, int nHeight )
 BOOL MemImage::create( String const & imgFile )
 {
     this->destroy();
-    _pBmpImage = new Gdiplus::Bitmap( StringToUnicode(imgFile).c_str(), FALSE );
+    _pBmpImage = new Gdiplus::Bitmap( STRING_TO_UNICODE(imgFile).c_str(), FALSE );
     return _pBmpImage != NULL;
 }
 

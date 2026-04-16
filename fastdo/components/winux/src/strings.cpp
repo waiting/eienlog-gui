@@ -2083,41 +2083,41 @@ WINUX_FUNC_IMPL(UnicodeString) LocalToUnicode( AnsiString const & local )
     return UnicodeString( r.c_str(), n );
 }
 
-WINUX_FUNC_IMPL(String) LocalToString( AnsiString const & local )
-{
-#ifdef UNICODE
-    return LocalToUnicode(local);
-#else
-    return local;
-#endif
-}
-
-WINUX_FUNC_IMPL(String) UnicodeToString( UnicodeString const & unicode )
-{
-#ifdef UNICODE
-    return unicode;
-#else
-    return UnicodeToLocal(unicode);
-#endif
-}
-
-WINUX_FUNC_IMPL(AnsiString) StringToLocal( String const & str )
-{
-#ifdef UNICODE
-    return UnicodeToLocal(str);
-#else
-    return str;
-#endif
-}
-
-WINUX_FUNC_IMPL(UnicodeString) StringToUnicode( String const & str )
-{
-#ifdef UNICODE
-    return str;
-#else
-    return LocalToUnicode(str);
-#endif
-}
+//WINUX_FUNC_IMPL(String) LocalToString( AnsiString const & local )
+//{
+//#ifdef UNICODE
+//    return LocalToUnicode(local);
+//#else
+//    return local;
+//#endif
+//}
+//
+//WINUX_FUNC_IMPL(String) UnicodeToString( UnicodeString const & unicode )
+//{
+//#ifdef UNICODE
+//    return unicode;
+//#else
+//    return UnicodeToLocal(unicode);
+//#endif
+//}
+//
+//WINUX_FUNC_IMPL(AnsiString) StringToLocal( String const & str )
+//{
+//#ifdef UNICODE
+//    return UnicodeToLocal(str);
+//#else
+//    return str;
+//#endif
+//}
+//
+//WINUX_FUNC_IMPL(UnicodeString) StringToUnicode( String const & str )
+//{
+//#ifdef UNICODE
+//    return str;
+//#else
+//    return LocalToUnicode(str);
+//#endif
+//}
 
 AnsiString FormatExVA( size_t cch, char const * fmt, va_list args )
 {
@@ -2361,7 +2361,7 @@ static struct __ConvLangCodePage
         {
             return atoi( cp.c_str() + 2 );
         }
-        if ( isset( _convLangCP, cp ) )
+        if ( IsSet( _convLangCP, cp ) )
         {
             return _convLangCP.at(cp);
         }
