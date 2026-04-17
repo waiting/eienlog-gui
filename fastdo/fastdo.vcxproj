@@ -23,7 +23,7 @@
     <ProjectGuid>{1A85F3B3-1970-4181-8C73-5047F53DF5BB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>fastdo</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

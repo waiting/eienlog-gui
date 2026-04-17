@@ -1614,7 +1614,7 @@ String IFile::getLine()
 int IFile::puts( String const & str )
 {
 #if defined(_UNICODE) || defined(_UNICODE)
-    AnsiString data = StringToLocal(str);
+    AnsiString data = STRING_TO_LOCAL(str);
     return (int)this->write( data.c_str(), data.length() );
 #else
     return (int)this->write( str.c_str(), str.length() * sizeof(str[0]) );

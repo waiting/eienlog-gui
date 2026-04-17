@@ -171,7 +171,7 @@ void LogListenWindow::renderComponents()
             case 2:
                 for ( int i = 0; i < (int)this->logs.size(); i++ )
                 {
-                    if ( this->saveTargetType == 2 && winux::isset( this->selected, i ) && this->selected[i] ) continue;
+                    if ( this->saveTargetType == 2 && winux::IsSet( this->selected, i ) && this->selected[i] ) continue;
                     auto && log = this->logs[i];
                     winux::Mixed record;
                     record.createArray();
