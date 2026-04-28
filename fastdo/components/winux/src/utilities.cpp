@@ -78,8 +78,8 @@ WINUX_FUNC_IMPL(int) MemoryCompareI( void const * buf1, size_t n1, void const * 
     if ( diff != 0 ) return diff;
     return (int)( n1 - n2 );
 #else
-    auto p1 = (winux::byte const *)buf1;
-    auto p2 = (winux::byte const *)buf2;
+    auto p1 = (byte const *)buf1;
+    auto p2 = (byte const *)buf2;
     size_t n = n1 < n2 ? n1 : n2;
     for ( size_t i = 0; i < n; ++i )
     {
@@ -638,7 +638,7 @@ void GrowBuffer::append( void const * data, size_t size )
     {
         this->realloc( __AutoIncrement( this->_dataSize + size ) );
     }
-    if ( data != nullptr ) memcpy( (winux::byte *)this->_buf + this->_dataSize, data, size );
+    if ( data != nullptr ) memcpy( (byte *)this->_buf + this->_dataSize, data, size );
     this->_dataSize += size;
 }
 
@@ -655,7 +655,7 @@ void GrowBuffer::erase( size_t start, size_t count )
         else
         {
             // 将后面数据覆盖掉删除的数据，并调整数据大小
-            memmove( (winux::byte *)_buf + start, (winux::byte *)_buf + start + count, _dataSize - ( start + count ) );
+            memmove( (byte *)_buf + start, (byte *)_buf + start + count, _dataSize - ( start + count ) );
             _dataSize -= count;
         }
 

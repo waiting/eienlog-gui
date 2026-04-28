@@ -787,7 +787,7 @@ int Socket::sendTo( EndPoint const & ep, void const * data, size_t size, int msg
     int err = socket_errno;
     if ( sentBytes < 0 || sentBytes == 0 && err != 0 )
     {
-        throw SocketError( err, winux::FormatA( "An error occurred while sending the data(to:%s,data:%p,size:%u).", winux::StringToLocal( ep.toString() ).c_str(), data, size ) );
+        throw SocketError( err, winux::FormatA( "An error occurred while sending the data(to:%s,data:%p,size:%u).", STRING_TO_LOCAL( ep.toString() ).c_str(), data, size ) );
     }
 #endif
 
@@ -839,7 +839,7 @@ bool Socket::connect( EndPoint const & ep )
     {
     #if defined(SOCKET_EXCEPTION_USE)
         int err = socket_errno;
-        throw SocketError( err, winux::FormatA( "An error occurred while connecting to the server(addr:%s).", winux::StringToLocal( ep.toString() ).c_str() ) );
+        throw SocketError( err, winux::FormatA( "An error occurred while connecting to the server(addr:%s).", STRING_TO_LOCAL( ep.toString() ).c_str() ) );
     #else
         return false;
     #endif
@@ -861,7 +861,7 @@ bool Socket::bind( EndPoint const & ep )
     {
     #if defined(SOCKET_EXCEPTION_USE)
         int err = socket_errno;
-        throw SocketError( err, winux::FormatA( "An error occurred while binding the address(addr:%s).", winux::StringToLocal( ep.toString() ).c_str() ) );
+        throw SocketError( err, winux::FormatA( "An error occurred while binding the address(addr:%s).", STRING_TO_LOCAL( ep.toString() ).c_str() ) );
     #else
         return false;
     #endif

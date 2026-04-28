@@ -386,7 +386,7 @@ protected:
 };
 
 /** \brief 定时器 */
-class Timer : public winux::EnableSharedFromThis<Timer>
+class EIENNET_DLL Timer : public winux::EnableSharedFromThis<Timer>
 {
 protected:
     Timer( io::IoService & serv );

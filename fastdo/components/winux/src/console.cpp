@@ -34,8 +34,8 @@ ConsoleAttr::ConsoleAttr( winux::ushort attr ) : _attr(attr)
         _wAttributes = ( _wAttributes & 0x0F ) | ( _attr & 0xF0 );
     }
 #else
-    winux::byte fg = ( _attr & 0x0F );
-    winux::byte bg = ( ( _attr >> 4 ) & 0x0F );
+    byte fg = ( _attr & 0x0F );
+    byte bg = ( ( _attr >> 4 ) & 0x0F );
     if ( ( _attr & fgIgnore ) != fgIgnore ) // 若不忽略前景色
     {
         this->_strAttr = __TerminalFgColorAttrs[fg];

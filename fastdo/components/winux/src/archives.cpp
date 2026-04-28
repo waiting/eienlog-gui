@@ -721,7 +721,7 @@ static void EvalSettings_ParseBinary( std::vector<EvalSettings_ParseContext> & c
             {
                 if ( !vch.empty() )
                 {
-                    buf.appendType<winux::byte>( (winux::byte)NumberStringToChar( vch, 16 ) );
+                    buf.appendType<byte>( (byte)NumberStringToChar( vch, 16 ) );
                     vch.clear();
                 }
                 i++;
@@ -735,7 +735,7 @@ static void EvalSettings_ParseBinary( std::vector<EvalSettings_ParseContext> & c
                 }
                 else
                 {
-                    buf.appendType<winux::byte>( (winux::byte)NumberStringToChar( vch, 16 ) );
+                    buf.appendType<byte>( (byte)NumberStringToChar( vch, 16 ) );
                     vch.clear();
                 }
             }
@@ -743,7 +743,7 @@ static void EvalSettings_ParseBinary( std::vector<EvalSettings_ParseContext> & c
 
         if ( !vch.empty() )
         {
-            buf.appendType<winux::byte>( (winux::byte)NumberStringToChar( vch, 16 ) );
+            buf.appendType<byte>( (byte)NumberStringToChar( vch, 16 ) );
             vch.clear();
         }
 

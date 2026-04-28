@@ -43,11 +43,11 @@ namespace iocp
 // IoSocketCtx 超时处理 ------------------------------------------------------------------------
 static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx )
 {
-    auto * ctx = timerCtx->assocCtx;
-    if ( ctx )
+    auto * assocCtx = timerCtx->assocCtx;
+    if ( assocCtx )
     {
-        ctx->timerCtx = nullptr; // 取消关联的超时timer场景
-        ctx->changeState(stateTimeoutCancel); // 超时取消操作
+        assocCtx->timerCtx = nullptr; // 取消关联的超时timer场景
+        assocCtx->changeState(stateTimeoutCancel); // 超时取消操作
     }
 }
 
@@ -975,7 +975,7 @@ void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, wi
 
     // 分配处理线程
     timer->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );
-    //if ( timer->getThread() ) timer->getThread()->incWeight(); // 增加线程负载权重
+    if ( timer->getThread() ) timer->getThread()->incWeight(); // 增加线程负载权重
 
     timer->set( timeoutMs, periodic );
 }

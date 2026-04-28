@@ -431,7 +431,7 @@ bool ExprIdentifier::evaluate( winux::SimplePointer<ExprOperand> * result ) cons
             result->attachNew( new ExprLiteral() );
         }
         return true;
-        //throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( winux::StringToLocal(this->_name).c_str() ) );
+        //throw ExprError( ExprError::eeVarNotFound, EXPRERRSTR_IDENTIFIER_NOT_DEFINED( STRING_TO_LOCAL(this->_name).c_str() ) );
     }
     return false;
 }

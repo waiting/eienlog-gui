@@ -2092,8 +2092,11 @@ public:
     void assign( Collection const & coll, bool caseInsensitive = false );
 
     // JSON相关操作 ----------------------------------------------------------------------------
+    /** \brief 转成自定义格式的JSON串 */
     String myJson( bool autoKeyQuotes = true, String const & spacer = $T(""), String const & newline = $T("") ) const;
+    /** \brief 转成标准JSON串 */
     String json() const;
+    /** \brief 解析JSON串 */
     Mixed & json( String const & jsonStr );
 
 private:

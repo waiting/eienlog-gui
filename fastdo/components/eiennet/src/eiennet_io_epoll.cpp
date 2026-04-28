@@ -41,7 +41,18 @@ namespace io
 {
 namespace epoll
 {
-// IoSocketCtx 清空超时事件关联，并停止超时定时器，尝试释放IoTimerCtx ------------------------------------------------
+// IoSocketCtx 超时处理 ---------------------------------------------------------------------------
+static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx )
+{
+    auto * assocCtx = timerCtx->assocCtx;
+    if ( assocCtx )
+    {
+        assocCtx->timerCtx = nullptr; // 取消关联的超时timer场景
+        assocCtx->changeState(stateTimeoutCancel); // 超时取消操作
+    }
+}
+
+// IoSocketCtx 清空超时事件关联，并停止超时定时器，尝试释放IoTimerCtx --------------------------------
 static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
 {
     if ( ctx->timerCtx )
@@ -53,7 +64,7 @@ static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
     }
 }
 
-// EPOLL工作函数 ------------------------------------------------------------------------------
+// EPOLL工作函数 ----------------------------------------------------------------------------------
 void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop )
 {
     while ( !*stop )
@@ -76,33 +87,110 @@ void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll
                 auto & evt = epoll->evt(i);
                 if ( evt.data.fd == stopEventFd.get() )
                 {
-                    // 控制事件，清理 eventfd
+                    // stop signal事件，清理 eventfd
                     uint64_t value;
                     read( stopEventFd.get(), &value, sizeof(value) );
-                    continue;
                 }
-                
-                // 处理其他事件
-                auto * ioCtx = reinterpret_cast<IoCtx *>(evt.data.ptr);
-                switch ( ioCtx->type )
+                else
                 {
-                case ioAccept:
-                    break;
-                case ioConnect:
-                    break;
-                case ioRecv:
-                    break;
-                case ioSend:
-                    break;
-                case ioRecvFrom:
-                    break;
-                case ioSendTo:
-                    break;
-                case ioTimer:
-                    break;
-                }
+                    // 处理其他IO事件
+                    winux::ScopeGuard guard(ioEvents._mtx);
+                    auto & ioMap = ioEvents._fdToIoCtxs[evt.data.fd];
+                    if ( evt.events & EPOLLIN )
+                    {
+                        for ( auto it = ioMap.begin(); it != ioMap.end(); it++ )
+                        {
+                            switch ( it->first )
+                            {
+                            case ioAccept:
+                                break;
+                            case ioRecv:
+                                break;
+                            case ioRecvFrom:
+                                break;
+                            case ioTimer:
+                                {
+                                    auto * timerCtx = dynamic_cast<IoTimerCtx *>(it->second);
+                                    auto timer = timerCtx->timer;
+                                    uint64_t cnt = 0;
+                                    read( timer->get(), &cnt, sizeof(uint64_t) );
+                                    
+                                    if ( timerCtx->cbOk )
+                                    {
+                                        winux::ScopeUnguard unguard(ioEvents._mtx);
+                                        timerCtx->cbOk( timer, timerCtx );
+                                    }
 
-                ioEvents.delIoCtx(ioCtx);
+                                    {
+                                        winux::ScopeGuard guard( timer->getMutex() );
+                                        if ( timerCtx->periodic == false ) // 非周期
+                                        {
+                                            {
+                                                winux::ScopeUnguard unguard( timer->getMutex() );
+                                                // 已处理，取消这个请求
+                                                timerCtx->changeState(stateFinish);
+                                            }
+                                            timer->_timerCtx = nullptr;
+
+                                            // 已处理，释放
+                                            {
+                                                winux::ScopeUnguard unguard(ioEvents._mtx);
+                                                ioEvents.delIoCtx(timerCtx);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            timer->_posted = false;
+                                        }
+                                    }
+
+                                    goto EXIT_EPOLLIN_IOMAP_LOOP;
+                                }
+                                break;
+                            }
+                        }
+                    EXIT_EPOLLIN_IOMAP_LOOP:
+                        ;
+                    }
+                    else if ( evt.events & EPOLLOUT )
+                    {
+                        for ( auto it = ioMap.begin(); it != ioMap.end(); it++ )
+                        {
+                            auto * ctx = it->second;
+                            switch ( ctx->type )
+                            {
+                            case ioConnect:
+                                break;
+                            case ioSend:
+                                break;
+                            case ioSendTo:
+                                break;
+                            }
+                        }
+                    }
+                    else if ( evt.events & EPOLLERR ) // 错误事件，清理相关IoCtx
+                    {
+                        if ( !ioMap.empty() )
+                        {
+                            auto & pr = *ioMap.begin();
+                            if ( pr.first != ioTimer ) // 非定时器的错误事件处理
+                            {
+                                auto * sockCtx = dynamic_cast<IoSocketCtx *>(pr.second);
+                                auto sock = sockCtx->sock;
+                                {
+                                    winux::ScopeUnguard guard(ioEvents._mtx);
+                                    sock->onError(sock);
+                                }
+                            }
+                        }
+
+                        // 删除此fd的所有IoCtxs
+                        {
+                            winux::ScopeUnguard guard(ioEvents._mtx);
+                            ioEvents.delIoCtxs(evt.data.fd);
+                        }
+                    }
+                }
             }
         }
     }
@@ -117,19 +205,58 @@ IoEventsData::IoEventsData( Epoll * epoll ) : _mtx(true), _epoll(epoll)
 void IoEventsData::setIoCtx( IoCtx * ioCtx )
 {
     winux::ScopeGuard guard(this->_mtx);
+    int fd;
     if ( ioCtx->type == ioTimer )
     {
-        auto * ctx = dynamic_cast<IoTimerCtx *>(ioCtx);
-        this->_fdToIoCtxs[ctx->timer->get()][ctx->type] = ctx;
+        fd = dynamic_cast<IoTimerCtx *>(ioCtx)->timer->get();
     }
     else
     {
-        auto * ctx = dynamic_cast<IoSocketCtx *>(ioCtx);
-        this->_fdToIoCtxs[ctx->sock->get()][ctx->type] = ctx;
+        fd = dynamic_cast<IoSocketCtx *>(ioCtx)->sock->get();
+    }
+    this->_fdToIoCtxs[fd][ioCtx->type] = ioCtx;
+
+    if ( winux::IsSet( this->_fdToEvents, fd ) )
+    {
+        auto & events = this->_fdToEvents[fd];
+        switch ( ioCtx->type )
+        {
+        case ioAccept:
+        case ioRecv:
+        case ioRecvFrom:
+        case ioTimer:
+            events |= EPOLLIN;
+            break;
+        case ioConnect:
+        case ioSend:
+        case ioSendTo:
+            events |= EPOLLOUT;
+            break;
+        }
+        this->_epoll->mod( fd, events );
+    }
+    else
+    {
+        auto & events = this->_fdToEvents[fd];
+        switch ( ioCtx->type )
+        {
+        case ioAccept:
+        case ioRecv:
+        case ioRecvFrom:
+        case ioTimer:
+            events = EPOLLIN;
+            break;
+        case ioConnect:
+        case ioSend:
+        case ioSendTo:
+            events = EPOLLOUT;
+            break;
+        }
+        this->_epoll->add( fd, events );
     }
 }
 
-IoCtx * IoEventsData::getIoCtx( int fd, IoType type )
+IoCtx * IoEventsData::getIoCtx( int fd, IoType type, uint32_t * events )
 {
     winux::ScopeGuard guard(this->_mtx);
     if ( winux::IsSet( this->_fdToIoCtxs, fd ) )
@@ -139,6 +266,10 @@ IoCtx * IoEventsData::getIoCtx( int fd, IoType type )
         {
             return ioMap[type];
         }
+    }
+    if ( events )
+    {
+        *events = winux::IsSet( this->_fdToEvents, fd ) ? this->_fdToEvents[fd] : 0;
     }
     return nullptr;
 }
@@ -157,12 +288,14 @@ void IoEventsData::delIoCtx( IoCtx * ioCtx )
         auto * ctx = dynamic_cast<IoSocketCtx *>(ioCtx);
         fd = ctx->sock->get();
     }
+
     auto & ioMap = this->_fdToIoCtxs[fd];
     ioMap.erase(ioCtx->type);
     if ( ioMap.empty() )
     {
         this->_fdToIoCtxs.erase(fd);
         this->_fdToEvents.erase(fd);
+        this->_epoll->del(fd);
     }
     else
     {
@@ -171,58 +304,20 @@ void IoEventsData::delIoCtx( IoCtx * ioCtx )
         switch ( ioCtx->type )
         {
         case ioAccept:
+        case ioRecv:
+        case ioRecvFrom:
+        case ioTimer:
             events &= ~EPOLLIN;
             break;
         case ioConnect:
-            events &= ~EPOLLOUT;
-            break;
-        case ioRecv:
-            events &= ~EPOLLIN;
-            break;
         case ioSend:
-            events &= ~EPOLLOUT;
-            break;
-        case ioRecvFrom:
-            events &= ~EPOLLIN;
-            break;
         case ioSendTo:
             events &= ~EPOLLOUT;
-            break;
-        case ioTimer:
-            events &= ~EPOLLIN;
             break;
         }
 
         // 更新epoll监听事件
-        for ( auto & pr : ioMap )
-        {
-            auto * ctx = pr.second;
-            switch ( ctx->type )
-            {
-            case ioAccept:
-                events |= EPOLLIN;
-                break;
-            case ioConnect:
-                events |= EPOLLOUT;
-                break;
-            case ioRecv:
-                events |= EPOLLIN;
-                break;
-            case ioSend:
-                events |= EPOLLOUT;
-                break;
-            case ioRecvFrom:
-                events |= EPOLLIN;
-                break;
-            case ioSendTo:
-                events |= EPOLLOUT;
-                break;
-            case ioTimer:
-                events |= EPOLLIN;
-                break;
-            }
-            this->_epoll->mod( fd, events, ctx );
-        }
+        this->_epoll->mod( fd, events );
     }
     ioCtx->decRef();
 }
@@ -280,7 +375,7 @@ void IoEventsData::delIoCtxs( int fd )
                 sockIoCtx->decRef();
             }
         }
-        // 从FdIoCtxsMap中移除对应fd所有io
+        // 从FdIoCtxsMap中移除对应fd所有IO
         this->_fdToIoCtxs.erase(fd);
         this->_fdToEvents.erase(fd);
         // 删除sock io的超时timer io
@@ -386,7 +481,7 @@ IoServiceThread::IoServiceThread( IoService * serv ) : _epoll( 64, true ), _ioEv
     // 创建eventfd
     this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
     // 监听stop event
-    this->_epoll.add( this->_stopEventFd.get(), EPOLLIN, nullptr );
+    this->_epoll.add( this->_stopEventFd.get(), EPOLLIN );
 }
 
 void IoServiceThread::run()
@@ -407,22 +502,22 @@ IoService::IoService( size_t groupThread ) : _epoll( 64, true ), _ioEvents(&_epo
     // 创建eventfd
     this->_stopEventFd.attachNew( eventfd( 0, 0 ), -1, close );
     // 监听stop event
-    this->_epoll.add( this->_stopEventFd.get(), EPOLLIN, nullptr );
+    this->_epoll.add( this->_stopEventFd.get(), EPOLLIN );
 }
 
 void IoService::stop()
 {
     winux::uint64 u = 1;
     this->_stop = true;
+    // 投递停止信号
     write( _stopEventFd.get(), &u, sizeof(winux::uint64) );
-    //close( this->_epoll.get() );
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
         auto * th = this->getGroupThread(i);
         th->_stop = true;
+        // 投递停止信号
         write( th->_stopEventFd.get(), &u, sizeof(winux::uint64) );
-        //close( th->_epoll.get() );
     }
 }
 
@@ -436,7 +531,26 @@ int IoService::run()
 
 void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
+    if ( !this->associate( sock, th ) ) return;
 
+    auto * ctx = IoAcceptCtx::New();
+    ctx->timeoutMs = timeoutMs;
+    ctx->sock = sock;
+    ctx->cbOk = cbOk;
+    ctx->cbTimeout = cbTimeout;
+
+    IoEventsData & ioEvents = sock->getThread() ? static_cast<IoServiceThread *>( sock->getThread() )->_ioEvents : this->_ioEvents;
+
+    // 超时处理
+    if ( ctx->timeoutMs != -1 )
+    {
+        eiennet::async::Timer::New(*this)->waitAsyncEx( ctx->timeoutMs, false, [] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+            _IoSocketCtxTimeoutCallback( timer, timerCtx );
+        }, ctx, sock->getThread() );
+    }
+
+    // 投递IO
+    ioEvents.setIoCtx(ctx);
 }
 
 void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs, IoConnectCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
@@ -466,7 +580,43 @@ void IoService::postSendTo( winux::SharedPointer<eiennet::async::Socket> sock, e
 
 void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, winux::uint64 timeoutMs, bool periodic, IoTimerCtx::OkFn cbOk, io::IoSocketCtx * assocCtx, io::IoServiceThread * th )
 {
+    IoTimerCtx * timerCtx = nullptr;
+    {
+        winux::ScopeGuard guard( timer->getMutex() );
+        timer->_posted = false;
+        if ( timer->_timerCtx )
+        {
+            timerCtx = static_cast<IoTimerCtx *>(timer->_timerCtx);
+        }
+        else
+        {
+            timerCtx = IoTimerCtx::New();
+            timer->_timerCtx = timerCtx;
+        }
+    }
 
+    if ( !timerCtx ) return;
+
+    timerCtx->timeoutMs = timeoutMs;
+    timerCtx->cbOk = cbOk; // 回调函数
+    timerCtx->timer = timer;
+    timerCtx->periodic = periodic;
+
+    if ( assocCtx ) // 关联的IoSocketCtx
+    {
+        timerCtx->assocCtx = assocCtx;
+        assocCtx->timerCtx = timerCtx;
+    }
+
+    // 分配处理线程
+    timer->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );
+    if ( timer->getThread() ) timer->getThread()->incWeight(); // 增加线程负载权重
+
+    IoEventsData & ioEvents = timer->getThread() ? ((IoServiceThread *)timer->getThread())->_ioEvents : this->_ioEvents;
+    // 投递 IO
+    ioEvents.setIoCtx(timerCtx);
+
+    timer->set( timeoutMs, periodic );
 }
 
 void IoService::timerTrigger( io::IoTimerCtx * timerCtx )

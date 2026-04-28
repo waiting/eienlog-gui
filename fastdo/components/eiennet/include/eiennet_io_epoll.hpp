@@ -120,8 +120,9 @@ public:
      *
      *  \param fd sock/timer fd
      *  \param type IO类型（ioAccept, ioConnect, ioRecv, ioSend, ioRecvFrom, ioSendTo, ioTimer）
+     *  \param events 事件掩码指针
      *  \return IoCtx实例 */
-    IoCtx * getIoCtx( int fd, IoType type );
+    IoCtx * getIoCtx( int fd, IoType type, uint32_t * events = nullptr );
 
     /** \brief 删除与`sock/timer fd`相关的指定`IoCtx`
      *
@@ -145,6 +146,9 @@ public:
      *  \param fd sock/timer fd */
     void delIoCtxs( int fd );
 
+    /** \brief 获取epoll实例 */
+    Epoll & getEpoll() const { return *_epoll; }
+
 private:
     IoMapMap _fdToIoCtxs; //!< fd到IoCtxs的映射
     std::map< int, uint32_t > _fdToEvents; //!< fd到epoll事件掩码的映射
@@ -152,6 +156,7 @@ private:
     Epoll * _epoll; //!< epoll实例
 
     friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
+    friend class IoService;
 };
 
 /** \brief epoll封装 */
@@ -169,7 +174,7 @@ public:
     /** \brief 添加fd到epoll
      *
      *  \param fd sock/timer fd
-     *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT）
+     *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT | EPOLLERR）
      *  \param data 关联数据
      *  \return 成功返回0，失败返回-1 */
     int add( int fd, uint32_t events, void * data = nullptr );
@@ -177,7 +182,7 @@ public:
     /** \brief 修改fd的epoll事件
      *
      *  \param fd sock/timer fd
-     *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT）
+     *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT | EPOLLERR）
      *  \param data 关联数据
      *  \return 成功返回0，失败返回-1 */
     int mod( int fd, uint32_t events, void * data = nullptr );
@@ -226,7 +231,7 @@ public:
 private:
     Epoll _epoll;
     IoEventsData _ioEvents;
-    winux::SimpleHandle<int> _stopEventFd;
+    winux::SimpleHandle<int> _stopEventFd; // 停止eventfd
     IoService * _serv;
     bool _stop;
 
@@ -327,7 +332,7 @@ public:
 private:
     Epoll _epoll;
     IoEventsData _ioEvents;
-    winux::SimpleHandle<int> _stopEventFd;
+    winux::SimpleHandle<int> _stopEventFd; // 停止eventfd
     winux::ThreadGroup _group;
     bool _stop;
 
