@@ -314,6 +314,8 @@ int const Socket::SdBoth = SHUT_RDWR;
 
 #endif
 
+int const Socket::ListenBacklogDefault = SOMAXCONN;
+
 Socket::Socket( int sock, bool isNewSock )
 {
     this->_membersInit();
@@ -1898,9 +1900,7 @@ winux::String EndPoint::toString() const
 
 eiennet::EndPoint * EndPoint::clone() const
 {
-    EndPoint * ep = new EndPoint();
-    *ep = *this;
-    return ep;
+    return new EndPoint(*this);
 }
 
 Socket::AddrFamily EndPoint::getAddrFamily() const

@@ -4,6 +4,7 @@
 /** \brief IO模型 */
 namespace io
 {
+/** \brief IOCP 模型 */
 namespace iocp
 {
 /** \brief IO场景 */
@@ -380,7 +381,7 @@ public:
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
     /** \brief 标记删除指定sock所有IO监听 */
-    void removeSock( winux::SharedPointer<eiennet::async::Socket> sock );
+    virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) override;
 
     /** \brief 关联线程
      *
@@ -388,18 +389,8 @@ public:
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
     bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
 
-    /** \brief 获取最小负载线程 */
-    virtual IoServiceThread * getMinWeightThread() const override;
-
-    /** \brief 获取指定索引的组线程 */
-    IoServiceThread * getGroupThread( size_t i ) const;
-
-    /** \brief 获取组线程数 */
-    size_t getGroupThreadCount() const { return _group.count(); }
-
 private:
     Iocp _iocp;
-    winux::ThreadGroup _group;
 
     DISABLE_OBJECT_COPY(IoService)
 };
@@ -410,5 +401,5 @@ private:
 
 } // namespace io
 
-#endif // __EIENNET_IO_IOCP_HPP__
 
+#endif // __EIENNET_IO_IOCP_HPP__

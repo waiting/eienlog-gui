@@ -112,7 +112,16 @@ Server::~Server()
 // 需要如下设置才可以监听与IPv4相同的端口
 
 // 启动IPv4、IPv6两个Sockets
-void __StartupSockets( ip::EndPoint const & ep, int backlog, eienlog::VerboseOutputType verbose, ip::EndPoint * pEp2, ip::tcp::Socket * sockA, ip::tcp::Socket * sockB )
+void __StartupSockets(
+    ip::EndPoint const & ep,
+    int backlog,
+    eienlog::VerboseOutputType verbose,
+    ip::EndPoint * pEp2,
+    ip::tcp::Socket * sockA,
+    ip::tcp::Socket * sockB,
+    bool * servSockAIsListening,
+    bool * servSockBIsListening
+)
 {
     // 创建另一个EP
     ip::EndPoint & ep2 = *pEp2;
@@ -150,7 +159,7 @@ void __StartupSockets( ip::EndPoint const & ep, int backlog, eienlog::VerboseOut
     sockB->setReUseAddr(true);
 
     // 同时监听2个端点
-    if ( !( sockA->bind(ep) && sockA->listen(backlog) ) && verbose )
+    if ( !( *servSockAIsListening = sockA->bind(ep) && sockA->listen(backlog) ) && verbose )
     {
         int err = Socket::ErrNo();
         eienlog::VerboseOutput(
@@ -161,7 +170,7 @@ void __StartupSockets( ip::EndPoint const & ep, int backlog, eienlog::VerboseOut
             ", err=", err
         );
     }
-    if ( !( sockB->bind(ep2) && sockB->listen(backlog) ) && verbose )
+    if ( !( *servSockBIsListening = sockB->bind(ep2) && sockB->listen(backlog) ) && verbose )
     {
         int err2 = Socket::ErrNo();
         eienlog::VerboseOutput(
@@ -182,11 +191,18 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
 
     // 启动套接字监听
     ip::EndPoint ep2;
-    __StartupSockets( ep, backlog, (eienlog::VerboseOutputType)verbose, &ep2, &_servSockA, &_servSockB );
+    __StartupSockets(
+        ep,
+        backlog,
+        (eienlog::VerboseOutputType)verbose,
+        &ep2,
+        &_servSockA,
+        &_servSockB,
+        &_servSockAIsListening,
+        &_servSockBIsListening
+    );
 
     // 两个都不处于监听中
-    _servSockAIsListening = _servSockA.isListening();
-    _servSockBIsListening = _servSockB.isListening();
     _stop = !_servSockAIsListening && !_servSockBIsListening;
 
     _isAutoReadData = autoReadData;
@@ -206,6 +222,7 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
         this->_verbose,
         _stop ? ( eienlog::vcaFgRed | eienlog::vcaBgIgnore ) : ( eienlog::vcaFgGreen | eienlog::vcaBgIgnore ),
         _stop ? "Server startup failed" : "Server startup success",
+        ", errno=", socket_errno,
         ", ep=", ep.toString(),
         ", ep2=", ep2.toString(),
         ", threads=", threadCount,

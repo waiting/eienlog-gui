@@ -138,7 +138,7 @@ public:
 };
 
 
-/** \brief select IO 模型 */
+/** \brief select 模型 */
 namespace select
 {
 /** \brief 接受场景接口 */
@@ -291,15 +291,10 @@ public:
     void wakeUpTrigger( WakeUpType type );
 
     // 预投递
-    void prePost( IoType type, IoCtx * ctx );
+    void prePost( IoCtx * ctx );
 
     // 投递IO事件
-    void post( IoType type, IoCtx * ctx );
-
-    // 套接字IO数
-    size_t getSockIoCount() const { return this->_sockIoCount; }
-    // 定时器IO数
-    size_t getTimerIoCount() const { return this->_timerIoCount; }
+    void post( IoCtx * ctx );
 
 private:
     // 处理IoEvents投递
@@ -323,8 +318,9 @@ private:
     size_t _sockIoCount; // 套接字IO数
     size_t _timerIoCount; // 定时器IO数
 
-    friend void _SelectWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData * ioEvents, bool * stop );
+    friend void _SelectWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop );
     friend class IoService;
+    friend class IoServiceThread;
 };
 
 /** \brief Io服务线程 */
@@ -339,7 +335,10 @@ public:
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
-    IoEventsData & getIoEvents() { return this->_ioEvents; }
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
 
 private:
     IoEventsData _ioEvents;
@@ -421,7 +420,12 @@ public:
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
     /** \brief 标记删除指定sock所有IO监听 */
-    void removeSock( winux::SharedPointer<eiennet::async::Socket> sock );
+    virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) override;
+
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
 
     /** \brief 关联线程
      *
@@ -429,21 +433,8 @@ public:
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
     bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
 
-    /** \brief 获取最小负载线程 */
-    virtual IoServiceThread * getMinWeightThread() const override;
-
-    /** \brief 获取指定索引的组线程 */
-    IoServiceThread * getGroupThread( size_t i ) const;
-
-    /** \brief 获取组线程数 */
-    size_t getGroupThreadCount() const { return _group.count(); }
-
-    /** \brief 获取IO事件数据 */
-    IoEventsData & getIoEvents() { return this->_ioEvents; }
-
 private:
     IoEventsData _ioEvents;
-    winux::ThreadGroup _group;
     bool _stop;
 
     DISABLE_OBJECT_COPY(IoService)

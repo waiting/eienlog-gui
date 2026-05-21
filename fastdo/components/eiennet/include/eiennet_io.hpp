@@ -5,11 +5,11 @@ namespace eiennet
 {
 namespace async
 {
-class Socket;
-class Timer;
-}
-
+    class Socket;
+    class Timer;
 } // namespace async
+
+} // namespace eiennet
 
 /** \brief IO模型 */
 namespace io
@@ -17,14 +17,14 @@ namespace io
 /** \brief IO类型 */
 enum IoType
 {
-    ioNone,
-    ioAccept,
-    ioConnect,
-    ioRecv,
-    ioSend,
-    ioRecvFrom,
-    ioSendTo,
-    ioTimer
+    ioNone, //!< 无IO场景
+    ioAccept, //!< 接受场景
+    ioConnect, //!< 连接场景
+    ioRecv, //!< 接收场景
+    ioSend, //!< 发送场景
+    ioRecvFrom, //!< 接收从场景
+    ioSendTo, //!< 发送到场景
+    ioTimer //!< 定时器场景
 };
 
 /** \brief IO状态 */
@@ -34,6 +34,16 @@ enum IoState
     stateProactiveCancel, //!< 主动取消
     stateTimeoutCancel, //!< 超时取消
     stateFinish, //!< 完成状态
+};
+
+/** \brief IO模型 */
+enum IoModel
+{
+    modelAuto, //!< 自动。Windows平台优先使用IOCP，Linux平台优先使用epoll，如果系统不支持则退回到select。
+    modelEpoll, //!< epoll模型
+    modelIocp, //!< IOCP模型
+    modelPoll, //!< poll模型
+    modelSelect, //!< select模型
 };
 
 /** \brief IO场景基类（提供引用计数功能） */
@@ -256,6 +266,11 @@ public:
     /** \brief 定时器IO触发器，直接发送到处理循环里 */
     virtual void timerTrigger( IoTimerCtx * timerCtx ) { }
 
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const { return 0; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const { return 0; }
+
 private:
     std::atomic<size_t> _weight;
 };
@@ -264,7 +279,12 @@ private:
 class IoService
 {
 public:
-    static EIENNET_FUNC_DECL(winux::SharedPointer<IoService>) New( size_t groupThread = 4 );
+    /** \brief 创建IoService实例
+     *
+     *  \param groupThread 线程组数量
+     *  \param model IO模型
+     *  \return IoService实例 */
+    static EIENNET_FUNC_DECL(winux::SharedPointer<IoService>) New( size_t groupThread = 4, IoModel model = modelAuto );
 
     virtual ~IoService() { }
 
@@ -330,11 +350,48 @@ public:
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
 
-    /** \brief 获取最小负载线程 */
-    virtual IoServiceThread * getMinWeightThread() const = 0;
-
     /** \brief 定时器IO触发器，直接发送到处理循环里 */
     virtual void timerTrigger( IoTimerCtx * timerCtx ) { }
+
+    /** \brief 标记删除指定sock所有IO监听 */
+    virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) { }
+
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const { return 0; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const { return 0; }
+
+    /** \brief 获取最小负载线程 */
+    IoServiceThread * getMinWeightThread() const
+    {
+        if ( _group.count() > 0 )
+        {
+            auto th0 = this->getGroupThread(0);
+            for ( size_t i = 1; i < _group.count(); i++ )
+            {
+                auto th = this->getGroupThread(i);
+                if ( th->getWeight() < th0->getWeight() )
+                {
+                    th0 = th;
+                }
+            }
+            return th0;
+        }
+        return nullptr;
+    }
+
+    /** \brief 获取指定索引的组线程 */
+    IoServiceThread * getGroupThread( size_t i ) const
+    {
+        return static_cast<IoServiceThread *>( _group.threadAt(i).get() );
+    }
+
+    /** \brief 获取组线程数 */
+    size_t getGroupThreadCount() const { return _group.count(); }
+
+protected:
+    winux::ThreadGroup _group;
+
 };
 
 

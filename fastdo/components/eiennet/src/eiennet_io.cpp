@@ -33,6 +33,7 @@
 #include "eiennet_socket.hpp"
 #include "eiennet_io.hpp"
 #include "eiennet_async.hpp"
+#include "eiennet_io_select.hpp"
 #if defined(OS_WIN)
 #include "eiennet_io_iocp.hpp"
 #else
@@ -41,13 +42,23 @@
 
 namespace io
 {
-EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupThread )
+EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupThread, IoModel model )
 {
-#if defined(OS_WIN)
-    return winux::MakeSharedNew<io::iocp::IoService>(groupThread);
-#else
-    return winux::MakeSharedNew<io::epoll::IoService>(groupThread);
-#endif
+    switch ( model )
+    {
+    case modelAuto:
+    case modelEpoll:
+    case modelIocp:
+    #if defined(OS_WIN)
+        return winux::MakeSharedNew<io::iocp::IoService>(groupThread);
+    #else
+        return winux::MakeSharedNew<io::epoll::IoService>(groupThread);
+    #endif
+    case modelPoll:
+    case modelSelect:
+    default:
+        return winux::MakeSharedNew<io::select::IoService>(groupThread);
+    }
 }
 
 

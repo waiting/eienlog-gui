@@ -163,7 +163,8 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
                                 {
                                     {
                                         winux::ScopeGuard unguard( timer->getMutex() );
-                                        timer->unset();
+                                        // timer->unset();
+                                        timerCtx->changeState(stateFinish);
                                     }
                                     timer->_timerCtx = nullptr;
 
@@ -561,7 +562,7 @@ void IoService::stop()
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
-        auto * th = this->getGroupThread(i);
+        auto * th = static_cast<IoServiceThread *>( this->getGroupThread(i) );
         th->_iocp.postCustom( 0, 0, nullptr );
     }
 }
@@ -1004,29 +1005,6 @@ bool IoService::associate( winux::SharedPointer<eiennet::async::Socket> sock, io
         }
     }
     return true;
-}
-
-IoServiceThread * IoService::getMinWeightThread() const
-{
-    if ( _group.count() > 0 )
-    {
-        auto th0 = this->getGroupThread(0);
-        for ( size_t i = 1; i < _group.count(); i++ )
-        {
-            auto th = this->getGroupThread(i);
-            if ( th->getWeight() < th0->getWeight() )
-            {
-                th0 = th;
-            }
-        }
-        return th0;
-    }
-    return nullptr;
-}
-
-IoServiceThread * IoService::getGroupThread( size_t i ) const
-{
-    return static_cast<IoServiceThread *>( _group.threadAt(i).get() );
 }
 
 

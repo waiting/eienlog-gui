@@ -163,10 +163,13 @@ public:
     static int const MsgCMsgCloexec;
 
 #endif
-    // shutdown's how flags
+    // shutdown()'s `how` flags
     static int const SdReceive;
     static int const SdSend;
     static int const SdBoth;
+
+    // listen()'s `backlog` default value
+    static int const ListenBacklogDefault;
 
     typedef std::function< void ( size_t hadBytes, void * param ) > FunctionSuccessCallback;
 public:
@@ -414,7 +417,7 @@ public:
     bool bind( EndPoint const & ep );
 
     /** \brief 监听 */
-    bool listen( int backlog );
+    bool listen( int backlog = ListenBacklogDefault );
 
     /** \brief 接受一个客户连接
      *

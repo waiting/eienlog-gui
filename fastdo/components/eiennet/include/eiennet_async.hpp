@@ -337,7 +337,8 @@ public:
     io::IoServiceThread * getThread() const { return _thread; }
 
     /** \brief 获取IO服务对象 */
-    io::IoService & getService() const { return *_serv; }
+    io::IoService * getService() const { return _serv; }
+
     /** \brief 接受客户连接（异步） */
     void acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoAcceptCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = nullptr );
     /** \brief 连接服务器（异步） */
@@ -380,8 +381,8 @@ public:
     DEFINE_CUSTOM_EVENT_RETURN_EX( Socket *, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
 
 protected:
-    io::IoService * _serv;
-    void * _data;
+    io::IoService * _serv; // IO服务对象
+    void * _data; // 套接字关联数据
     io::IoServiceThread * _thread; // 线程
 };
 
@@ -426,13 +427,14 @@ public:
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     );
 
-    io::IoService & getService() const { return *_serv; }
-    winux::MutexNative & getMutex() const { return const_cast<winux::MutexNative &>(_mtx); }
-
     /** \brief 设置关联线程 */
     void setThread( io::IoServiceThread * th ) { _thread = th; }
     /** \brief 获取关联线程 */
     io::IoServiceThread * getThread() const { return _thread; }
+
+    io::IoService * getService() const { return _serv; }
+
+    winux::MutexNative & getMutex() const { return const_cast<winux::MutexNative &>(_mtx); }
 
     /** \brief 获取底层定时器的句柄
      * 

@@ -4,6 +4,7 @@
 /** \brief IO模型 */
 namespace io
 {
+/** \brief epoll 模型 */
 namespace epoll
 {
 /** \brief 接受场景接口 */
@@ -111,43 +112,45 @@ public:
      *  \param epoll epoll实例 */
     IoEventsData( Epoll * epoll );
 
-    /** \brief 设置与`sock/timer fd`相关的`IoCtx`
+    /** \brief 设置与`fd`相关的`IoCtx`
      *
      *  \param ioCtx IoCtx实例 */
     void setIoCtx( IoCtx * ioCtx );
 
-    /** \brief 获取与`sock/timer fd`相关的指定类型的`IoCtx`
+    /** \brief 获取与`fd`相关的指定类型的`IoCtx`
      *
-     *  \param fd sock/timer fd
+     *  \param fd 对象文件描述符fd
      *  \param type IO类型（ioAccept, ioConnect, ioRecv, ioSend, ioRecvFrom, ioSendTo, ioTimer）
      *  \param events 事件掩码指针
      *  \return IoCtx实例 */
     IoCtx * getIoCtx( int fd, IoType type, uint32_t * events = nullptr );
 
-    /** \brief 删除与`sock/timer fd`相关的指定`IoCtx`
+    /** \brief 删除与`fd`相关的指定`IoCtx`
      *
      *  \param ioCtx IoCtx实例 */
     void delIoCtx( IoCtx * ioCtx );
 
-    /** \brief 是否存在与`sock/timer fd`相关的`IoCtxs`
+    /** \brief 是否存在与`fd`相关的`IoCtxs`
      *
-     *  \param fd sock/timer fd
+     *  \param fd 对象文件描述符fd
      *  \return 是否存在 */
     bool hasIoCtxs( int fd ) const;
 
-    /** \brief 获取与`sock/timer fd`相关的所有`IoCtxs`
+    /** \brief 获取与`fd`相关的所有`IoCtxs`
      *
-     *  \param fd sock/timer fd
+     *  \param fd 对象文件描述符fd
      *  \return IoCtx映射 */
     IoMap & getIoCtxs( int fd );
 
-    /** \brief 删除与`sock/timer fd`相关的所有`IoCtxs`
+    /** \brief 删除与`fd`相关的所有`IoCtxs`
      *
-     *  \param fd sock/timer fd */
+     *  \param fd 对象文件描述符fd */
     void delIoCtxs( int fd );
 
     /** \brief 获取epoll实例 */
     Epoll & getEpoll() const { return *_epoll; }
+
+    winux::Mutex & getMutex() const { return const_cast<winux::Mutex &>(_mtx); }
 
 private:
     IoMapMap _fdToIoCtxs; //!< fd到IoCtxs的映射
@@ -155,8 +158,12 @@ private:
     winux::Mutex _mtx; //!< 互斥锁
     Epoll * _epoll; //!< epoll实例
 
-    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
+    size_t _sockIoCount; // 套接字IO数
+    size_t _timerIoCount; // 定时器IO数
+
+    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop );
     friend class IoService;
+    friend class IoServiceThread;
 };
 
 /** \brief epoll封装 */
@@ -165,7 +172,7 @@ class EIENNET_DLL Epoll
 public:
     /** \brief Epoll 构造函数
      * 
-     *  \param maxEvents 单次wait()最大处理事件
+     *  \param maxEvents 单次`wait()`最大处理事件
      *  \param mts 是否多线程安全 */
     Epoll( size_t maxEvents = 64, bool mts = false );
 
@@ -173,7 +180,7 @@ public:
 
     /** \brief 添加fd到epoll
      *
-     *  \param fd sock/timer fd
+     *  \param fd 对象文件描述符fd
      *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT | EPOLLERR）
      *  \param data 关联数据
      *  \return 成功返回0，失败返回-1 */
@@ -181,7 +188,7 @@ public:
 
     /** \brief 修改fd的epoll事件
      *
-     *  \param fd sock/timer fd
+     *  \param fd 对象文件描述符fd
      *  \param events 事件类型（EPOLLET | EPOLLIN | EPOLLOUT | EPOLLERR）
      *  \param data 关联数据
      *  \return 成功返回0，失败返回-1 */
@@ -189,7 +196,7 @@ public:
 
     /** \brief 从epoll删除fd
      *
-     *  \param fd sock/timer fd
+     *  \param fd 对象文件描述符fd
      *  \return 成功返回0，失败返回-1 */
     int del( int fd );
 
@@ -207,7 +214,7 @@ public:
 
     struct epoll_event & evt( int i );
 
-    winux::Mutex & getMutex() { return _mtx; }
+    winux::Mutex & getMutex() const { return const_cast<winux::Mutex &>(_mtx); }
 
 private:
     int _epollFd;
@@ -228,6 +235,13 @@ public:
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
+    IoEventsData & getIoEvents() { return _ioEvents; }
+
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
+
 private:
     Epoll _epoll;
     IoEventsData _ioEvents;
@@ -236,7 +250,7 @@ private:
     bool _stop;
 
     friend class IoService;
-    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
+    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop );
 
     DISABLE_OBJECT_COPY(IoServiceThread)
 };
@@ -312,7 +326,12 @@ public:
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
     /** \brief 标记删除指定sock所有IO监听 */
-    void removeSock( winux::SharedPointer<eiennet::async::Socket> sock );
+    virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) override;
+
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
 
     /** \brief 关联线程
      *
@@ -320,26 +339,19 @@ public:
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
     bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
 
-    /** \brief 获取最小负载线程 */
-    virtual IoServiceThread * getMinWeightThread() const override;
-
-    /** \brief 获取指定索引的组线程 */
-    IoServiceThread * getGroupThread( size_t i ) const;
-
-    /** \brief 获取组线程数 */
-    size_t getGroupThreadCount() const { return _group.count(); }
+    IoEventsData & getIoEvents() { return _ioEvents; }
 
 private:
     Epoll _epoll;
     IoEventsData _ioEvents;
     winux::SimpleHandle<int> _stopEventFd; // 停止eventfd
-    winux::ThreadGroup _group;
     bool _stop;
 
-    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, Epoll * epoll, bool * stop );
+    friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop );
 
     DISABLE_OBJECT_COPY(IoService)
 };
+
 
 } // namespace epoll
 
