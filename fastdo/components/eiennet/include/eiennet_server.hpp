@@ -25,9 +25,9 @@ public:
     Server * server;            //!< 服务器
     winux::uint64 clientId;     //!< 客户Id
     winux::String clientEpStr;  //!< 客户终端字符串
-    winux::SharedPointer<ip::tcp::Socket> clientSockPtr; //!< 客户套接字
-
-    winux::SafeQueue<DataRecvSendCtx> pendingSend;    //!< 待发送队列
+    winux::SharedPointer<ip::tcp::Socket> clientSockPtr;    //!< 客户套接字
+    winux::Mutex mtxClient;     //!< 互斥量保护客户共享数据
+    winux::SafeQueue<DataRecvSendCtx> pendingSend;  //!< 待发送队列
 
     winux::uint16 processingEvents;  //!< 等待处理或正在处理中的事件，保证同一个客户连接仅投递一个事件到线程池中
     bool canRemove;             //!< 是否标记为可以移除
@@ -115,6 +115,7 @@ protected:
         // 标记为处理事件中
         clientCtxPtr->processingEvents++;
         this->_pool.task( [routine, clientCtxPtr] () {
+            winux::ScopeGuard guard(clientCtxPtr->mtxClient);
             routine->invoke();
             // 事件处理完毕，可再次select()事件
             clientCtxPtr->processingEvents--;

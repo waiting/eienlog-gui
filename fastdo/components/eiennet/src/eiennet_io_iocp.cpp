@@ -988,6 +988,11 @@ void IoService::timerTrigger( io::IoTimerCtx * timerCtx )
     this->_iocp.postCustom( 0, (ULONG_PTR)timer->get(), &myTimerCtx->ol );
 }
 
+void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
+{
+
+}
+
 bool IoService::associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th )
 {
     if ( sock->getThread() == nullptr )

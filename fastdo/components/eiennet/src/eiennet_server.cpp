@@ -42,6 +42,7 @@ ClientCtx::ClientCtx( Server * server, winux::uint64 clientId, winux::String con
     clientId(clientId),
     clientEpStr(clientEpStr),
     clientSockPtr(clientSockPtr),
+    mtxClient(true),
     processingEvents(0),
     canRemove(false)
 {
@@ -279,25 +280,27 @@ int Server::run( void * runParam )
             // 监视客户连接
             for ( auto it = this->_clients.begin(); it != this->_clients.end(); )
             {
-                if ( it->second->canRemove ) // 删除标记为可删除的客户
+                auto clientCtxPtr = it->second;
+                winux::ScopeGuard guardClient(clientCtxPtr->mtxClient);
+                if ( clientCtxPtr->canRemove ) // 删除标记为可删除的客户
                 {
-                    if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, it->second->getStamp(), " remove" );
+                    if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " remove" );
 
                     it = this->_clients.erase(it);
                 }
-                else if ( it->second->processingEvents > 0 ) // 跳过有事件在处理中的客户
+                else if ( clientCtxPtr->processingEvents > 0 ) // 跳过有事件在处理中的客户
                 {
                     it++;
                 }
                 else
                 {
                     // 监视数据接收
-                    sel.setReadSock(*it->second->clientSockPtr.get());
+                    sel.setReadSock( *clientCtxPtr->clientSockPtr.get() );
                     // 若未决发送队列不空则监视数据写入
-                    if ( it->second->pendingSend.size() > 0 )
-                        sel.setWriteSock(*it->second->clientSockPtr.get());
+                    if ( clientCtxPtr->pendingSend.size() > 0 )
+                        sel.setWriteSock( *clientCtxPtr->clientSockPtr.get() );
                     // 监视套接字出错
-                    sel.setExceptSock(*it->second->clientSockPtr.get());
+                    sel.setExceptSock( *clientCtxPtr->clientSockPtr.get() );
 
                     it++;
                 }
@@ -374,51 +377,53 @@ int Server::run( void * runParam )
 
                 for ( auto it = this->_clients.begin(); it != this->_clients.end(); )
                 {
-                    if ( sel.hasExceptSock(*it->second->clientSockPtr.get()) ) // 该套接字有错误
+                    auto clientCtxPtr = it->second;
+                    winux::ScopeGuard guardClient(clientCtxPtr->mtxClient);
+                    if ( sel.hasExceptSock(*clientCtxPtr->clientSockPtr.get()) ) // 该套接字有错误
                     {
-                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, it->second->getStamp(), " error, mark it as removable" );
+                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " error, mark it as removable" );
 
-                        it->second->canRemove = true;
+                        clientCtxPtr->canRemove = true;
 
                         rc--;
                     }
-                    else if ( sel.hasWriteSock(*it->second->clientSockPtr.get()) ) // 该套接字可写数据
+                    else if ( sel.hasWriteSock(*clientCtxPtr->clientSockPtr.get()) ) // 该套接字可写数据
                     {
-                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgIgnore | eienlog::vcaBgIgnore, it->second->getStamp(), " sendable" );
+                        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgIgnore | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " sendable" );
 
                         // 投递数据发送事件到线程池处理
-                        this->_postTask( it->second, &Server::onClientDataSend, this, it->second );
+                        this->_postTask( clientCtxPtr, &Server::onClientDataSend, this, clientCtxPtr );
 
                         rc--;
                     }
-                    else if ( sel.hasReadSock(*it->second->clientSockPtr.get()) ) // 该套接字有数据可读
+                    else if ( sel.hasReadSock(*clientCtxPtr->clientSockPtr.get()) ) // 该套接字有数据可读
                     {
-                        size_t readableSize = it->second->clientSockPtr->getAvailable();
+                        size_t readableSize = clientCtxPtr->clientSockPtr->getAvailable();
 
                         if ( readableSize > 0 )
                         {
                             if ( _isAutoReadData )
                             {
                                 // 收数据
-                                winux::Buffer data = it->second->clientSockPtr->recv(readableSize);
-                                if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgWhite | eienlog::vcaBgIgnore, it->second->getStamp(), " data arrived(bytes:", data.getSize(), ")" );
+                                winux::Buffer data = clientCtxPtr->clientSockPtr->recv(readableSize);
+                                if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgWhite | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " data arrived(bytes:", data.getSize(), ")" );
 
                                 // 投递数据到达事件到线程池处理
-                                this->_postTask( it->second, &Server::onClientDataArrived, this, it->second, std::move(data) );
+                                this->_postTask( clientCtxPtr, &Server::onClientDataArrived, this, clientCtxPtr, std::move(data) );
                             }
                             else
                             {
-                                if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgWhite | eienlog::vcaBgIgnore, it->second->getStamp(), " data notify(bytes:", readableSize, ")" );
+                                if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgWhite | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " data notify(bytes:", readableSize, ")" );
 
                                 // 投递数据到达事件到线程池处理
-                                this->_postTask( it->second, &Server::onClientDataNotify, this, it->second, readableSize );
+                                this->_postTask( clientCtxPtr, &Server::onClientDataNotify, this, clientCtxPtr, readableSize );
                             }
                         }
                         else // readableSize <= 0
                         {
-                            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgRed | eienlog::vcaBgIgnore, it->second->getStamp(), " data arrived(bytes:", readableSize, "), the connection may be closed" );
+                            if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgRed | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " data arrived(bytes:", readableSize, "), the connection may be closed" );
 
-                            it->second->canRemove = true;
+                            clientCtxPtr->canRemove = true;
                         }
 
                         rc--;
