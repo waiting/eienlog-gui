@@ -579,6 +579,7 @@ void IoEventsData::_handleIoEventsPost()
     winux::ScopeGuard guard(this->_mtxPreIoCtxs);
     for ( auto it = this->_preIoCtxs.begin(); it != this->_preIoCtxs.end(); it++ )
     {
+        it->second->state = stateNormal; // 投递前状态改为正常状态
         this->post(it->second);
     }
     this->_preIoCtxs.clear();
@@ -1363,7 +1364,7 @@ void IoService::stop()
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
-        auto * th = static_cast<IoServiceThread *>( this->getGroupThread(i) );
+        auto * th = this->getGroupThread<IoServiceThread>(i);
         th->_stop = true;
         th->_ioEvents.wakeUpTrigger(IoEventsData::wutWantStop);
     }

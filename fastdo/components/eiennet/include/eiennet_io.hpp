@@ -30,6 +30,7 @@ enum IoType
 /** \brief IO状态 */
 enum IoState
 {
+    statePrePost, //!< 投递前状态
     stateNormal, //!< 正常状态
     stateProactiveCancel, //!< 主动取消
     stateTimeoutCancel, //!< 超时取消
@@ -55,7 +56,7 @@ struct IoCtx
     winux::uint64 timeoutMs; //!< 超时时间
 
 protected:
-    IoCtx() : type(ioNone), state(stateNormal), startTime( winux::GetUtcTimeMs() ), timeoutMs(-1), _uses(1) { }
+    IoCtx() : type(ioNone), state(statePrePost), startTime( winux::GetUtcTimeMs() ), timeoutMs(-1), _uses(1) { }
     virtual ~IoCtx() { }
 
 public:
@@ -362,14 +363,15 @@ public:
     virtual size_t getTimerIoCount() const { return 0; }
 
     /** \brief 获取最小负载线程 */
-    IoServiceThread * getMinWeightThread() const
+    template < typename _ThreadCls = IoServiceThread >
+    _ThreadCls * getMinWeightThread() const
     {
         if ( _group.count() > 0 )
         {
-            auto th0 = this->getGroupThread(0);
+            auto th0 = this->getGroupThread<_ThreadCls>(0);
             for ( size_t i = 1; i < _group.count(); i++ )
             {
-                auto th = this->getGroupThread(i);
+                auto th = this->getGroupThread<_ThreadCls>(i);
                 if ( th->getWeight() < th0->getWeight() )
                 {
                     th0 = th;
@@ -381,9 +383,10 @@ public:
     }
 
     /** \brief 获取指定索引的组线程 */
-    IoServiceThread * getGroupThread( size_t i ) const
+    template < typename _ThreadCls = IoServiceThread >
+    _ThreadCls * getGroupThread( size_t i ) const
     {
-        return static_cast<IoServiceThread *>( _group.threadAt(i).get() );
+        return static_cast<_ThreadCls *>( _group.threadAt(i).get() );
     }
 
     /** \brief 获取组线程数 */

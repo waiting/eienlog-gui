@@ -15,6 +15,7 @@ struct IoCtx : virtual io::IoCtx
 protected:
     IoCtx()
     {
+        this->state = stateNormal;
         ZeroMemory( &this->ol, sizeof(OVERLAPPED) );
     }
     virtual ~IoCtx() { }

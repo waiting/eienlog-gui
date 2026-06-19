@@ -334,10 +334,12 @@ public:
     /** \brief 设置关联线程 */
     void setThread( io::IoServiceThread * th ) { _thread = th; }
     /** \brief 获取关联线程 */
-    io::IoServiceThread * getThread() const { return _thread; }
+    template < typename _ThreadCls = io::IoServiceThread >
+    _ThreadCls * getThread() const { return static_cast<_ThreadCls *>(_thread); }
 
     /** \brief 获取IO服务对象 */
-    io::IoService * getService() const { return _serv; }
+    template < typename _ServiceCls = io::IoService >
+    _ServiceCls * getService() const { return static_cast<_ServiceCls *>(_serv); }
 
     /** \brief 接受客户连接（异步） */
     void acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoAcceptCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = nullptr );
@@ -430,9 +432,12 @@ public:
     /** \brief 设置关联线程 */
     void setThread( io::IoServiceThread * th ) { _thread = th; }
     /** \brief 获取关联线程 */
-    io::IoServiceThread * getThread() const { return _thread; }
+    template < typename _ThreadCls = io::IoServiceThread >
+    _ThreadCls * getThread() const { return static_cast<_ThreadCls *>(_thread); }
 
-    io::IoService * getService() const { return _serv; }
+    /** \brief 获取IO服务对象 */
+    template < typename _ServiceCls = io::IoService >
+    _ServiceCls * getService() const { return static_cast<_ServiceCls *>(_serv); }
 
     winux::MutexNative & getMutex() const { return const_cast<winux::MutexNative &>(_mtx); }
 

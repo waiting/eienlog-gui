@@ -562,7 +562,7 @@ void IoService::stop()
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
-        auto * th = static_cast<IoServiceThread *>( this->getGroupThread(i) );
+        auto * th = this->getGroupThread<IoServiceThread>(i);
         th->_iocp.postCustom( 0, 0, nullptr );
     }
 }

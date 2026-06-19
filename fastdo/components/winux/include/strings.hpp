@@ -826,7 +826,7 @@ public:
 
     /** \brief 构造函数0
      *
-     *  之后需要自己调用addMatchReplacePair()、addMatch()、setReplaceFunc()设置相关参数 */
+     *  之后需要自己调用`addMatchReplacePair()`、`addMatch()`、`setReplaceFunc()`设置相关参数 */
     MultiMatch();
 
     /** \brief 构造函数1，要求匹配项和替换项 */
@@ -1031,7 +1031,7 @@ public:
      *
      *  \param srcBuf 需要转换的字符串缓冲区
      *  \param srcSize 缓冲区的大小(in bytes)
-     *  \param destBuf 转换得到的结果，函数自动分配内存，用户负责Buffer.Free()释放
+     *  \param destBuf 转换得到的结果，函数自动分配内存，用户负责`Buffer#Free()`释放
      *  \return size_t 输出到destBuf的字节数 */
     size_t convert( char const * srcBuf, size_t srcSize, char * * destBuf );
 
@@ -1164,5 +1164,6 @@ inline static AnsiString LocalToUtf8( AnsiString const & str ) { return str; }
 
 
 } // namespace winux
+
 
 #endif // __STRINGS_HPP__

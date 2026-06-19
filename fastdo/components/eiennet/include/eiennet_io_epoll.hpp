@@ -104,43 +104,70 @@ class Epoll;
 class EIENNET_DLL IoEventsData
 {
 public:
-    using IoMapMap = std::map< int, std::map< IoType, IoCtx * > >;
-    using IoMap = IoMapMap::mapped_type;
+    enum WakeUpType
+    {
+        wutWantNone, //!< 无目的单纯唤醒
+        wutWantStop, //!< 欲要停止，唤醒
+        wutWantUpdate, //!< 欲要更新IO事件，唤醒以更新事件监听
+    };
+    struct IoVecStruct
+    {
+        std::vector<IoCtx *> ctxs; //!< IoCtx vector
+        uint32_t events; //!< epoll事件掩码
+
+        IoVecStruct() : events(0) { }
+
+        void set( IoCtx * ioCtx )
+        {
+            auto it = std::find( this->ctxs.begin(), this->ctxs.end(), ioCtx );
+            if ( it == this->ctxs.end() )
+            {
+                this->ctxs.push_back(ioCtx);
+            }
+        }
+
+        void remove( IoCtx * ioCtx )
+        {
+            for ( auto it = this->ctxs.begin(); it != this->ctxs.end(); )
+            {
+                if ( *it == ioCtx )
+                {
+                    it = this->ctxs.erase(it);
+                }
+                else
+                {
+                    it++;
+                }
+            }
+        }
+    };
+
+    using IoVecMap = std::map< int, IoVecStruct >;
 
     /** \brief 构造函数
      *
      *  \param epoll epoll实例 */
     IoEventsData( Epoll * epoll );
 
+    /** \brief 唤醒沉默的epoll.wait()等待
+     *
+     *  \param type 唤醒类型 */
+    void wakeUpTrigger( WakeUpType type );
+
+    /** \brief 预投递`IoCtx`
+     *
+     *  \param ioCtx IoCtx实例 */
+    void prePost( IoCtx * ioCtx );
+
     /** \brief 设置与`fd`相关的`IoCtx`
      *
      *  \param ioCtx IoCtx实例 */
     void setIoCtx( IoCtx * ioCtx );
 
-    /** \brief 获取与`fd`相关的指定类型的`IoCtx`
-     *
-     *  \param fd 对象文件描述符fd
-     *  \param type IO类型（ioAccept, ioConnect, ioRecv, ioSend, ioRecvFrom, ioSendTo, ioTimer）
-     *  \param events 事件掩码指针
-     *  \return IoCtx实例 */
-    IoCtx * getIoCtx( int fd, IoType type, uint32_t * events = nullptr );
-
     /** \brief 删除与`fd`相关的指定`IoCtx`
      *
      *  \param ioCtx IoCtx实例 */
     void delIoCtx( IoCtx * ioCtx );
-
-    /** \brief 是否存在与`fd`相关的`IoCtxs`
-     *
-     *  \param fd 对象文件描述符fd
-     *  \return 是否存在 */
-    bool hasIoCtxs( int fd ) const;
-
-    /** \brief 获取与`fd`相关的所有`IoCtxs`
-     *
-     *  \param fd 对象文件描述符fd
-     *  \return IoCtx映射 */
-    IoMap & getIoCtxs( int fd );
 
     /** \brief 删除与`fd`相关的所有`IoCtxs`
      *
@@ -153,10 +180,22 @@ public:
     winux::Mutex & getMutex() const { return const_cast<winux::Mutex &>(_mtx); }
 
 private:
-    IoMapMap _fdToIoCtxs; //!< fd到IoCtxs的映射
-    std::map< int, uint32_t > _fdToEvents; //!< fd到epoll事件掩码的映射
-    winux::Mutex _mtx; //!< 互斥锁
+    // 处理IoEvents投递
+    void _handleIoEventsPost();
+    // 处理IoEvents事件回调
+    void _handleIoEventsCallback( int rc );
+    // 处理IoEvents超时响应以及删除取消的IO
+    void _handleIoEventsTimeoutAndDelete();
+
+    std::vector<IoCtx *> _preIoCtxs; //!< 预投递的IoCtxs
+    winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
+
+    IoVecMap _ioVecMap; //!< IoCtx vector的映射
+    winux::Mutex _mtx; //!< 互斥量，保护IoVecMap数据
+
     Epoll * _epoll; //!< epoll实例
+
+    winux::SimpleHandle<int> _wakeUpEventFd; // 唤醒epoll.wait()的eventfd
 
     size_t _sockIoCount; // 套接字IO数
     size_t _timerIoCount; // 定时器IO数
@@ -245,7 +284,6 @@ public:
 private:
     Epoll _epoll;
     IoEventsData _ioEvents;
-    winux::SimpleHandle<int> _stopEventFd; // 停止eventfd
     IoService * _serv;
     bool _stop;
 
@@ -344,7 +382,6 @@ public:
 private:
     Epoll _epoll;
     IoEventsData _ioEvents;
-    winux::SimpleHandle<int> _stopEventFd; // 停止eventfd
     bool _stop;
 
     friend void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop );

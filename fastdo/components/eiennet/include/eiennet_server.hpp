@@ -91,7 +91,7 @@ public:
     );
 
     /** \brief 运行 */
-    virtual int run( void * runParam );
+    virtual int run();
 
     /** \brief 是否停止服务运行 */
     void stop( bool b = true );
@@ -147,8 +147,7 @@ protected:
     // 客户数据发送
     /** \brief 客户数据发送
      *
-     *  \param clientCtxPtr 客户场景
-     *  \param data 数据 */
+     *  \param clientCtxPtr 客户场景 */
     DEFINE_CUSTOM_EVENT_RETURN_EX(
         void,
         ClientDataSend,

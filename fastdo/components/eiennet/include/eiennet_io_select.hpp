@@ -261,12 +261,6 @@ public:
         aotSocket, //!< 套接字
         aotTimer //!< 定时器
     };
-    enum WakeUpType
-    {
-        wutWantNone, //!< 无目的单纯唤醒
-        wutWantStop, //!< 欲要停止，唤醒
-        wutWantUpdate, //!< 欲要更新IO事件，唤醒以更新事件监听
-    };
     struct IoKey
     {
         IoKey( void * ptr, AsyncObjectType type ) : ptr(ptr), type(type)
@@ -281,19 +275,32 @@ public:
         void * ptr;
         AsyncObjectType type;
     };
+    enum WakeUpType
+    {
+        wutWantNone, //!< 无目的单纯唤醒
+        wutWantStop, //!< 欲要停止，唤醒
+        wutWantUpdate, //!< 欲要更新IO事件，唤醒以更新事件监听
+    };
 
     using IoMapMap = std::map< IoKey, std::map< IoType, IoCtx * > >;
     using IoMap = IoMapMap::mapped_type;
 
+    /** \brief 构造函数 */
     IoEventsData();
 
-    // 唤醒沉默的select()等待
+    /** \brief 唤醒沉默的select()等待
+     *
+     *  \param type 唤醒类型 */
     void wakeUpTrigger( WakeUpType type );
 
-    // 预投递
+    /** \brief 预投递
+     *
+     *  \param ctx IoCtx实例 */
     void prePost( IoCtx * ctx );
 
-    // 投递IO事件
+    /** \brief 投递IO事件
+     *
+     *  \param ctx IoCtx实例 */
     void post( IoCtx * ctx );
 
 private:

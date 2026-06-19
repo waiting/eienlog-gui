@@ -237,7 +237,7 @@ bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCoun
     return !_stop;
 }
 
-int Server::run( void * runParam )
+int Server::run()
 {
     io::Select sel;
     int counter = 0;
