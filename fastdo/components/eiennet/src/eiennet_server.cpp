@@ -248,15 +248,15 @@ int Server::run()
         // 监视servSockA
         if ( _servSockAIsListening )
         {
-            sel.setExceptSock(_servSockA);
-            sel.setReadSock(_servSockA);
+            sel.setExceptFd( _servSockA.get() );
+            sel.setReadFd( _servSockA.get() );
         }
 
         // 监视servSockB
         if ( _servSockBIsListening )
         {
-            sel.setExceptSock(_servSockB);
-            sel.setReadSock(_servSockB);
+            sel.setExceptFd( _servSockB.get() );
+            sel.setReadFd( _servSockB.get() );
         }
 
         if ( true )
@@ -295,12 +295,12 @@ int Server::run()
                 else
                 {
                     // 监视数据接收
-                    sel.setReadSock( *clientCtxPtr->clientSockPtr.get() );
+                    sel.setReadFd( clientCtxPtr->clientSockPtr->get() );
                     // 若未决发送队列不空则监视数据写入
                     if ( clientCtxPtr->pendingSend.size() > 0 )
-                        sel.setWriteSock( *clientCtxPtr->clientSockPtr.get() );
+                        sel.setWriteFd( clientCtxPtr->clientSockPtr->get() );
                     // 监视套接字出错
-                    sel.setExceptSock( *clientCtxPtr->clientSockPtr.get() );
+                    sel.setExceptFd( clientCtxPtr->clientSockPtr->get() );
 
                     it++;
                 }
@@ -315,14 +315,14 @@ int Server::run()
             // 处理servSockA事件
             if ( _servSockAIsListening )
             {
-                if ( sel.hasExceptSock(_servSockA) )
+                if ( sel.hasExceptFd( _servSockA.get() ) )
                 {
                     winux::ScopeGuard guard(this->_mtxServer);
                     _stop = true;
 
                     rc--;
                 }
-                else if ( sel.hasReadSock(_servSockA) )
+                else if ( sel.hasReadFd( _servSockA.get() ) )
                 {
                     // 有一个客户连接到来
                     eiennet::ip::EndPoint clientEp;
@@ -344,14 +344,14 @@ int Server::run()
             // 处理servSockB事件
             if ( _servSockBIsListening )
             {
-                if ( sel.hasExceptSock(_servSockB) )
+                if ( sel.hasExceptFd( _servSockB.get() ) )
                 {
                     winux::ScopeGuard guard(this->_mtxServer);
                     _stop = true;
 
                     rc--;
                 }
-                else if ( sel.hasReadSock(_servSockB) )
+                else if ( sel.hasReadFd( _servSockB.get() ) )
                 {
                     // 有一个客户连接到来
                     eiennet::ip::EndPoint clientEp;
@@ -379,7 +379,7 @@ int Server::run()
                 {
                     auto clientCtxPtr = it->second;
                     winux::ScopeGuard guardClient(clientCtxPtr->mtxClient);
-                    if ( sel.hasExceptSock(*clientCtxPtr->clientSockPtr.get()) ) // 该套接字有错误
+                    if ( sel.hasExceptFd( clientCtxPtr->clientSockPtr->get() ) ) // 该套接字有错误
                     {
                         if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgMaroon | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " error, mark it as removable" );
 
@@ -387,7 +387,7 @@ int Server::run()
 
                         rc--;
                     }
-                    else if ( sel.hasWriteSock(*clientCtxPtr->clientSockPtr.get()) ) // 该套接字可写数据
+                    else if ( sel.hasWriteFd( clientCtxPtr->clientSockPtr->get() ) ) // 该套接字可写数据
                     {
                         if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgIgnore | eienlog::vcaBgIgnore, clientCtxPtr->getStamp(), " sendable" );
 
@@ -396,7 +396,7 @@ int Server::run()
 
                         rc--;
                     }
-                    else if ( sel.hasReadSock(*clientCtxPtr->clientSockPtr.get()) ) // 该套接字有数据可读
+                    else if ( sel.hasReadFd( clientCtxPtr->clientSockPtr->get() ) ) // 该套接字有数据可读
                     {
                         size_t readableSize = clientCtxPtr->clientSockPtr->getAvailable();
 

@@ -487,7 +487,7 @@ public:
     // ioctls ---------------------------------------------------------------------------------
 
     /** \brief 获取可不阻塞接收的数据量 */
-    int getAvailable() const;
+    winux::ulong getAvailable() const;
 
     /** \brief 设置socket阻塞模式，true为阻塞，false为非阻塞。 */
     bool setBlocking( bool blocking );

@@ -34,6 +34,7 @@
 #include "eiennet_io.hpp"
 #include "eiennet_async.hpp"
 #include "eiennet_io_select.hpp"
+#include "eiennet_io_poll.hpp"
 #if defined(OS_WIN)
 #include "eiennet_io_iocp.hpp"
 #else
@@ -55,6 +56,7 @@ EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupT
         return winux::MakeSharedNew<io::epoll::IoService>(groupThread);
     #endif
     case modelPoll:
+        return winux::MakeSharedNew<io::poll::IoService>(groupThread);
     case modelSelect:
     default:
         return winux::MakeSharedNew<io::select::IoService>(groupThread);

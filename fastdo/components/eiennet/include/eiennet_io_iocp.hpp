@@ -285,10 +285,74 @@ public:
 
 private:
     winux::PlainMembers< struct Iocp_Data, sizeof(HANDLE) * 5 > _self;
+    friend void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
     friend class IoService;
+
     DISABLE_OBJECT_COPY(Iocp)
 };
 
+/** \brief IO事件数据 */
+class EIENNET_DLL IoEventsData
+{
+public:
+    enum WakeUpType
+    {
+        wutWantNone, //!< 无目的单纯唤醒
+        wutWantStop, //!< 欲要停止，唤醒
+        wutWantUpdate, //!< 欲要更新IO事件，唤醒以更新事件监听
+    };
+    struct IoVecStruct
+    {
+        std::vector<IoCtx *> ctxs; //!< IoCtx vector
+
+        IoVecStruct() { }
+    };
+
+    using IoVecMap = std::map< void *, IoVecStruct >;
+
+    /** \brief 构造函数 */
+    IoEventsData();
+
+    /** \brief 唤醒沉默的select()等待
+    *
+    *  \param type 唤醒类型 */
+    void wakeUpTrigger( WakeUpType type );
+
+    /** \brief 预投递
+    *
+    *  \param ioCtx IoCtx实例 */
+    void prePost( IoCtx * ioCtx );
+
+    /** \brief 投递IO事件
+    *
+    *  \param ioCtx IoCtx实例 */
+    void post( IoCtx * ioCtx );
+
+private:
+    // 处理IoCtxs投递
+    void _handleIoCtxsPost();
+    // 处理IoCtxs监听
+    void _handleIoCtxsListen();
+    // 处理IoCtxs事件回调
+    void _handleIoCtxsCallback( int rc );
+    // 处理IoCtxs超时响应以及删除取消的IO
+    void _handleIoCtxsTimeoutAndDelete();
+
+    std::vector<IoCtx *> _preIoCtxs; //!< 预投递的IoCtx
+    winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
+
+    IoVecMap _ioVecMap; //!< 监听IO事件数据结构
+    winux::Mutex _mtxIoVecMap; //!< 互斥量，保护IoVecMap数据
+
+    Iocp _iocp; //!< iocp实例
+
+    size_t _sockIoCount; // 套接字IO数
+    size_t _timerIoCount; // 定时器IO数
+
+    friend void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents );
+    friend class IoService;
+    friend class IoServiceThread;
+};
 
 /** \brief Io服务线程 */
 class EIENNET_DLL IoServiceThread : public io::IoServiceThread
@@ -306,6 +370,7 @@ public:
 private:
     Iocp _iocp;
     IoService * _serv;
+    friend void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
     friend class IoService;
 
     DISABLE_OBJECT_COPY(IoServiceThread)
@@ -392,6 +457,7 @@ public:
 
 private:
     Iocp _iocp;
+    friend void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
 
     DISABLE_OBJECT_COPY(IoService)
 };

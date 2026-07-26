@@ -4,24 +4,23 @@
 /** \brief IO模型 */
 namespace io
 {
-using eiennet::Socket;
+struct SelectRead_Data;
+struct SelectWrite_Data;
+struct SelectExcept_Data;
 
 /** \brief SelectRead Io模型 */
 class EIENNET_DLL SelectRead
 {
 public:
     SelectRead();
-    SelectRead( Socket const & sock );
     SelectRead( int fd );
     SelectRead( winux::Mixed const & fds );
     ~SelectRead();
 
-    bool setReadSock( Socket const & sock ) { return setReadFd( sock.get() ); }
     bool setReadFd( int fd );
     bool delReadFd( int fd );
     bool setReadFds( winux::Mixed const & fds );
     void clear();
-    int hasReadSock( Socket const & sock ) const { return hasReadFd( sock.get() ); }
     int hasReadFd( int fd ) const;
     int getReadFdsCount() const;
     int getReadMaxFd() const;
@@ -42,17 +41,14 @@ class EIENNET_DLL SelectWrite
 {
 public:
     SelectWrite();
-    SelectWrite( Socket const & sock );
     SelectWrite( int fd );
     SelectWrite( winux::Mixed const & fds );
     ~SelectWrite();
 
-    bool setWriteSock( Socket const & sock ) { return setWriteFd( sock.get() ); }
     bool setWriteFd( int fd );
     bool delWriteFd( int fd );
     bool setWriteFds( winux::Mixed const & fds );
     void clear();
-    int hasWriteSock( Socket const & sock ) const { return hasWriteFd( sock.get() ); }
     int hasWriteFd( int fd ) const;
     int getWriteFdsCount() const;
     int getWriteMaxFd() const;
@@ -73,17 +69,14 @@ class EIENNET_DLL SelectExcept
 {
 public:
     SelectExcept();
-    SelectExcept( Socket const & sock );
     SelectExcept( int fd );
     SelectExcept( winux::Mixed const & fds );
     ~SelectExcept();
 
-    bool setExceptSock( Socket const & sock ) { return setExceptFd( sock.get() ); }
     bool setExceptFd( int fd );
     bool delExceptFd( int fd );
     bool setExceptFds( winux::Mixed const & fds );
     void clear();
-    int hasExceptSock( Socket const & sock ) const { return hasExceptFd( sock.get() ); }
     int hasExceptFd( int fd ) const;
     int getExceptFdsCount() const;
     int getExceptMaxFd() const;
@@ -109,19 +102,16 @@ public:
     /** \brief Select模型构造函数 */
     Select() { }
 
-    bool setReadSock( Socket const & sock ) { return SelectRead::setReadSock(sock); }
     bool setReadFd( int fd ) { return SelectRead::setReadFd(fd); }
     bool delReadFd( int fd ) { return SelectRead::delReadFd(fd); }
     bool setReadFds( winux::Mixed const & fds ) { return SelectRead::setReadFds(fds); }
     void clearReadFds() { SelectRead::clear(); }
 
-    bool setWriteSock( Socket const & sock ) { return SelectWrite::setWriteSock(sock); }
     bool setWriteFd( int fd ) { return SelectWrite::setWriteFd(fd); }
     bool delWriteFd( int fd ) { return SelectWrite::delWriteFd(fd); }
     bool setWriteFds( winux::Mixed const & fds ) { return SelectWrite::setWriteFds(fds); }
     void clearWriteFds() { SelectWrite::clear(); }
 
-    bool setExceptSock( Socket const & sock ) { return SelectExcept::setExceptSock(sock); }
     bool setExceptFd( int fd ) { return SelectExcept::setExceptFd(fd); }
     bool delExceptFd( int fd ) { return SelectExcept::delExceptFd(fd); }
     bool setExceptFds( winux::Mixed const & fds ) { return SelectExcept::setExceptFds(fds); }
@@ -256,34 +246,20 @@ class IoServiceThread;
 class EIENNET_DLL IoEventsData
 {
 public:
-    enum AsyncObjectType
-    {
-        aotSocket, //!< 套接字
-        aotTimer //!< 定时器
-    };
-    struct IoKey
-    {
-        IoKey( void * ptr, AsyncObjectType type ) : ptr(ptr), type(type)
-        {
-        }
-
-        bool operator < ( IoKey const & other ) const
-        {
-            return this->ptr < other.ptr;
-        }
-
-        void * ptr;
-        AsyncObjectType type;
-    };
     enum WakeUpType
     {
         wutWantNone, //!< 无目的单纯唤醒
         wutWantStop, //!< 欲要停止，唤醒
         wutWantUpdate, //!< 欲要更新IO事件，唤醒以更新事件监听
     };
+    struct IoVecStruct
+    {
+        std::vector<IoCtx *> ctxs; //!< IoCtx vector
 
-    using IoMapMap = std::map< IoKey, std::map< IoType, IoCtx * > >;
-    using IoMap = IoMapMap::mapped_type;
+        IoVecStruct() { }
+    };
+
+    using IoVecMap = std::map< int, IoVecStruct >;
 
     /** \brief 构造函数 */
     IoEventsData();
@@ -295,29 +271,31 @@ public:
 
     /** \brief 预投递
      *
-     *  \param ctx IoCtx实例 */
-    void prePost( IoCtx * ctx );
+     *  \param ioCtx IoCtx实例 */
+    void prePost( IoCtx * ioCtx );
 
     /** \brief 投递IO事件
      *
-     *  \param ctx IoCtx实例 */
-    void post( IoCtx * ctx );
+     *  \param ioCtx IoCtx实例 */
+    void post( IoCtx * ioCtx );
 
 private:
-    // 处理IoEvents投递
-    void _handleIoEventsPost();
-    // 处理IoEvents监听
-    void _handleIoEventsListen( io::Select & sel );
-    // 处理IoEvents事件回调
-    void _handleIoEventsCallback( io::Select & sel, int rc );
-    // 处理IoEvents超时响应以及删除取消的IO
-    void _handleIoEventsTimeoutAndDelete();
+    // 处理IoCtxs投递
+    void _handleIoCtxsPost();
+    // 处理IoCtxs监听
+    void _handleIoCtxsListen();
+    // 处理IoCtxs事件回调
+    void _handleIoCtxsCallback( int rc );
+    // 处理IoCtxs超时响应以及删除取消的IO
+    void _handleIoCtxsTimeoutAndDelete();
 
-    std::vector<IoMap::value_type> _preIoCtxs; //!< 预投递的IoCtx
+    std::vector<IoCtx *> _preIoCtxs; //!< 预投递的IoCtx
     winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
 
-    IoMapMap _ioMaps; //!< 监听IO事件数据结构
-    winux::Mutex _mtxIoMaps; //!< 互斥量，保护IoMaps数据
+    IoVecMap _ioVecMap; //!< 监听IO事件数据结构
+    winux::Mutex _mtxIoVecMap; //!< 互斥量，保护IoVecMap数据
+
+    io::Select _sel; //!< select实例
 
     eiennet::ip::udp::Socket _sockWakeUp; //!< UDP套接字，用于发送唤醒select()信号
     winux::ushort _portSockWakeUp; //!< 唤醒信号套接字端口
@@ -351,6 +329,7 @@ private:
     IoEventsData _ioEvents;
     IoService * _serv;
     bool _stop;
+
     friend class IoService;
 
     DISABLE_OBJECT_COPY(IoServiceThread)
@@ -447,10 +426,11 @@ private:
     DISABLE_OBJECT_COPY(IoService)
 };
 
+
 } // namespace select
 
 
 } // namespace io
 
-#endif // __EIENNET_IO_SELECT_HPP__
 
+#endif // __EIENNET_IO_SELECT_HPP__

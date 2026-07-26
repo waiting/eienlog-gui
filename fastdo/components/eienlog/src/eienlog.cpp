@@ -196,7 +196,7 @@ bool LogReader::readRecord( LogRecord * record, time_t waitTimeout, time_t updat
         while ( _sock.getAvailable() < _chunkSize && winux::GetUtcTimeMs() - curTime < (winux::uint64)waitTimeout )
         {
             sel.clear();
-            sel.setReadSock(_sock);
+            sel.setReadFd( _sock.get() );
             sel.wait( waitTimeout / 1000.0 );
         }
 

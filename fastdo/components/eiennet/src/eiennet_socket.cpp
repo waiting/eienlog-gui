@@ -37,7 +37,7 @@
 #include "eiennet_socket.hpp"
 #include "eiennet_io.hpp"
 #include "eiennet_async.hpp"
-#include "eiennet_io_select.hpp"
+#include "eiennet_io_poll.hpp"
 
 namespace eiennet
 {
@@ -556,16 +556,16 @@ bool Socket::sendUntil( size_t targetSize, void const * data, int msgFlags )
 
 int Socket::sendWaitUntil( size_t targetSize, void const * data, size_t * hadSent, double sec, int * rcWait, FunctionSuccessCallback eachSuccessCallback, void * param, int msgFlags )
 {
-    thread_local io::SelectWrite sel;
+    thread_local io::Poll poll;
     int oneSent = 0;
     while ( *hadSent < targetSize )
     {
-        sel.clear();
-        sel.setWriteFd(this->_sock);
-        *rcWait = sel.wait(sec);
+        poll.clear();
+        poll.add( this->_sock, io::Poll::PollOut );
+        *rcWait = poll.wait(sec);
         if ( *rcWait > 0 )
         {
-            oneSent = this->send( (winux::byte*)data + *hadSent, targetSize - *hadSent, msgFlags );
+            oneSent = this->send( (winux::byte *)data + *hadSent, targetSize - *hadSent, msgFlags );
             if ( oneSent > 0 )
             {
                 *hadSent += oneSent;
@@ -647,15 +647,15 @@ bool Socket::recvUntilTarget( winux::AnsiString const & target, winux::GrowBuffe
 
 int Socket::recvWaitUntilTarget( winux::AnsiString const & target, winux::GrowBuffer * data, winux::GrowBuffer * extraData, size_t * hadRead, size_t * startpos, size_t * pos, double sec, int * rcWait, FunctionSuccessCallback eachSuccessCallback, void * param, int msgFlags )
 {
-    thread_local io::SelectRead sel;
+    thread_local io::Poll poll;
     auto targetNextVal = winux::_Templ_KmpCalcNext<short>( target.c_str(), target.size() );
     int oneRead = 0;
     while ( data->getSize() - *startpos < target.size() || ( *pos = winux::_Templ_KmpMatchEx( data->getBuf<char>(), data->getSize(), target.c_str(), target.size(), *startpos, targetNextVal ) ) == -1 )
     {
         if ( data->getSize() >= target.size() ) *startpos = data->getSize() - target.size() + 1; // 计算下次搜索起始
-        sel.clear();
-        sel.setReadFd(this->_sock);
-        *rcWait = sel.wait(sec);
+        poll.clear();
+        poll.add( this->_sock, io::Poll::PollIn );
+        *rcWait = poll.wait(sec);
         if ( *rcWait > 0 )
         {
             char buf[4096];
@@ -709,7 +709,7 @@ bool Socket::recvUntilSize( size_t targetSize, winux::GrowBuffer * data, int msg
 
 int Socket::recvWaitUntilSize( size_t targetSize, winux::GrowBuffer * data, size_t * hadRead, double sec, int * rcWait, FunctionSuccessCallback eachSuccessCallback, void * param, int msgFlags )
 {
-    thread_local io::SelectRead sel;
+    thread_local io::Poll poll;
     int oneRead = 0;
     while ( *hadRead < targetSize )
     {
@@ -717,9 +717,9 @@ int Socket::recvWaitUntilSize( size_t targetSize, winux::GrowBuffer * data, size
         size_t remaining = targetSize - *hadRead; // 剩余读取的数据量
         size_t oneWant = remaining > sizeof(tmp) ? sizeof(tmp) : remaining; // 这次想读的数据量
 
-        sel.clear();
-        sel.setReadFd(this->_sock);
-        *rcWait = sel.wait(sec);
+        poll.clear();
+        poll.add( this->_sock, io::Poll::PollIn );
+        *rcWait = poll.wait(sec);
         if ( *rcWait > 0 )
         {
             oneRead = this->recv( tmp, oneWant, msgFlags );
@@ -754,18 +754,18 @@ winux::Buffer Socket::recvAvail( int msgFlags )
 
 winux::Buffer Socket::recvWaitAvail( double sec, int * rcWait, int msgFlags )
 {
-    thread_local io::SelectRead sel;
-    sel.clear();
-    sel.setReadFd(this->_sock);
+    thread_local io::Poll poll;
+    poll.clear();
+    poll.add( this->_sock, io::Poll::PollIn );
     // 等待有可接收的数据
-    *rcWait = sel.wait(sec);
+    *rcWait = poll.wait(sec);
     if ( *rcWait > 0 )
     {
         return this->recvAvail(msgFlags);
     }
     else if ( *rcWait == 0 )
     {
-        return winux::Buffer("");
+        return winux::Buffer( winux::Literal<char>::emptyStr, 0, true );
     }
     else
     {
@@ -1216,12 +1216,12 @@ bool Socket::isListening() const
     return optval != 0;
 }
 
-int Socket::getAvailable() const
+winux::ulong Socket::getAvailable() const
 {
     u_long avail = 0;
     int rc = ioctlsocket( this->_sock, FIONREAD, &avail );
     (void)rc;
-    return (int)avail;
+    return avail;
 }
 
 bool Socket::setBlocking( bool blocking )
@@ -1463,10 +1463,10 @@ std::streamsize SocketStreamIn::waitAvail( double sec )
 {
     std::streamsize avail = _sockBuf->in_avail() + _sockBuf->getSocket()->getAvailable();
     if ( avail > 0 ) return avail;
-    thread_local io::SelectRead sel;
-    sel.clear();
-    sel.setReadSock( *_sockBuf->getSocket() );
-    int rc = sel.wait(sec);
+    thread_local io::Poll poll;
+    poll.clear();
+    poll.add( _sockBuf->getSocket()->get(), io::Poll::PollIn );
+    int rc = poll.wait(sec);
     if ( rc > 0 )
     {
         return _sockBuf->getSocket()->getAvailable();
@@ -2095,11 +2095,11 @@ EIENNET_FUNC_IMPL(int) ConnectAttempt( Socket * sock, EndPoint const & ep, winux
     }
     else
     {
-        thread_local io::SelectWrite sel;
+        thread_local io::Poll poll;
         int err = 0;
-        sel.clear();
-        sel.setWriteSock(*sock);
-        int r = sel.wait( timeoutMs / 1000.0 );
+        poll.clear();
+        poll.add( sock->get(), io::Poll::PollOut );
+        int r = poll.wait( timeoutMs / 1000.0 );
         if ( r > 0 )
         {
             err = sock->getError();
@@ -2129,11 +2129,11 @@ EIENNET_FUNC_IMPL(int) ConnectAttempt( Socket * sock, Resolver const & resolver,
         }
         else
         {
-            thread_local io::SelectWrite sel;
+            thread_local io::Poll poll;
             int err = 0;
-            sel.clear();
-            sel.setWriteSock(*sock);
-            int r = sel.wait( perCnnTimeoutMs / 1000.0 );
+            poll.clear();
+            poll.add( sock->get(), io::Poll::PollOut );
+            int r = poll.wait( perCnnTimeoutMs / 1000.0 );
             if ( r > 0 )
             {
                 err = sock->getError();

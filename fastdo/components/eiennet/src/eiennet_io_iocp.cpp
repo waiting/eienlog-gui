@@ -121,6 +121,7 @@ static void _ProcessCanceledIoCtx( IoCtx * assocCtx )
 }
 
 // --------------------------------------------------------------------------------------------
+void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
 void _PostRecv( IoService * serv, IoRecvCtx * ctx );
 void _PostSend( IoService * serv, IoSendCtx * ctx );
 void _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx );
@@ -136,6 +137,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
     {
         DWORD bytesTransferred;
         ULONG_PTR key;
+        SetLastError(0);
         b = GetQueuedCompletionStatus( iocp->get(), &bytesTransferred, &key, &ol, INFINITE );
         err = GetLastError();
         if ( ol )
@@ -185,20 +187,22 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, Iocp * iocp )
 
                             if ( ctx->cbOk )
                             {
-                                eiennet::ip::EndPoint ep0( ctx->outputBuf.get<winux::byte>(), ctx->localAddrLen );
-                                eiennet::ip::EndPoint ep1( ctx->outputBuf.get<winux::byte>() + ctx->localAddrLen, ctx->remoteAddrLen );
-                                //winux::ColorOutputLine( winux::fgFuchsia, ep0, ", ", ep1 );
-                                if ( ctx->cbOk( ctx->sock, ctx->clientSock, ep1 ) )
+                                eiennet::ip::EndPoint epLocal( ctx->outputBuf.get<winux::byte>(), ctx->localAddrLen );
+                                eiennet::ip::EndPoint epRemote( ctx->outputBuf.get<winux::byte>() + ctx->localAddrLen, ctx->remoteAddrLen );
+                                //winux::ColorOutputLine( winux::fgFuchsia, "local: ", epLocal, ", remote: ", epRemote );
+                                if ( ctx->cbOk( ctx->sock, ctx->clientSock, epRemote ) )
                                 {
-                                    ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                    _PostAccept( serv, ctx );
+                                }
+                                else
+                                {
+                                    ctx->decRef();
                                 }
                             }
                             else
                             {
-                                ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                _PostAccept( serv, ctx );
                             }
-
-                            ctx->decRef();
                         }
                         break;
                     case ioConnect:
@@ -540,7 +544,7 @@ void IoServiceThread::run()
 
 void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
 {
-    auto myTimerCtx = static_cast<IoTimerCtx *>(timerCtx);
+    auto * myTimerCtx = static_cast<IoTimerCtx *>(timerCtx);
     auto timer = myTimerCtx->timer;
     this->_iocp.postCustom( 0, (ULONG_PTR)timer->get(), &myTimerCtx->ol );
 }
@@ -576,6 +580,57 @@ int IoService::run()
     return 0;
 }
 
+void _PostAccept( IoService * serv, IoAcceptCtx * ctx )
+{
+    // 获取绑定IP
+    eiennet::ip::EndPoint ep;
+    ctx->sock->getBoundEp(&ep);
+
+    // 创建现成的socket
+    ctx->clientSock = eiennet::async::Socket::New( *serv, ep.getAddrFamily(), eiennet::async::Socket::sockStream, eiennet::async::Socket::protoUnspec );
+    ctx->clientSock->create();
+
+    DWORD dw;
+    BOOL b;
+    Iocp & iocp = ctx->sock->getThread() ? ctx->sock->getThread<IoServiceThread>()->_iocp : serv->_iocp;
+
+    // 投递 IO
+    b = iocp._self->AcceptEx(
+        ctx->sock->get(),
+        ctx->clientSock->get(),
+        ctx->outputBuf.get(),
+        0,
+        ctx->localAddrLen,
+        ctx->remoteAddrLen,
+        &dw,
+        &ctx->ol
+    );
+
+    // 检测是否真的投递IO到iocp
+    if ( b == FALSE )
+    {
+        DWORD err = WSAGetLastError();
+        if ( err && err != ERROR_IO_PENDING )
+        {
+            // 其他错误，释放IoCtx
+            ctx->decRef();
+            return;
+        }
+    }
+
+    // 超时处理
+    if ( ctx->timeoutMs != -1 )
+    {
+        eiennet::async::Timer::New(*serv)->waitAsyncEx(
+            ctx->timeoutMs,
+            false,
+            _IoSocketCtxTimeoutCallback,
+            ctx,
+            ctx->sock->getThread()
+        );
+    }
+}
+
 void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, IoAcceptCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
     if ( !this->associate( sock, th ) ) return;
@@ -590,50 +645,12 @@ void IoService::postAccept( winux::SharedPointer<eiennet::async::Socket> sock, I
     eiennet::ip::EndPoint ep;
     sock->getBoundEp(&ep);
 
-    // 创建现成的socket
-    ctx->clientSock = eiennet::async::Socket::New( *this, ep.getAddrFamily(), eiennet::async::Socket::sockStream, eiennet::async::Socket::protoUnspec );
-    ctx->clientSock->create();
-
-    DWORD dw;
-    BOOL b;
+    // 设置地址数据大小与输出缓冲区
     ctx->localAddrLen = ep.size() + 16;
     ctx->remoteAddrLen = ep.size() + 16;
     ctx->outputBuf.alloc( ctx->localAddrLen + ctx->remoteAddrLen );
 
-    Iocp & iocp = sock->getThread() ? ((IoServiceThread*)sock->getThread())->_iocp : this->_iocp;
-    // 投递 IO
-    b = iocp._self->AcceptEx(
-        sock->get(),
-        ctx->clientSock->get(),
-        ctx->outputBuf.get(),
-        0,
-        ctx->localAddrLen,
-        ctx->remoteAddrLen,
-        &dw,
-        &ctx->ol
-    );
-    // 检测是否真的投递IO到iocp
-    if ( b == FALSE )
-    {
-        DWORD err = WSAGetLastError();
-        if ( err && err != ERROR_IO_PENDING )
-        {
-            // 其他错误，释放IoCtx
-            ctx->decRef();
-            return;
-        }
-    }
-    // 超时处理
-    if ( ctx->timeoutMs != -1 )
-    {
-        eiennet::async::Timer::New(*this)->waitAsyncEx(
-            timeoutMs,
-            false,
-            _IoSocketCtxTimeoutCallback,
-            ctx,
-            ctx->sock->getThread()
-        );
-    }
+    _PostAccept( this, ctx );
 }
 
 void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, eiennet::EndPoint const & ep, IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs, IoConnectCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
@@ -647,10 +664,12 @@ void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, 
     ctx->sock = sock;
     ctx->cbOk = cbOk;
     ctx->cbTimeout = cbTimeout;
-    // 绑定一个IP
+
+    // 绑定一个本机端点
     sock->bind( eiennet::ip::EndPoint( ep.getAddrFamily() ) );
+
     BOOL b;
-    Iocp & iocp = sock->getThread() ? ((IoServiceThread*)sock->getThread())->_iocp : this->_iocp;
+    Iocp & iocp = sock->getThread() ? sock->getThread<IoServiceThread>()->_iocp : this->_iocp;
     // 投递 IO
     b = iocp._self->ConnectEx(
         sock->get(),
@@ -661,6 +680,7 @@ void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, 
         nullptr,
         &ctx->ol
     );
+
     // 检测是否真的投递IO到iocp
     if ( b == FALSE )
     {
@@ -672,6 +692,7 @@ void IoService::postConnect( winux::SharedPointer<eiennet::async::Socket> sock, 
             return;
         }
     }
+
     // 超时处理
     if ( ctx->timeoutMs != -1 )
     {

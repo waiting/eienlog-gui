@@ -104,7 +104,7 @@ int IoService::run()
                     IoMapMap::key_type const & sock = pr.first;
                     IoMap & ioMap = pr.second;
                     // 监听错误
-                    sel.setExceptSock(*sock.get());
+                    sel.setExceptFd( sock->get() );
 
                     // 监听其他IO请求
                     for ( auto & req : ioMap )
@@ -112,22 +112,22 @@ int IoService::run()
                         switch ( req.first )
                         {
                         case ioAccept:
-                            sel.setReadSock(*sock.get());
+                            sel.setReadFd( sock->get() );
                             break;
                         case ioConnect:
-                            sel.setWriteSock(*sock.get());
+                            sel.setWriteFd( sock->get() );
                             break;
                         case ioRecv:
-                            sel.setReadSock(*sock.get());
+                            sel.setReadFd( sock->get() );
                             break;
                         case ioSend:
-                            sel.setWriteSock(*sock.get());
+                            sel.setWriteFd( sock->get() );
                             break;
                         case ioRecvFrom:
-                            sel.setReadSock(*sock.get());
+                            sel.setReadFd( sock->get() );
                             break;
                         case ioSendTo:
-                            sel.setWriteSock(*sock.get());
+                            sel.setWriteFd( sock->get() );
                             break;
                         }
                     }
@@ -155,7 +155,7 @@ int IoService::run()
                     if ( rc > 0 )
                     {
                         // 出错处理
-                        if ( sel.hasExceptSock(*sock.get()) )
+                        if ( sel.hasExceptFd( sock->get() ) )
                         {
                             _pool.task( &AsyncSocket::onError, sock.get(), sock ).post();
                             // 删除该sock的所有IO事件
@@ -259,7 +259,7 @@ int IoService::run()
                                 switch ( pr.first )
                                 {
                                 case ioAccept:
-                                    if ( sel.hasReadSock(*sock.get()) )
+                                    if ( sel.hasReadFd( sock->get() ) )
                                     {
                                         IoAcceptCtx * ctx = static_cast<IoAcceptCtx *>( pr.second.get() );
                                         // 接受客户连接
@@ -279,7 +279,7 @@ int IoService::run()
                                     }
                                     break;
                                 case ioConnect:
-                                    if ( sel.hasWriteSock(*sock.get()) )
+                                    if ( sel.hasWriteFd( sock->get() ) )
                                     {
                                         IoConnectCtx * ctx = static_cast<IoConnectCtx *>( pr.second.get() );
                                         ctx->costTimeMs = diff;
@@ -293,7 +293,7 @@ int IoService::run()
                                     }
                                     break;
                                 case ioRecv:
-                                    if ( sel.hasReadSock(*sock.get()) )
+                                    if ( sel.hasReadFd( sock->get() ) )
                                     {
                                         IoRecvCtx * ctx = static_cast<IoRecvCtx *>( pr.second.get() );
 
@@ -329,7 +329,7 @@ int IoService::run()
                                     }
                                     break;
                                 case ioSend:
-                                    if ( sel.hasWriteSock(*sock.get()) )
+                                    if ( sel.hasWriteFd( sock->get() ) )
                                     {
                                         IoSendCtx * ctx = static_cast<IoSendCtx *>( pr.second.get() );
                                         ctx->cnnAvail = true;
@@ -366,7 +366,7 @@ int IoService::run()
                                     }
                                     break;
                                 case ioRecvFrom:
-                                    if ( sel.hasReadSock(*sock.get()) )
+                                    if ( sel.hasReadFd( sock->get() ) )
                                     {
                                         IoRecvFromCtx * ctx = static_cast<IoRecvFromCtx *>( pr.second.get() );
 
@@ -401,7 +401,7 @@ int IoService::run()
                                     }
                                     break;
                                 case ioSendTo:
-                                    if ( sel.hasWriteSock(*sock.get()) )
+                                    if ( sel.hasWriteFd( sock->get() ) )
                                     {
                                         IoSendToCtx * ctx = static_cast<IoSendToCtx *>( pr.second.get() );
                                         bool fail = false;
