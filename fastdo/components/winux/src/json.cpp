@@ -715,23 +715,26 @@ inline static XString<_ChTy> Impl_RecursiveMixedToJsonEx( int level, Mixed const
     case Mixed::MT_COLLECTION:
         {
             s += Literal<_ChTy>::lCBrkStr + ( newline.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::spaceStr : newline );
-            for ( auto it = v._pColl->refKeysArray().begin(); it != v._pColl->refKeysArray().end(); ++it )
-            {
-                if ( it != v._pColl->refKeysArray().begin() ) s += Literal<_ChTy>::commaStr + ( newline.empty() ? Literal<_ChTy>::spaceStr : newline );
+            bool noFirst = false;
+            v._pColl->traverse( [&v, &s, &noFirst, level, autoKeyQuotes, &spacer, &newline] ( MixedMixedPair const & pr ) {
+                if ( noFirst ) s += Literal<_ChTy>::commaStr + ( newline.empty() ? Literal<_ChTy>::spaceStr : newline );
                 // key
-                if ( it->isString() )
+                if ( pr.first.isString() )
                 {
-                    XString<_ChTy> k = *it;
+                    XString<_ChTy> k = pr.first;
                     s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + ( autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr ) );
                 }
                 else
                 {
-                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + Impl_RecursiveMixedToJsonEx( level + 1, v, *it, autoKeyQuotes, spacer, newline );
+                    s += ( spacer.empty() ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level + 1 ) ) + Impl_RecursiveMixedToJsonEx( level + 1, v, pr.first, autoKeyQuotes, spacer, newline );
                 }
                 s += Literal<_ChTy>::colonStr + XString<_ChTy>( newline.empty() ? Literal<_ChTy>::nulStr : Literal<_ChTy>::spaceStr );
                 // value
-                s += Impl_RecursiveMixedToJsonEx( level + 1, v, v._pColl->at(*it), autoKeyQuotes, spacer, newline );
-            }
+                s += Impl_RecursiveMixedToJsonEx( level + 1, v, pr.second, autoKeyQuotes, spacer, newline );
+
+                noFirst = true;
+                return true;
+            } );
             s += ( newline.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::spaceStr : newline ) + ( spacer.empty() || v._pColl->getCount() == 0 ? Literal<_ChTy>::nulStr : StrMultiple<_ChTy>( spacer, level ) ) + Literal<_ChTy>::rCBrkStr;
         }
         break;
@@ -795,27 +798,30 @@ inline static XString<_ChTy> Impl_RecursiveMixedToJson( int level, Mixed const &
         {
             s += Literal<_ChTy>::lCBrkStr;
             s += Literal<_ChTy>::spaceStr;
-            for ( auto it = v._pColl->refKeysArray().begin(); it != v._pColl->refKeysArray().end(); ++it )
-            {
-                if ( it != v._pColl->refKeysArray().begin() )
+            bool noFirst = false;
+            v._pColl->traverse( [&v, &s, &noFirst, level, autoKeyQuotes] ( MixedMixedPair const & pr ) {
+                if ( noFirst )
                 {
                     s += Literal<_ChTy>::commaStr;
                     s += Literal<_ChTy>::spaceStr;
                 }
                 // key
-                if ( it->isString() )
+                if ( pr.first.isString() )
                 {
-                    XString<_ChTy> k = *it;
+                    XString<_ChTy> k = pr.first;
                     s += autoKeyQuotes ? ( IsKeyNameUseString(k) ? Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr : k ) : ( Literal<_ChTy>::quoteStr + AddSlashes<_ChTy>( k, Literal<_ChTy>::jsonSlashesStr ) + Literal<_ChTy>::quoteStr );
                 }
                 else
                 {
-                    s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, *it, autoKeyQuotes );
+                    s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, pr.first, autoKeyQuotes );
                 }
                 s += Literal<_ChTy>::colonStr;
                 // value
-                s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, v._pColl->at(*it), autoKeyQuotes );
-            }
+                s += Impl_RecursiveMixedToJson<_ChTy>( level + 1, v, pr.second, autoKeyQuotes );
+
+                noFirst = true;
+                return true;
+            } );
             s += Literal<_ChTy>::spaceStr;
             s += Literal<_ChTy>::rCBrkStr;
         }

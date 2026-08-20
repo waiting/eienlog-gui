@@ -17,6 +17,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <list>
 #include <map>
 #include <tuple>
 #include <queue>
@@ -280,8 +281,6 @@ typedef std::pair<String, String> StringStringPair;
 typedef std::vector<Mixed> MixedArray;
 typedef std::map<String, Mixed> StringMixedMap;
 typedef std::pair<String, Mixed> StringMixedPair;
-//typedef std::map<Mixed, Mixed> MixedMixedMap;
-//typedef std::pair<Mixed, Mixed> MixedMixedPair;
 
 // WINUX常用常量 ---------------------------------------------------------------------------
 /** \brief 非位置，值为-1。 */
@@ -1250,13 +1249,19 @@ public:
 };
 typedef std::map< Mixed, Mixed, MixedLessI > MixedMixedMapI;
 
-typedef std::pair< Mixed const, Mixed > MixedMixedPair;
+typedef std::pair< Mixed const, Mixed > ConstMixedMixedPair;
+typedef std::pair< Mixed, Mixed > MixedMixedPair;
 
 
 /** \brief 集合类 */
 class WINUX_DLL Collection
 {
 public:
+    using PairList = std::list<MixedMixedPair>;
+    using MixedListIteratorMap = std::map< Mixed, typename PairList::iterator, MixedLess >;
+    using MixedListIteratorMapI = std::map< Mixed, typename PairList::iterator, MixedLessI >;
+
+    /** \brief 构造函数 */
     explicit Collection( bool caseInsensitive = false );
     ~Collection();
 
@@ -1299,12 +1304,7 @@ public:
 
     /** \brief 获取全部键名，返回键名个数 */
     template < typename _Ty, typename _Alloc >
-    size_t getKeys( std::vector< _Ty, _Alloc > * keys ) const
-    {
-        for ( auto it = this->_pKeysArr->begin(); it != this->_pKeysArr->end(); ++it )
-            keys->push_back(*it);
-        return keys->size();
-    }
+    size_t getKeys( std::vector< _Ty, _Alloc > * keys ) const;
 
     /** \brief 获取映射表，返回键值对个数 */
     template < typename _KTy, typename _VTy, typename _Pr, typename _Alloc >
@@ -1314,7 +1314,7 @@ public:
     bool isEmpty() const { return this->getCount() == 0; }
 
     /** \brief 获取Collection元素个数 */
-    size_t getCount() const { return this->_pKeysArr != NULL ? this->_pKeysArr->size() : 0; }
+    size_t getCount() const { return this->_pPairList != nullptr ? this->_pPairList->size() : 0; }
 
     /** \brief 下标操作 */
     Mixed & operator [] ( Mixed const & k );
@@ -1331,22 +1331,28 @@ public:
     /** \brief 取得指定'Key'的元素，不存在则返回默认值 */
     Mixed const & get( Mixed const & k, Mixed const & defval ) const;
 
-    /** \brief Collection获取'键值对'索引操作 */
-    MixedMixedPair & getPair( size_t i );
-    /** \brief Collection获取'键值对'索引操作 */
-    MixedMixedPair const & getPair( size_t i ) const;
+    /** \brief Collection获取第一个'键值对' */
+    MixedMixedPair & getFirstPair();
+    /** \brief Collection获取第一个'键值对' */
+    MixedMixedPair const & getFirstPair() const;
 
-    /** \brief Collection设置'键值对'索引操作 */
-    void setPair( size_t i, Mixed const & k, Mixed const & v );
+    /** \brief Collection设置新的第一个'键值对' */
+    void setNewFirstPair( Mixed const & k, Mixed const & v );
 
-    /** \brief 往Collection添加一个pair */
-    void addPair( Mixed const & k, Mixed const & v );
+    /** \brief 往Collection设置一个新pair替换旧pair */
+    void setNewPair( Mixed const & oldK, Mixed const & k, Mixed const & v );
 
-    /** \brief 往Collection添加一个pair */
-    void addPair( Mixed const & k, Mixed && v );
+    /** \brief 往Collection设置一个新pair替换旧pair */
+    void setNewPair( Mixed const & oldK, Mixed const & k, Mixed && v );
+
+    /** \brief 往Collection设置一个pair */
+    void setPair( Mixed const & k, Mixed const & v );
+
+    /** \brief 往Collection设置一个pair */
+    void setPair( Mixed const & k, Mixed && v );
 
     /** \brief 删除一个元素，k代表键名 */
-    void del( Mixed const & k );
+    bool del( Mixed const & k );
 
     /** \brief 判断键名是否存在 */
     bool has( Mixed const & k ) const;
@@ -1354,24 +1360,49 @@ public:
     /** \brief 反转集合内元素顺序 */
     void reverse();
 
-    MixedArray & refKeysArray() { return *this->_pKeysArr; }
-    MixedArray const & refKeysArray() const { return *this->_pKeysArr; }
+    /** \brief 遍历集合回调函数 */
+    using TraverseFn = std::function< bool ( MixedMixedPair & pr ) >;
+    /** \brief 遍历集合回调函数 */
+    using ConstTraverseFn = std::function< bool ( MixedMixedPair const & pr ) >;
+    /** \brief 遍历次序 */
+    enum TraverseOrder
+    {
+        orderInsert, //!< 插入序
+        orderKey, //!< 键序
+    };
+    /** \brief 遍历pair
+     *
+     *  \param cb TraverseFn 回调函数，回调函数内返回true表示继续遍历，返回false退出遍历
+     *  \param order TraverseOrder 顺序：插入序、键序
+     *  \param inverted bool 是否反序
+     *  \return bool 完整遍历返回true，部分遍历返回false */
+    bool traverse( TraverseFn cb, TraverseOrder order = orderInsert, bool inverted = false );
+    /** \brief 遍历pair
+     *
+     *  \param cb TraverseFn 回调函数，回调函数内返回true表示继续遍历，返回false退出遍历
+     *  \param order TraverseOrder 顺序：插入序、键序
+     *  \param inverted bool 是否反序
+     *  \return bool 完整遍历返回true，部分遍历返回false */
+    bool traverse( ConstTraverseFn cb, TraverseOrder order = orderInsert, bool inverted = false ) const;
 
+    PairList & refPairList() { return *this->_pPairList; }
+    PairList const & refPairList() const { return *this->_pPairList; }
+
+    MixedListIteratorMap & refMap() { return *this->_pListItMap; }
+    MixedListIteratorMap const & refMap() const { return *this->_pListItMap; }
+
+    MixedListIteratorMapI & refMapI() { return *this->_pListItMapI; }
+    MixedListIteratorMapI const & refMapI() const { return *this->_pListItMapI; }
+
+    /** \brief 键是否大小写无关 */
     bool getCaseInsensitive() const { return this->_caseInsensitive; }
-
-    MixedMixedMap & refMap() { return *this->_pMap; }
-    MixedMixedMap const & refMap() const { return *this->_pMap; }
-
-    MixedMixedMapI & refMapI() { return *this->_pMapI; }
-    MixedMixedMapI const & refMapI() const { return *this->_pMapI; }
 
     /** \brief 用map给Collection赋值 */
     template < typename _KTy, typename _VTy, typename _Pr, typename _Alloc >
     void assign( std::map< _KTy, _VTy, _Pr, _Alloc > const & m, bool caseInsensitive = false )
     {
         this->_implAssign(
-            &Collection::_fxMap<MixedMixedMap, _KTy, _VTy, _Pr, _Alloc>,
-            &Collection::_fxMap<MixedMixedMapI, _KTy, _VTy, _Pr, _Alloc>,
+            &Collection::_fxMap<_KTy, _VTy, _Pr, _Alloc>,
             m,
             caseInsensitive
         );
@@ -1382,8 +1413,7 @@ public:
     void assign( std::pair< _KTy, _VTy > (&pairs)[_Count], bool caseInsensitive = false )
     {
         this->_implAssign(
-            &Collection::_fxPairs<MixedMixedMap, _KTy, _VTy, _Count>,
-            &Collection::_fxPairs<MixedMixedMapI, _KTy, _VTy, _Count>,
+            &Collection::_fxPairs<_KTy, _VTy, _Count>,
             pairs,
             caseInsensitive
         );
@@ -1393,8 +1423,7 @@ public:
     void assign( $c && coll, bool caseInsensitive = false )
     {
         this->_implAssign(
-            &Collection::_fxC<MixedMixedMap>,
-            &Collection::_fxC<MixedMixedMapI>,
+            &Collection::_fxC,
             std::move(coll),
             caseInsensitive
         );
@@ -1406,44 +1435,47 @@ private:
     {
         memset( this, 0, sizeof(*this) );
     }
+
     // 拷贝构造（不会判断自身原有资源情况）
     void _copyConstruct( Collection const & other );
 
-    // 给数组加入一个唯一键名
-    bool _addUniqueKey( Mixed const & k );
+    // 根据pair列表构建映射表
+    void _buildMapByPairList();
 
-    template < typename _MAP, typename _KTy, typename _VTy, typename _Pr, typename _Alloc >
-    void _fxMap( _MAP * pMap, std::map< _KTy, _VTy, _Pr, _Alloc > const & m )
+    template < typename _KTy, typename _VTy, typename _Pr, typename _Alloc >
+    void _fxMap( std::map< _KTy, _VTy, _Pr, _Alloc > const & m )
     {
         for ( auto it = m.begin(); it != m.end(); ++it )
         {
-            this->_addUniqueKey(it->first);
-            (*pMap)[it->first] = it->second;
+            this->setPair( it->first, it->second );
         }
     }
 
-    template < typename _MAP, typename _KTy, typename _VTy, size_t _Count >
-    void _fxPairs( _MAP * pMap, std::pair< _KTy, _VTy > (&pairs)[_Count] )
+    template < typename _KTy, typename _VTy, size_t _Count >
+    void _fxPairs( std::pair< _KTy, _VTy > (&pairs)[_Count] )
     {
         for ( size_t i = 0; i < _Count; ++i )
         {
-            this->_addUniqueKey(pairs[i].first);
-            (*pMap)[pairs[i].first] = pairs[i].second;
+            this->setPair( pairs[i].first, pairs[i].second );
         }
     }
 
-    template < typename _MAP >
-    void _fxC( _MAP * pMap, $c && coll );
+    void _fxC( $c && coll );
 
-    template < typename _Fx1, typename _Fx2, typename _Ty >
-    void _implAssign( _Fx1 fn, _Fx2 fnI, _Ty && m, bool caseInsensitive );
+    /** \brief 赋值实现
+     *
+     *  \param fn _Fx1 映射表初始化函数
+     *  \param m _Ty && 用于初始化映射表的对象（可以是std::map、std::pair[]、winux::$c）
+     *  \param caseInsensitive bool 键是否大小写无关 */
+    template < typename _Fx1, typename _Ty >
+    void _implAssign( _Fx1 fn, _Ty && m, bool caseInsensitive );
 
 private:
-    MixedArray * _pKeysArr; //!< Key数组
+    PairList * _pPairList; //!< Pair列表
     union
     {
-        MixedMixedMap * _pMap;      //!< 映射表
-        MixedMixedMapI * _pMapI;    //!< 映射表大小写无关
+        MixedListIteratorMap * _pListItMap;      //!< 映射表
+        MixedListIteratorMapI * _pListItMapI;    //!< 映射表大小写无关
     };
     bool _caseInsensitive; //!< `false`表示大小写相关KEY的MAP，`true`表示大小写无关KEY的MAP
 
@@ -1634,7 +1666,7 @@ public:
     /** \brief 取得类型 */
     MixedType type() const { return this->_type; }
 
-    // 取得相关类型的引用 --------------------------------------------------------------------
+    // 取得相关类型的引用 ------------------------------------------------------------------------
     template < typename _ChTy >
     XString<_ChTy> & refString();
     template < typename _ChTy >
@@ -1648,7 +1680,7 @@ public:
     // 生成 Mixed 引用类型方法
     MIXED_TYPE_LIST(MIXED_REF_TYPE_METHOD)
 
-    // 类型转换 ----------------------------------------------------------------------------
+    // 类型转换 --------------------------------------------------------------------------------
     operator bool() const;
     //operator char() const;
     operator byte() const;
@@ -1691,7 +1723,7 @@ public:
     template < typename _Ty >
     _Ty to() const;
 
-    // 比较操作符 --------------------------------------------------------------------------
+    // 比较操作符 ------------------------------------------------------------------------------
     bool operator == ( Mixed const & other ) const;
     bool operator < ( Mixed const & other ) const;
     bool operator > ( Mixed const & other ) const;
@@ -1699,7 +1731,7 @@ public:
     bool operator >= ( Mixed const & other ) const { return !this->operator < (other); }
     bool operator <= ( Mixed const & other ) const { return !this->operator > (other); }
 
-    // 判定特殊类型 -------------------------------------------------------------------------
+    // 判定特殊类型 -----------------------------------------------------------------------------
     bool isNull() const { return this->_type == MT_NULL; }
     bool isNumeric() const { return this->_type > MT_NULL && this->_type < MT_ANSI; }
     bool isInteger() const { return this->isNumeric() && this->_type != MT_FLOAT && this->_type != MT_DOUBLE; }
@@ -1712,7 +1744,7 @@ public:
     bool isArray() const { return this->_type == MT_ARRAY; }
     bool isCollection() const { return this->_type == MT_COLLECTION; }
 
-    // 创建相关类型 -------------------------------------------------------------------------
+    // 创建相关类型 -----------------------------------------------------------------------------
     /** \brief 创建一个字符串，根据_ChTy设置type为`MT_ANSI`或`MT_UNICODE` */
     template < typename _ChTy >
     Mixed & createString();
@@ -1738,7 +1770,7 @@ public:
     /** \brief 创建一个集合，自动把先前的数据清空，并设置type为`MT_COLLECTION` */
     Mixed & createCollection( bool caseInsensitive = false );
 
-    // Buffer有关操作 ----------------------------------------------------------------------
+    // Buffer有关操作 --------------------------------------------------------------------------
     /** \brief 分配一块内存，自动释放先前数据，并设置type为`MT_BINARY` */
     void alloc( size_t size, bool setDataSize = true );
 
@@ -1752,7 +1784,7 @@ public:
      *  即使`Mixed`不是`MT_BINARY`类型也不会出错，会直接返回NULL */
     void * getBuf() const;
 
-    // Array/Collection有关的操作 ----------------------------------------------------------
+    // Array/Collection有关的操作 --------------------------------------------------------------
     /** \brief 取得数组全部元素，返回元素个数
      *
      *  必须是`MT_ARRAY`类型 */
@@ -1859,13 +1891,13 @@ public:
     /** \brief 当Mixed为Array或Collection类型时，取得指定'索引/Key'的元素，不存在则返回默认值 */
     Mixed const & get( Mixed const & k, Mixed const & defval = mxNull ) const;
 
-    /** \brief Collection获取'键值对'索引操作 */
-    MixedMixedPair & getPair( size_t i );
-    /** \brief Collection获取'键值对'索引操作 */
-    MixedMixedPair const & getPair( size_t i ) const;
+    /** \brief Collection获取第一个'键值对' */
+    MixedMixedPair & getFirstPair();
+    /** \brief Collection获取第一个'键值对' */
+    MixedMixedPair const & getFirstPair() const;
 
-    /** \brief Collection设置'键值对'索引操作 */
-    Mixed & setPair( size_t i, Mixed const & k, Mixed const & v );
+    /** \brief Collection设置新的第一个'键值对' */
+    Mixed & setNewFirstPair( Mixed const & k, Mixed const & v );
 
     class CollectionAssigner
     {
@@ -1873,12 +1905,12 @@ public:
         CollectionAssigner( Mixed * mx ) : _mx(mx) { }
         CollectionAssigner & operator()( Mixed const & k, Mixed const & v )
         {
-            if ( _mx->isCollection() ) _mx->_pColl->addPair( k, v );
+            if ( _mx->isCollection() ) _mx->_pColl->setPair( k, v );
             return *this;
         }
         CollectionAssigner & operator()( Mixed const & k, Mixed && v )
         {
-            if ( _mx->isCollection() ) _mx->_pColl->addPair( k, std::move(v) );
+            if ( _mx->isCollection() ) _mx->_pColl->setPair( k, std::move(v) );
             return *this;
         }
         operator Mixed & () { return *_mx; }
@@ -1887,17 +1919,26 @@ public:
         Mixed * _mx;
     };
 
-    /** \brief 往Collection添加数据
+    /** \brief 往Collection设置数据
      *
      *  如果不是Collection，则自动释放之前数据，创建Collection */
-    CollectionAssigner addPair( bool caseInsensitive = false )
+    CollectionAssigner setPair( bool caseInsensitive = false )
     {
         if ( this->_type != MT_COLLECTION ) this->createCollection(caseInsensitive);
         return CollectionAssigner(this);
     }
 
-    /** \brief 往Collection添加一个pair。非Collection类型调用此函数会抛异常 */
-    Mixed & addPair( Mixed const & k, Mixed const & v );
+    /** \brief 往Collection设置一个新pair替换旧pair。非Collection类型调用此函数会抛异常 */
+    Mixed & setNewPair( Mixed const & oldK, Mixed const & k, Mixed const & v );
+
+    /** \brief 往Collection设置一个新pair替换旧pair。非Collection类型调用此函数会抛异常 */
+    Mixed & setNewPair( Mixed const & oldK, Mixed const & k, Mixed && v );
+
+    /** \brief 往Collection设置一个pair。非Collection类型调用此函数会抛异常 */
+    Mixed & setPair( Mixed const & k, Mixed const & v );
+
+    /** \brief 往Collection设置一个pair。非Collection类型调用此函数会抛异常 */
+    Mixed & setPair( Mixed const & k, Mixed && v );
 
     class ArrayAssigner
     {
@@ -1949,7 +1990,7 @@ public:
     MixedArrayElement addUnique( Mixed && v );
 
     /** \brief 删除一个元素，操作类型可以是Array或Collection，k分别代表索引或键名 */
-    void del( Mixed const & k );
+    bool del( Mixed const & k );
 
     /** \brief 判断元素是否存在，Array判断值是否存在，Collection判断键名是否存在
      *
@@ -1963,6 +2004,27 @@ public:
 
     /** \brief 反转容器内元素顺序/反转多字节数据字节序 */
     Mixed & reverse();
+
+    /** \brief 遍历数组回调函数 */
+    using TraverseFn = std::function< bool ( Mixed & v ) >;
+    using ConstTraverseFn = std::function< bool ( Mixed const & v ) >;
+    /** \brief 遍历Array的元素
+     *
+     *  非Array类型调用此函数会抛异常 */
+    bool traverse( TraverseFn cb, bool inverted = false );
+    /** \brief 遍历Array的元素
+     *
+     *  非Array类型调用此函数会抛异常 */
+    bool traverse( ConstTraverseFn cb, bool inverted = false ) const;
+
+    /** \brief 遍历Collection的pair
+     *
+     *  非Collection类型调用此函数会抛异常 */
+    bool traverse( Collection::TraverseFn cb, Collection::TraverseOrder order = Collection::orderInsert, bool inverted = false );
+    /** \brief 遍历Collection的pair
+     *
+     *  非Collection类型调用此函数会抛异常 */
+    bool traverse( Collection::ConstTraverseFn cb, Collection::TraverseOrder order = Collection::orderInsert, bool inverted = false ) const;
 
     // 赋值操作 --------------------------------------------------------------------------------
     // 基本类型赋值函数 -------------------------------------------------------------------------
@@ -2204,20 +2266,28 @@ inline Mixed & Mixed::createString<char>( XString<char> && str ) { return this->
 template <>
 inline Mixed & Mixed::createString<wchar>( XString<wchar> && str ) { return this->createUnicode( std::move(str) ); }
 
-// class Collection inline functions ------------------------------------------------------
+// class Collection inline functions ----------------------------------------------------------
+template < typename _Ty, typename _Alloc >
+inline size_t Collection::getKeys( std::vector< _Ty, _Alloc > * keys ) const
+{
+    for ( auto it = this->_pPairList->begin(); it != this->_pPairList->end(); ++it )
+        keys->push_back(it->first);
+    return keys->size();
+}
+
 template < typename _KTy, typename _VTy, typename _Pr, typename _Alloc >
 inline size_t Collection::getMap( std::map< _KTy, _VTy, _Pr, _Alloc > * m ) const
 {
     if ( this->_caseInsensitive )
     {
-        for ( auto it = this->_pMapI->begin(); it != this->_pMapI->end(); ++it )
-            (*m)[(_KTy)it->first] = (_VTy)it->second;
+        for ( auto it = this->_pListItMapI->begin(); it != this->_pListItMapI->end(); ++it )
+            (*m)[it->first.to<_KTy>()] = it->second->second.to<_VTy>();
         return m->size();
     }
     else
     {
-        for ( auto it = this->_pMap->begin(); it != this->_pMap->end(); ++it )
-            (*m)[(_KTy)it->first] = (_VTy)it->second;
+        for ( auto it = this->_pListItMap->begin(); it != this->_pListItMap->end(); ++it )
+            (*m)[it->first.to<_KTy>()] = it->second->second.to<_VTy>();
         return m->size();
     }
 }
@@ -2226,59 +2296,36 @@ inline Mixed const & Collection::get( Mixed const & k, Mixed const & defval = mx
 {
     if ( this->_caseInsensitive )
     {
-        if ( this->_pMapI->find(k) != this->_pMapI->end() )
-            return this->_pMapI->at(k);
+        if ( this->_pListItMapI->find(k) != this->_pListItMapI->end() )
+            return this->_pListItMapI->at(k)->second;
     }
     else
     {
-        if ( this->_pMap->find(k) != this->_pMap->end() )
-            return this->_pMap->at(k);
+        if ( this->_pListItMap->find(k) != this->_pListItMap->end() )
+            return this->_pListItMap->at(k)->second;
     }
     return defval;
 }
 
 inline bool Collection::has( Mixed const & k ) const
 {
-    return this->_caseInsensitive ? this->_pMapI->find(k) != this->_pMapI->end() : this->_pMap->find(k) != this->_pMap->end();
+    return this->_caseInsensitive ? this->_pListItMapI->find(k) != this->_pListItMapI->end() : this->_pListItMap->find(k) != this->_pListItMap->end();
 }
 
-inline bool Collection::_addUniqueKey( Mixed const & k )
-{
-    if ( this->_caseInsensitive )
-    {
-        if ( this->_pMapI->find(k) == this->_pMapI->end() )
-        {
-            this->_pKeysArr->push_back(k);
-            return true;
-        }
-    }
-    else
-    {
-        if ( this->_pMap->find(k) == this->_pMap->end() )
-        {
-            this->_pKeysArr->push_back(k);
-            return true;
-        }
-    }
-    return false;
-}
-
-template < typename _MAP >
-inline void Collection::_fxC( _MAP * pMap, $c && coll )
+inline void Collection::_fxC( $c && coll )
 {
     for ( auto & pr : coll._list )
     {
-        this->_addUniqueKey(pr.first);
-        (*pMap)[pr.first] = pr.second;
+        this->setPair( pr.first, pr.second );
     }
 }
 
-template < typename _Fx1, typename _Fx2, typename _Ty >
-inline void Collection::_implAssign( _Fx1 fn, _Fx2 fnI, _Ty && m, bool caseInsensitive )
+template < typename _Fx1, typename _Ty >
+inline void Collection::_implAssign( _Fx1 fn, _Ty && m, bool caseInsensitive )
 {
-    if ( this->_pKeysArr && ( this->_pMap || this->_pMapI ) ) // 当前已经存在分配的数组和映射表
+    if ( this->_pPairList && ( this->_pListItMap || this->_pListItMapI ) ) // 当前已经存在分配的列表和映射表
     {
-        this->_pKeysArr->clear();
+        this->_pPairList->clear();
 
         if ( this->_caseInsensitive )
         {
@@ -2286,15 +2333,15 @@ inline void Collection::_implAssign( _Fx1 fn, _Fx2 fnI, _Ty && m, bool caseInsen
             if ( !caseInsensitive )
             {
                 this->_caseInsensitive = caseInsensitive;
-                delete this->_pMapI;
-                this->_pMapI = NULL;
-                this->_pMap = new MixedMixedMap();
-                (this->*fn)( this->_pMap, std::forward<_Ty>(m) );
+                delete this->_pListItMapI;
+                this->_pListItMapI = nullptr;
+                this->_pListItMap = new MixedListIteratorMap();
+                (this->*fn)( std::forward<_Ty>(m) );
             }
             else
             {
-                this->_pMapI->clear();
-                (this->*fnI)( this->_pMapI, std::forward<_Ty>(m) );
+                this->_pListItMapI->clear();
+                (this->*fn)( std::forward<_Ty>(m) );
             }
         }
         else
@@ -2303,15 +2350,15 @@ inline void Collection::_implAssign( _Fx1 fn, _Fx2 fnI, _Ty && m, bool caseInsen
             if ( caseInsensitive )
             {
                 this->_caseInsensitive = caseInsensitive;
-                delete this->_pMap;
-                this->_pMap = NULL;
-                this->_pMapI = new MixedMixedMapI();
-                (this->*fnI)( this->_pMapI, std::forward<_Ty>(m) );
+                delete this->_pListItMap;
+                this->_pListItMap = nullptr;
+                this->_pListItMapI = new MixedListIteratorMapI();
+                (this->*fn)( std::forward<_Ty>(m) );
             }
             else
             {
-                this->_pMap->clear();
-                (this->*fn)( this->_pMap, std::forward<_Ty>(m) );
+                this->_pListItMap->clear();
+                (this->*fn)( std::forward<_Ty>(m) );
             }
         }
     }
@@ -2319,16 +2366,16 @@ inline void Collection::_implAssign( _Fx1 fn, _Fx2 fnI, _Ty && m, bool caseInsen
     {
         this->destroy();
         this->_caseInsensitive = caseInsensitive;
-        this->_pKeysArr = new MixedArray(); // 存放keys
+        this->_pPairList = new PairList(); // 存放pairs
         if ( this->_caseInsensitive )
         {
-            this->_pMapI = new MixedMixedMapI();
-            (this->*fnI)( this->_pMapI, std::forward<_Ty>(m) );
+            this->_pListItMapI = new MixedListIteratorMapI();
+            (this->*fn)( std::forward<_Ty>(m) );
         }
         else
         {
-            this->_pMap = new MixedMixedMap();
-            (this->*fn)( this->_pMap, std::forward<_Ty>(m) );
+            this->_pListItMap = new MixedListIteratorMap();
+            (this->*fn)( std::forward<_Ty>(m) );
         }
     }
 }

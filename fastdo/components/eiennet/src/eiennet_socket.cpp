@@ -1838,7 +1838,7 @@ void EndPoint::init( winux::Mixed const & ipAndPort )
     {
         if ( ipAndPort.getCount() > 0 )
         {
-            auto pr = ipAndPort.getPair(0);
+            auto & pr = ipAndPort.getFirstPair();
             winux::String strIp = pr.first.to<winux::String>();
             winux::ushort port = pr.second.toUShort();
 
@@ -1919,9 +1919,7 @@ Socket::AddrFamily EndPoint::getAddrFamily() const
 
 EndPoint::operator winux::Mixed() const
 {
-    winux::Mixed endpoint;
-    endpoint.addPair()( this->getIp(), this->getPort() );
-    return endpoint;
+    return winux::$c{ { this->getIp(), this->getPort() } };
 }
 
 winux::String EndPoint::getIp() const
@@ -2009,7 +2007,7 @@ Resolver::Resolver( winux::Mixed const & hostAndPort )
     {
         if ( hostAndPort.getCount() > 0 )
         {
-            auto pr = hostAndPort.getPair(0);
+            auto & pr = hostAndPort.getFirstPair();
             this->_resolve( pr.first, pr.second );
         }
     }

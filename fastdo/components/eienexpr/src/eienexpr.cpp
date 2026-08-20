@@ -1025,12 +1025,10 @@ void VarContext::setMixedCollection( winux::Mixed * collection )
     {
         this->_collection = collection;
 
-        size_t n = this->_collection->getCount();
-        for ( size_t i = 0; i < n; ++i )
-        {
-            auto & kv = this->_collection->getPair(i);
-            this->setPtr( kv.first, &kv.second );
-        }
+        this->_collection->traverse( [this] ( winux::MixedMixedPair & pr ) {
+            this->setPtr( pr.first, &pr.second );
+            return true;
+        } );
     }
     else
     {

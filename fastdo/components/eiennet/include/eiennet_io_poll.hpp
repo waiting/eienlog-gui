@@ -53,8 +53,8 @@ public:
     /** \brief 等待 */
     int wait( double sec = -1 );
 
-    /** \brief 枚举事件 */
-    size_t enumEvents( EvtFn cbEvt );
+    /** \brief 遍历事件 */
+    size_t traverseEvents( EvtFn cbEvt );
 
 private:
     winux::PlainMembers<struct Poll_Data, 32> _self;
@@ -225,7 +225,6 @@ private:
     winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
 
     IoVecMap _ioVecMap; //!< 监听IO事件数据结构
-    winux::Mutex _mtxIoVecMap; //!< 互斥量，保护IoVecMap数据
 
     io::Poll _poll; //!< poll实例
 
@@ -340,16 +339,16 @@ public:
     /** \brief 标记删除指定sock所有IO监听 */
     virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) override;
 
-    /** \brief 获取套接字IO数 */
-    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
-    /** \brief 获取定时器IO数 */
-    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
-
     /** \brief 关联线程
      *
      *  \param sock 异步套接字
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
     bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
+
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
 
 private:
     IoEventsData _ioEvents;

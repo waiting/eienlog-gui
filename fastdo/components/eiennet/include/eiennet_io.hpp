@@ -152,7 +152,7 @@ struct IoRecvCtx : IoSocketCtx
     bool cnnAvail; //!< 连接是否有效
 
 protected:
-    IoRecvCtx() : hadBytes(0), targetBytes(0), cnnAvail(false)
+    IoRecvCtx() : hadBytes(0), targetBytes(0), cnnAvail(true)
     {
         this->type = ioRecv;
     }
@@ -174,7 +174,7 @@ struct IoSendCtx : IoSocketCtx
     bool cnnAvail; //!< 连接是否有效
 
 protected:
-    IoSendCtx() : hadBytes(0), costTimeMs(0), cnnAvail(false)
+    IoSendCtx() : hadBytes(0), costTimeMs(0), cnnAvail(true)
     {
         this->type = ioSend;
     }
@@ -289,7 +289,10 @@ public:
 
     virtual ~IoService() { }
 
+    /** \brief 停止运行 */
     virtual void stop() = 0;
+
+    /** \brief 运行 */
     virtual int run() = 0;
 
     virtual void postAccept(

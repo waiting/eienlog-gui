@@ -1249,17 +1249,16 @@ inline static XString<_ChTy> Impl_RecursiveEvalSettingsToStringEx(
             {
                 if ( level || parentCollVal.isContainer() ) s += Literal<_ChTy>::lCBrkStr + newline;
 
-                for ( auto & k : collExpr._pColl->refKeysArray() )
-                {
+                collExpr._pColl->traverse( [&s, level, &collVal, &collExpr, &spacer, &newline] ( MixedMixedPair const & pr ) {
                     // 如果不换行，就不用级别留白
                     s += newline.find('\n') == npos ? Literal<_ChTy>::spaceStr : StrMultiple( spacer, level );
                     // 键
-                    auto tk = k.toString<_ChTy>();
+                    auto tk = pr.first.toString<_ChTy>();
                     s += IsNeedQuote(tk) ? Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(tk) + Literal<_ChTy>::quoteStr : tk;
                     s += Literal<_ChTy>::spaceStr;
                     // 值的表达式
-                    auto & expr = collExpr[k];
-                    s += Impl_RecursiveEvalSettingsToStringEx( level + 1, collVal, collExpr, collVal[k], expr, spacer, newline );
+                    auto & expr = pr.second;
+                    s += Impl_RecursiveEvalSettingsToStringEx( level + 1, collVal, collExpr, collVal[pr.first], expr, spacer, newline );
                     // 如果值表达式是集合或是数组且最后一个元素是集合，且换行，那么不加分号
                     if ( ( expr.isCollection() || ( expr.getCount() > 0 && expr[expr.getCount() - 1].isCollection() ) ) && newline.find('\n') != npos )
                     {
@@ -1269,7 +1268,8 @@ inline static XString<_ChTy> Impl_RecursiveEvalSettingsToStringEx(
                     {
                         s += Literal<_ChTy>::semicolonStr + newline;
                     }
-                }
+                    return true;
+                } );
 
                 if ( level || parentCollVal.isContainer() ) s += ( newline.find('\n') == npos ? Literal<_ChTy>::spaceStr : StrMultiple( spacer, level ? level - 1 : 0 ) ) + Literal<_ChTy>::rCBrkStr;
             }
@@ -1345,16 +1345,15 @@ inline static XString<_ChTy> Impl_RecursiveEvalSettingsValueToStringEx(
         {
             if ( level || parentVal.isContainer() ) s += Literal<_ChTy>::lCBrkStr + newline;
 
-            for ( auto & k : curVal._pColl->refKeysArray() )
-            {
+            curVal._pColl->traverse( [&s, level, &curVal, &spacer, &newline] ( MixedMixedPair const & pr ) {
                 // 如果不换行，就不用级别留白
                 s += newline.find('\n') == npos ? Literal<_ChTy>::spaceStr : StrMultiple( spacer, level );
                 // 键
-                auto tk = k.toString<_ChTy>();
+                auto tk = pr.first.toString<_ChTy>();
                 s += IsNeedQuote(tk) ? Literal<_ChTy>::quoteStr + AddCSlashes<_ChTy>(tk) + Literal<_ChTy>::quoteStr : tk;
                 s += Literal<_ChTy>::spaceStr;
                 // 值
-                auto & val = curVal[k];
+                auto & val = pr.second;
                 s += Impl_RecursiveEvalSettingsValueToStringEx( level + 1, curVal, val, spacer, newline );
                 // 如果值是集合或是数组且最后一个元素是集合，且换行，那么不加分号
                 if ( ( val.isCollection() || ( val.getCount() > 0 && val[val.getCount() - 1].isCollection() ) ) && newline.find('\n') != npos )
@@ -1365,7 +1364,8 @@ inline static XString<_ChTy> Impl_RecursiveEvalSettingsValueToStringEx(
                 {
                     s += Literal<_ChTy>::semicolonStr + newline;
                 }
-            }
+                return true;
+            } );
 
             if ( level || parentVal.isContainer() ) s += ( newline.find('\n') == npos ? Literal<_ChTy>::spaceStr : StrMultiple( spacer, level ? level - 1 : 0 ) ) + Literal<_ChTy>::rCBrkStr;
         }
@@ -1670,8 +1670,8 @@ void CsvWriter::writeRecord( Mixed const & record )
 {
     if ( record.isArray() ) // 多个列
     {
-        size_t i, n = record.getCount();
         String strRecord;
+        size_t i, n = record.getCount();
         for ( i = 0; i < n; i++ )
         {
             if ( i != 0 ) strRecord += $T(",");
@@ -1681,13 +1681,14 @@ void CsvWriter::writeRecord( Mixed const & record )
     }
     else if ( record.isCollection() )
     {
-        size_t i, n = record.getCount();
         String strRecord;
-        for ( i = 0; i < n; i++ )
-        {
+        size_t i = 0;
+        record.traverse( [&strRecord, &i] ( MixedMixedPair const & pr ) {
             if ( i != 0 ) strRecord += $T(",");
-            strRecord += __JudgeAddQuotes( record.getPair(i).second );
-        }
+            strRecord += __JudgeAddQuotes(pr.second);
+            i++;
+            return true;
+        } );
         _outputFile->puts( strRecord + $T("\n") );
     }
     else // 只有1列

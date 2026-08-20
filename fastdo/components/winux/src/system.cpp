@@ -681,13 +681,11 @@ inline static void __ObtainFlagPrefixAndFlagNameList( StringArray const & desire
         }
     }
 
-    for ( size_t i = 0; i < nameLists.getCount(); i++ )
-    {
-        auto & pr = nameLists.getPair(i);
+    nameLists.traverse( [flagPrefix, flagNameList] ( MixedMixedPair const & pr ) {
         *flagPrefix = pr.first.to<String>();
         *flagNameList = pr.second.to<String>();
-        break;
-    }
+        return false;
+    } );
 }
 
 // class CommandLineVars ------------------------------------------------------------------

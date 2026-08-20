@@ -912,7 +912,7 @@ static Buffer __RegValueFromMixed( Mixed const & v, DWORD * pdwType )
         break;
     case Mixed::MT_COLLECTION:
         {
-            auto && pr = v.getPair(0);
+            auto & pr = v.getFirstPair();
             if ( v.getCount() > 0 && pr.first.toULong() == REG_EXPAND_SZ )
             {
                 *pdwType = REG_EXPAND_SZ;
@@ -968,7 +968,7 @@ DWORD Registry::ValueType( Mixed const & v )
         break;
     case Mixed::MT_COLLECTION:
         {
-            if ( v.getCount() > 0 && v.getPair(0).first.toULong() == REG_EXPAND_SZ )
+            if ( v.getCount() > 0 && v.getFirstPair().first.toULong() == REG_EXPAND_SZ )
                 return REG_EXPAND_SZ;
             return REG_NONE;
         }
@@ -988,7 +988,7 @@ Mixed const & Registry::Value( Mixed const & v )
     {
         if ( v.getCount() > 0 )
         {
-            auto && pr = v.getPair(0);
+            auto & pr = v.getFirstPair();
             if ( pr.first.toULong() == REG_EXPAND_SZ )
             {
                 return pr.second;

@@ -113,7 +113,7 @@ int Epoll::wait( int timeout )
     return rc;
 }
 
-size_t Epoll::enumEvents( EvtFn cbEvt )
+size_t Epoll::traverseEvents( EvtFn cbEvt )
 {
     for ( size_t i = 0; i < _evtsCount; ++i )
     {
@@ -204,7 +204,6 @@ inline static int _GetFdByIoCtx( io::IoCtx * ioCtx )
 // EPOLL工作函数 ----------------------------------------------------------------------------------
 void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop )
 {
-    *stop = false;
     while ( !*stop )
     {
         ioEvents._handleIoCtxsPost();
@@ -213,7 +212,7 @@ void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData 
         if ( rc < 0 )
         {
             if ( errno == EINTR ) continue;
-            //*stop = false;
+
         }
         else // rc >= 0
         {
@@ -225,7 +224,7 @@ void _EpollWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData 
 
 
 // class IoEventsData -------------------------------------------------------------------------
-IoEventsData::IoEventsData() : _mtxPreIoCtxs(true), _mtxIoVecMap(true), _epoll(128), _sockIoCount(0), _timerIoCount(0)
+IoEventsData::IoEventsData() : _mtxPreIoCtxs(true), _epoll(128), _sockIoCount(0), _timerIoCount(0)
 {
     // 创建wake up eventfd
     this->_wakeUpEventFd.attachNew( eventfd( 0, 0 ), -1, close );
@@ -246,15 +245,14 @@ void IoEventsData::_handleIoCtxsPost()
 
 void IoEventsData::_handleIoCtxsCallback( int rc )
 {
-    this->_epoll.enumEvents( [this] ( int fd, uint32_t events, void * data ) {
+    this->_epoll.traverseEvents( [this] ( int fd, uint32_t events, void * data ) {
         if ( fd == this->_wakeUpEventFd.get() ) // 处理wake up事件
         {
-            uint64_t value;
-            read( this->_wakeUpEventFd.get(), &value, sizeof(value) );
+            eventfd_t value;
+            eventfd_read( this->_wakeUpEventFd.get(), &value );
         }
         else // 处理IO事件
         {
-            winux::ScopeGuard guard(this->_mtxIoVecMap);
             auto & ioVecStruct = this->_ioVecMap[fd];
             if ( events & EPOLLIN )
             {
@@ -272,7 +270,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                             // 处理回调
                             if ( accCtx->cbOk )
                             {
-                                winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                 if ( accCtx->cbOk( accCtx->sock, clientSock, accCtx->clientEp ) )
                                 {
                                     // 重投这个IO请求和Timer
@@ -333,7 +330,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( recvCtx->cbOk )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     recvCtx->cbOk( recvCtx->sock, recvCtx->data, recvCtx->cnnAvail );
                                 }
 
@@ -379,7 +375,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( recvFromCtx->cbOk )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     recvFromCtx->cbOk( recvFromCtx->sock, recvFromCtx->data, recvFromCtx->epFrom );
                                 }
 
@@ -411,7 +406,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
 
                             if ( timerCtx->cbOk )
                             {
-                                winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                 timerCtx->cbOk( timer, timerCtx );
                             }
 
@@ -456,7 +450,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                             // 处理回调
                             if ( cnnCtx->cbOk )
                             {
-                                winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                 cnnCtx->cbOk( cnnCtx->sock, cnnCtx->costTimeMs );
                             }
 
@@ -493,7 +486,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( sendCtx->cbOk )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
                                 }
 
@@ -542,7 +534,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( sendToCtx->cbOk )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     sendToCtx->cbOk( sendToCtx->sock, sendToCtx->hadBytes, sendToCtx->costTimeMs );
                                 }
 
@@ -589,7 +580,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( recvCtx->cbOk )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     recvCtx->cbOk( recvCtx->sock, recvCtx->data, recvCtx->cnnAvail );
                                 }
 
@@ -613,7 +603,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( sendCtx->cbOk )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
                                 }
 
@@ -639,10 +628,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                     {
                         auto * sockCtx = dynamic_cast<IoSocketCtx *>(*it);
                         auto sock = sockCtx->sock;
-                        {
-                            winux::ScopeUnguard unguard(this->_mtxIoVecMap);
-                            sock->onError(sock);
-                        }
+                        sock->onError(sock);
                     }
                 }
 
@@ -655,7 +641,6 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
 
 void IoEventsData::_handleIoCtxsTimeoutAndDelete()
 {
-    winux::ScopeGuard guard(this->_mtxIoVecMap);
     bool hasEraseInIoVecMap = false;
     for ( auto itVecStruct = this->_ioVecMap.begin(); itVecStruct != this->_ioVecMap.end(); hasEraseInIoVecMap = false )
     {
@@ -694,7 +679,6 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 auto * ctx = static_cast<IoAcceptCtx *>(sockIoCtx);
                                 if ( ctx->cbTimeout )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     if ( ctx->cbTimeout( ctx->sock, ctx ) )
                                     {
                                         ctx->state = stateNormal; // 重新设置为正常状态
@@ -739,9 +723,9 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 auto * ctx = static_cast<IoConnectCtx *>(sockIoCtx);
                                 if ( ctx->cbTimeout )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
                                 ioVecStruct.events &= ~EPOLLOUT; // 从事件掩码中删除EPOLLOUT事件
                                 this->_epoll.mod( fd, ioVecStruct.events ); // 更新这个fd的事件监听
 
@@ -758,9 +742,9 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 auto * ctx = static_cast<IoRecvCtx *>(sockIoCtx);
                                 if ( ctx->cbTimeout )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
                                 ioVecStruct.events &= ~EPOLLIN; // 从事件掩码中删除EPOLLIN事件
                                 this->_epoll.mod( fd, ioVecStruct.events ); // 更新这个fd的事件监听
 
@@ -777,9 +761,9 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 auto * ctx = static_cast<IoSendCtx *>(sockIoCtx);
                                 if ( ctx->cbTimeout )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
                                 ioVecStruct.events &= ~EPOLLOUT; // 从事件掩码中删除EPOLLOUT事件
                                 this->_epoll.mod( fd, ioVecStruct.events ); // 更新这个fd的事件监听
 
@@ -796,9 +780,9 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 auto * ctx = static_cast<IoRecvFromCtx *>(sockIoCtx);
                                 if ( ctx->cbTimeout )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
                                 ioVecStruct.events &= ~EPOLLIN; // 从事件掩码中删除EPOLLIN事件
                                 this->_epoll.mod( fd, ioVecStruct.events ); // 更新这个fd的事件监听
 
@@ -815,9 +799,9 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 auto * ctx = static_cast<IoSendToCtx *>(sockIoCtx);
                                 if ( ctx->cbTimeout )
                                 {
-                                    winux::ScopeUnguard unguard(this->_mtxIoVecMap);
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
                                 ioVecStruct.events &= ~EPOLLOUT; // 从事件掩码中删除EPOLLOUT事件
                                 this->_epoll.mod( fd, ioVecStruct.events ); // 更新这个fd的事件监听
 
@@ -889,8 +873,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
 
 void IoEventsData::wakeUpTrigger( WakeUpType type )
 {
-    uint64_t t = (uint64_t)type;
-    write( this->_wakeUpEventFd.get(), &t, sizeof(t) );
+    eventfd_write( this->_wakeUpEventFd.get(), (eventfd_t)type );
 }
 
 void IoEventsData::prePost( IoCtx * ioCtx )
@@ -901,7 +884,6 @@ void IoEventsData::prePost( IoCtx * ioCtx )
 
 void IoEventsData::post( IoCtx * ioCtx )
 {
-    winux::ScopeGuard guard(this->_mtxIoVecMap);
     switch ( ioCtx->type )
     {
     case ioTimer:
@@ -1295,7 +1277,6 @@ void IoService::timerTrigger( io::IoTimerCtx * timerCtx )
 void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
 {
     IoEventsData & ioEvents = sock->getThread() ? sock->getThread<IoServiceThread>()->_ioEvents : this->_ioEvents;
-    winux::ScopeGuard guard(ioEvents._mtxIoVecMap);
     auto & ioVecMap = ioEvents._ioVecMap;
     auto itVecStruct = ioVecMap.find( sock->get() );
     if ( itVecStruct != ioVecMap.end() )

@@ -93,17 +93,19 @@ WINUX_FUNC_IMPL(int) MemoryCompareI( void const * buf1, size_t n1, void const * 
 WINUX_FUNC_IMPL(bool) CollectionLess( Collection const & coll1, Collection const & coll2 )
 {
     size_t count1 = coll1.getCount(), count2 = coll2.getCount();
-    size_t n = count1 < count2 ? count1 : count2;
-    size_t i;
-    for ( i = 0; i < n; ++i )
+    auto it1 = coll1.refPairList().begin();
+    auto it2 = coll2.refPairList().begin();
+    auto & coll = count1 < count2 ? coll1 : coll2;
+    if ( !coll.traverse( [&it1, &it2, &coll1, &coll2] ( MixedMixedPair const & ) {
+        if ( coll1.at(it1->first) != coll2.at(it2->first) ) return false;
+        it1++;
+        it2++;
+        return true;
+    } ) )
     {
-        if ( coll1.getPair(i).second != coll2.getPair(i).second ) break;
+        return coll1.at(it1->first) < coll2.at(it2->first);
     }
-    if ( i < n )
-    {
-        return coll1.getPair(i).second < coll2.getPair(i).second;
-    }
-    else // i == n
+    else
     {
         return count1 < count2;
     }
@@ -112,17 +114,19 @@ WINUX_FUNC_IMPL(bool) CollectionLess( Collection const & coll1, Collection const
 WINUX_FUNC_IMPL(bool) CollectionGreater( Collection const & coll1, Collection const & coll2 )
 {
     size_t count1 = coll1.getCount(), count2 = coll2.getCount();
-    size_t n = count1 < count2 ? count1 : count2;
-    size_t i;
-    for ( i = 0; i < n; ++i )
+    auto it1 = coll1.refPairList().begin();
+    auto it2 = coll2.refPairList().begin();
+    auto & coll = count1 < count2 ? coll1 : coll2;
+    if ( !coll.traverse( [&it1, &it2, &coll1, &coll2] ( MixedMixedPair const & ) {
+        if ( coll1.at(it1->first) != coll2.at(it2->first) ) return false;
+        it1++;
+        it2++;
+        return true;
+    } ) )
     {
-        if ( coll1.getPair(i).second != coll2.getPair(i).second ) break;
+        return coll1.at(it1->first) > coll2.at(it2->first);
     }
-    if ( i < n )
-    {
-        return coll1.getPair(i).second > coll2.getPair(i).second;
-    }
-    else // i == n
+    else
     {
         return count1 > count2;
     }
@@ -131,13 +135,22 @@ WINUX_FUNC_IMPL(bool) CollectionGreater( Collection const & coll1, Collection co
 WINUX_FUNC_IMPL(bool) CollectionEqual( Collection const & coll1, Collection const & coll2 )
 {
     size_t count1 = coll1.getCount(), count2 = coll2.getCount();
-    size_t n = count1 < count2 ? count1 : count2;
-    size_t i;
-    for ( i = 0; i < n; ++i )
+    auto it1 = coll1.refPairList().begin();
+    auto it2 = coll2.refPairList().begin();
+    auto & coll = count1 < count2 ? coll1 : coll2;
+    if ( !coll.traverse( [&it1, &it2, &coll1, &coll2] ( MixedMixedPair const & ) {
+        if ( coll1.at(it1->first) != coll2.at(it2->first) ) return false;
+        it1++;
+        it2++;
+        return true;
+    } ) )
     {
-        if ( coll1.getPair(i).second != coll2.getPair(i).second ) return false;
+        return false;
     }
-    return count1 == count2;
+    else
+    {
+        return count1 == count2;
+    }
 }
 
 WINUX_FUNC_IMPL(bool) ValueIsInArray( StringArray const & arr, String const & val, bool caseInsensitive )
@@ -349,7 +362,7 @@ WINUX_FUNC_IMPL(bool) ParseDouble( UnicodeString const & str, double * dblVal )
     return Impl_ParseFloat( str, StrToInt64<wchar>, wcstod, dblVal );
 }
 
-// class Buffer ----------------------------------------------------------------------
+// class Buffer -------------------------------------------------------------------------------
 void * Buffer::Alloc( size_t size )
 {
     return ::malloc(size);
@@ -564,7 +577,7 @@ void Buffer::_copyConstruct( void const * buf, size_t size, bool isPeek )
     }
 }
 
-// class GrowBuffer -----------------------------------------------------------------------
+// class GrowBuffer ---------------------------------------------------------------------------
 GrowBuffer::GrowBuffer( size_t capacity )
 {
     if ( capacity )
@@ -675,13 +688,13 @@ void GrowBuffer::erase( size_t start, size_t count )
     }
 }
 
-// class MixedLess ------------------------------------------------------------------------
+// class MixedLess ----------------------------------------------------------------------------
 bool MixedLess::operator () ( Mixed const & v1, Mixed const & v2 ) const
 {
     return v1 < v2;
 }
 
-// class MixedLessI -----------------------------------------------------------------------
+// class MixedLessI ---------------------------------------------------------------------------
 bool MixedLessI::operator () ( Mixed const & v1, Mixed const & v2 ) const
 {
     if ( v1._type == v2._type )
@@ -733,7 +746,7 @@ bool MixedLessI::operator () ( Mixed const & v1, Mixed const & v2 ) const
     return v1 < v2;
 }
 
-// class Collection -----------------------------------------------------------------------
+// class Collection ---------------------------------------------------------------------------
 Collection::Collection( bool caseInsensitive )
 {
     this->_zeroInit();
@@ -753,12 +766,12 @@ Collection::Collection( Collection const & other )
 Collection & Collection::operator = ( Collection const & other )
 {
     if ( this == &other ) return *this;
-    if ( this->_pKeysArr && ( this->_pMap || this->_pMapI ) ) // 当前已经存在分配的数组和映射表
+    if ( this->_pPairList && ( this->_pListItMap || this->_pListItMapI ) ) // 当前已经存在分配的列表和映射表
     {
-        if ( other._pKeysArr )
-            *this->_pKeysArr = *other._pKeysArr;
+        if ( other._pPairList )
+            *this->_pPairList = *other._pPairList;
         else
-            this->_pKeysArr->clear();
+            this->_pPairList->clear();
 
         if ( this->_caseInsensitive )
         {
@@ -766,16 +779,15 @@ Collection & Collection::operator = ( Collection const & other )
             if ( other._caseInsensitive == false )
             {
                 this->_caseInsensitive = other._caseInsensitive;
-                delete this->_pMapI;
-                this->_pMapI = nullptr;
-                this->_pMap = other._pMap ? new MixedMixedMap(*other._pMap) : new MixedMixedMap();
+                delete this->_pListItMapI;
+                this->_pListItMapI = nullptr;
+                this->_pListItMap = new MixedListIteratorMap();
+                this->_buildMapByPairList();
             }
             else
             {
-                if ( other._pMapI )
-                    *this->_pMapI = *other._pMapI;
-                else
-                    this->_pMapI->clear();
+                this->_pListItMapI->clear();
+                this->_buildMapByPairList();
             }
         }
         else
@@ -784,16 +796,15 @@ Collection & Collection::operator = ( Collection const & other )
             if ( other._caseInsensitive )
             {
                 this->_caseInsensitive = other._caseInsensitive;
-                delete this->_pMap;
-                this->_pMap = nullptr;
-                this->_pMapI = other._pMapI ?  new MixedMixedMapI(*other._pMapI) : new MixedMixedMapI();
+                delete this->_pListItMap;
+                this->_pListItMap = nullptr;
+                this->_pListItMapI = new MixedListIteratorMapI();
+                this->_buildMapByPairList();
             }
             else
             {
-                if ( other._pMap )
-                    *this->_pMap = *other._pMap;
-                else
-                    this->_pMap->clear();
+                this->_pListItMap->clear();
+                this->_buildMapByPairList();
             }
         }
     }
@@ -813,52 +824,7 @@ Collection::Collection( Collection && other ) noexcept
 
 Collection & Collection::operator = ( Collection && other ) noexcept
 {
-    if ( this == &other ) return *this;
-    if ( this->_pKeysArr && ( this->_pMap || this->_pMapI ) ) // 当前已经存在分配的数组和映射表
-    {
-        if ( other._pKeysArr )
-            *this->_pKeysArr = std::move(*other._pKeysArr);
-        else
-            this->_pKeysArr->clear();
-
-        if ( this->_caseInsensitive )
-        {
-            // 当前是大小写无关的，但是目标是大小写相关的，删除当前的创建全新的
-            if ( other._caseInsensitive == false )
-            {
-                this->_caseInsensitive = other._caseInsensitive;
-                delete this->_pMapI;
-                this->_pMapI = nullptr;
-                this->_pMap = other._pMap ? new MixedMixedMap( std::move(*other._pMap) ) : new MixedMixedMap();
-            }
-            else
-            {
-                if ( other._pMapI )
-                    *this->_pMapI = std::move(*other._pMapI);
-                else
-                    this->_pMapI->clear();
-            }
-        }
-        else
-        {
-            // 当前是大小写相关的，但是目标是大小写无关的，删除当前的创建全新的
-            if ( other._caseInsensitive )
-            {
-                this->_caseInsensitive = other._caseInsensitive;
-                delete this->_pMap;
-                this->_pMap = nullptr;
-                this->_pMapI = other._pMapI ?  new MixedMixedMapI( std::move(*other._pMapI) ) : new MixedMixedMapI();
-            }
-            else
-            {
-                if ( other._pMap )
-                    *this->_pMap = std::move(*other._pMap);
-                else
-                    this->_pMap->clear();
-            }
-        }
-    }
-    else
+    if ( this != &other )
     {
         this->destroy();
         memcpy( this, &other, sizeof(*this) );
@@ -880,22 +846,18 @@ Collection::Collection( Mixed const & coll, bool caseInsensitive )
 
     if ( coll._type == Mixed::MT_COLLECTION )
     {
-        size_t n = coll._pColl->getCount();
-        for ( size_t i = 0; i < n; ++i )
-        {
-            auto & pr = coll._pColl->getPair(i);
-            this->addPair( pr.first, pr.second );
-        }
+        coll._pColl->traverse( [this] ( MixedMixedPair const & pr ) {
+            this->setPair( pr.first, pr.second );
+            return true;
+        } );
     }
     else
     {
         Collection tmpColl = coll.operator Collection();
-        size_t n = tmpColl.getCount();
-        for ( size_t i = 0; i < n; ++i )
-        {
-            auto & pr = tmpColl.getPair(i);
-            this->addPair( pr.first, pr.second );
-        }
+        tmpColl.traverse( [this] ( MixedMixedPair const & pr ) {
+            this->setPair( pr.first, pr.second );
+            return true;
+        } );
     }
 }
 
@@ -903,151 +865,432 @@ void Collection::create( bool caseInsensitive )
 {
     this->destroy();
     this->_caseInsensitive = caseInsensitive;
-    this->_pKeysArr = new MixedArray();
+    this->_pPairList = new PairList();
     if ( this->_caseInsensitive )
-        this->_pMapI = new MixedMixedMapI();
+        this->_pListItMapI = new MixedListIteratorMapI();
     else
-        this->_pMap = new MixedMixedMap();
+        this->_pListItMap = new MixedListIteratorMap();
 }
 
 void Collection::destroy() noexcept
 {
-    if ( this->_pKeysArr ) delete this->_pKeysArr;
+    if ( this->_pPairList ) delete this->_pPairList;
     if ( this->_caseInsensitive )
     {
-        if ( this->_pMapI ) delete this->_pMapI;
+        if ( this->_pListItMapI ) delete this->_pListItMapI;
     }
     else
     {
-        if ( this->_pMap ) delete this->_pMap;
+        if ( this->_pListItMap ) delete this->_pListItMap;
     }
     this->_zeroInit();
 }
 
 void Collection::clear() noexcept
 {
-    if ( this->_pKeysArr ) this->_pKeysArr->clear();
+    if ( this->_pPairList ) this->_pPairList->clear();
     if ( this->_caseInsensitive )
     {
-        if ( this->_pMapI ) this->_pMapI->clear();
+        if ( this->_pListItMapI ) this->_pListItMapI->clear();
     }
     else
     {
-        if ( this->_pMap ) this->_pMap->clear();
+        if ( this->_pListItMap ) this->_pListItMap->clear();
     }
 }
 
 Mixed & Collection::operator [] ( Mixed const & k )
 {
-    this->_addUniqueKey(k);
     if ( this->_caseInsensitive )
-        return this->_pMapI->operator [] (k);
+    {
+        auto itListIt = this->_pListItMapI->find(k);
+        if ( itListIt != this->_pListItMapI->end() ) // 存在此key，直接得到列表节点数据引用
+        {
+            return itListIt->second->second;
+        }
+        else // 不存在此key，新建列表节点，并存下节点迭代器，返回数据引用
+        {
+            this->_pPairList->emplace_back( k, mxNull );
+            auto it = std::prev( this->_pPairList->end() );
+            (*this->_pListItMapI)[k] = it;
+            return it->second;
+        }
+    }
     else
-        return this->_pMap->operator [] (k);
+    {
+        auto itListIt = this->_pListItMap->find(k);
+        if ( itListIt != this->_pListItMap->end() ) // 存在此key，直接得到列表节点数据引用
+        {
+            return itListIt->second->second;
+        }
+        else // 不存在此key，新建列表节点，并存下节点迭代器，返回数据引用
+        {
+            this->_pPairList->emplace_back( k, mxNull );
+            auto it = std::prev( this->_pPairList->end() );
+            (*this->_pListItMap)[k] = it;
+            return it->second;
+        }
+    }
 }
 
 Mixed & Collection::at( Mixed const & k )
 {
-    if ( this->_caseInsensitive )
-        return this->_pMapI->at(k);
-    else
-        return this->_pMap->at(k);
+    return this->operator [] (k);
 }
 
 Mixed const & Collection::at( Mixed const & k ) const
 {
     if ( this->_caseInsensitive )
-        return this->_pMapI->at(k);
+        return static_cast<MixedListIteratorMapI const *>(this->_pListItMapI)->at(k)->second;
     else
-        return this->_pMap->at(k);
+        return static_cast<MixedListIteratorMap const *>(this->_pListItMap)->at(k)->second;
 }
 
-MixedMixedPair & Collection::getPair( size_t i )
+MixedMixedPair & Collection::getFirstPair()
 {
-    if ( this->_caseInsensitive )
-        return *_pMapI->find( _pKeysArr->at(i) );
-    else
-        return *_pMap->find( _pKeysArr->at(i) );
+    return *this->_pPairList->begin();
 }
 
-MixedMixedPair const & Collection::getPair( size_t i ) const
+MixedMixedPair const & Collection::getFirstPair() const
 {
-    if ( this->_caseInsensitive )
-        return *_pMapI->find( _pKeysArr->at(i) );
-    else
-        return *_pMap->find( _pKeysArr->at(i) );
+    return *static_cast<PairList const *>(this->_pPairList)->begin();
 }
 
-void Collection::setPair( size_t i, Mixed const & k, Mixed const & v )
+void Collection::setNewFirstPair( Mixed const & k, Mixed const & v )
 {
+    auto itFirstPair = this->_pPairList->begin();
     if ( this->_caseInsensitive )
     {
-        this->_pMapI->erase( this->_pKeysArr->at(i) );
-        (*this->_pMapI)[k] = v;
+        this->_pListItMapI->erase(itFirstPair->first);
+        (*this->_pListItMapI)[k] = itFirstPair;
     }
     else
     {
-        this->_pMap->erase( this->_pKeysArr->at(i) );
-        (*this->_pMap)[k] = v;
+        this->_pListItMap->erase(itFirstPair->first);
+        (*this->_pListItMap)[k] = itFirstPair;
     }
-
-    this->_pKeysArr->at(i) = k;
+    itFirstPair->first = k;
+    itFirstPair->second = v;
 }
 
-void Collection::addPair( Mixed const & k, Mixed const & v )
+void Collection::setNewPair( Mixed const & oldK, Mixed const & k, Mixed const & v )
 {
-    this->_addUniqueKey(k);
     if ( this->_caseInsensitive )
-        this->_pMapI->operator [] (k) = v;
+    {
+        auto itListIt = this->_pListItMapI->find(oldK);
+        if ( itListIt != this->_pListItMapI->end() ) // 旧key存在
+        {
+            auto it = itListIt->second;
+            this->_pListItMapI->erase(itListIt);
+            (*this->_pListItMapI)[k] = it;
+            it->first = k;
+            it->second = v;
+        }
+        else // 旧key不存在
+        {
+            this->setPair( k, v );
+        }
+    }
     else
-        this->_pMap->operator [] (k) = v;
+    {
+        auto itListIt = this->_pListItMap->find(oldK);
+        if ( itListIt != this->_pListItMap->end() ) // 旧key存在
+        {
+            auto it = itListIt->second;
+            this->_pListItMap->erase(itListIt);
+            (*this->_pListItMap)[k] = it;
+            it->first = k;
+            it->second = v;
+        }
+        else // 旧key不存在
+        {
+            this->setPair( k, v );
+        }
+    }
 }
 
-void Collection::addPair( Mixed const & k, Mixed && v )
+void Collection::setNewPair( Mixed const & oldK, Mixed const & k, Mixed && v )
 {
-    this->_addUniqueKey(k);
     if ( this->_caseInsensitive )
-        this->_pMapI->operator [] (k) = std::move(v);
+    {
+        auto itListIt = this->_pListItMapI->find(oldK);
+        if ( itListIt != this->_pListItMapI->end() ) // 旧key存在
+        {
+            auto it = itListIt->second;
+            this->_pListItMapI->erase(itListIt);
+            (*this->_pListItMapI)[k] = it;
+            it->first = k;
+            it->second = std::move(v);
+        }
+        else // 旧key不存在
+        {
+            this->setPair( k, std::move(v) );
+        }
+    }
     else
-        this->_pMap->operator [] (k) = std::move(v);
+    {
+        auto itListIt = this->_pListItMap->find(oldK);
+        if ( itListIt != this->_pListItMap->end() ) // 旧key存在
+        {
+            auto it = itListIt->second;
+            this->_pListItMap->erase(itListIt);
+            (*this->_pListItMap)[k] = it;
+            it->first = k;
+            it->second = std::move(v);
+        }
+        else // 旧key不存在
+        {
+            this->setPair( k, std::move(v) );
+        }
+    }
 }
 
-void Collection::del( Mixed const & k )
+void Collection::setPair( Mixed const & k, Mixed const & v )
 {
-    auto it = std::find( this->_pKeysArr->begin(), this->_pKeysArr->end(), k );
-    if ( it != this->_pKeysArr->end() ) this->_pKeysArr->erase(it);
     if ( this->_caseInsensitive )
-        this->_pMapI->erase(k);
+    {
+        auto itListIt = this->_pListItMapI->find(k);
+        if ( itListIt != this->_pListItMapI->end() ) // 存在此key
+        {
+            itListIt->second->second = v;
+        }
+        else // 不存在此key
+        {
+            this->_pPairList->emplace_back( k, v );
+            auto it = std::prev( this->_pPairList->end() );
+            (*this->_pListItMapI)[k] = it;
+        }
+    }
     else
-        this->_pMap->erase(k);
+    {
+        auto itListIt = this->_pListItMap->find(k);
+        if ( itListIt != this->_pListItMap->end() ) // 存在此key
+        {
+            itListIt->second->second = v;
+        }
+        else // 不存在此key
+        {
+            this->_pPairList->emplace_back( k, v );
+            auto it = std::prev( this->_pPairList->end() );
+            (*this->_pListItMap)[k] = it;
+        }
+    }
+}
+
+void Collection::setPair( Mixed const & k, Mixed && v )
+{
+    if ( this->_caseInsensitive )
+    {
+        auto itListIt = this->_pListItMapI->find(k);
+        if ( itListIt != this->_pListItMapI->end() ) // 存在此key
+        {
+            itListIt->second->second = std::move(v);
+        }
+        else // 不存在此key
+        {
+            this->_pPairList->emplace_back( k, std::move(v) );
+            auto it = std::prev( this->_pPairList->end() );
+            (*this->_pListItMapI)[k] = it;
+        }
+    }
+    else
+    {
+        auto itListIt = this->_pListItMap->find(k);
+        if ( itListIt != this->_pListItMap->end() ) // 存在此key
+        {
+            itListIt->second->second = std::move(v);
+        }
+        else // 不存在此key
+        {
+            this->_pPairList->emplace_back( k, std::move(v) );
+            auto it = std::prev( this->_pPairList->end() );
+            (*this->_pListItMap)[k] = it;
+        }
+    }
+}
+
+bool Collection::del( Mixed const & k )
+{
+    if ( this->_caseInsensitive )
+    {
+        auto itListIt = this->_pListItMapI->find(k);
+        if ( itListIt == this->_pListItMapI->end() ) return false;
+        this->_pPairList->erase(itListIt->second);
+        this->_pListItMapI->erase(itListIt);
+    }
+    else
+    {
+        auto itListIt = this->_pListItMap->find(k);
+        if ( itListIt == this->_pListItMap->end() ) return false;
+        this->_pPairList->erase(itListIt->second);
+        this->_pListItMap->erase(itListIt);
+    }
+    return true;
 }
 
 void Collection::reverse()
 {
-    offset_t j = (offset_t)_pKeysArr->size() - 1;
-    offset_t i = 0;
-    while ( i < j )
-    {
-        Mixed t = std::move( _pKeysArr->at(i) );
-        _pKeysArr->at(i) = std::move( _pKeysArr->at(j) );
-        _pKeysArr->at(j) = std::move(t);
+    this->_pPairList->reverse();
+}
 
-        i++;
-        j--;
+bool Collection::traverse( TraverseFn cb, TraverseOrder order, bool inverted )
+{
+    if ( inverted )
+    {
+        switch ( order )
+        {
+        case orderInsert:
+            for ( auto it = this->_pPairList->rbegin(); it != this->_pPairList->rend(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+            break;
+        case orderKey:
+            for (
+                auto itListIt = ( this->_caseInsensitive ? this->_pListItMapI->rbegin() : this->_pListItMap->rbegin() );
+                itListIt != ( this->_caseInsensitive ? this->_pListItMapI->rend() : this->_pListItMap->rend() );
+                itListIt++
+            )
+            {
+                if ( !cb(*itListIt->second) )
+                {
+                    return false;
+                }
+            }
+            break;
+        }
     }
+    else
+    {
+        switch ( order )
+        {
+        case orderInsert:
+            for ( auto it = this->_pPairList->begin(); it != this->_pPairList->end(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+            break;
+        case orderKey:
+            for (
+                auto itListIt = ( this->_caseInsensitive ? this->_pListItMapI->begin() : this->_pListItMap->begin() );
+                itListIt != ( this->_caseInsensitive ? this->_pListItMapI->end() : this->_pListItMap->end() );
+                itListIt++
+            )
+            {
+                if ( !cb(*itListIt->second) )
+                {
+                    return false;
+                }
+            }
+            break;
+        }
+    }
+    return true;
+}
+
+bool Collection::traverse( ConstTraverseFn cb, TraverseOrder order, bool inverted ) const
+{
+    if ( inverted )
+    {
+        switch ( order )
+        {
+        case orderInsert:
+            for ( auto it = this->_pPairList->rbegin(); it != this->_pPairList->rend(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+            break;
+        case orderKey:
+            for (
+                auto itListIt = ( this->_caseInsensitive ? this->_pListItMapI->rbegin() : this->_pListItMap->rbegin() );
+                itListIt != ( this->_caseInsensitive ? this->_pListItMapI->rend() : this->_pListItMap->rend() );
+                itListIt++
+            )
+            {
+                if ( !cb(*itListIt->second) )
+                {
+                    return false;
+                }
+            }
+            break;
+        }
+    }
+    else
+    {
+        switch ( order )
+        {
+        case orderInsert:
+            for ( auto it = this->_pPairList->begin(); it != this->_pPairList->end(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+            break;
+        case orderKey:
+            for (
+                auto itListIt = ( this->_caseInsensitive ? this->_pListItMapI->begin() : this->_pListItMap->begin() );
+                itListIt != ( this->_caseInsensitive ? this->_pListItMapI->end() : this->_pListItMap->end() );
+                itListIt++
+            )
+            {
+                if ( !cb(*itListIt->second) )
+                {
+                    return false;
+                }
+            }
+            break;
+        }
+    }
+    return true;
 }
 
 void Collection::_copyConstruct( Collection const & other )
 {
     this->_caseInsensitive = other._caseInsensitive;
-    this->_pKeysArr = other._pKeysArr ? new MixedArray(*other._pKeysArr) : new MixedArray();
+    this->_pPairList = other._pPairList ? new PairList(*other._pPairList) : new PairList();
     if ( this->_caseInsensitive )
-        this->_pMapI = other._pMapI ? new MixedMixedMapI(*other._pMapI) : new MixedMixedMapI();
+    {
+        this->_pListItMapI = new MixedListIteratorMapI();
+        this->_buildMapByPairList();
+    }
     else
-        this->_pMap = other._pMap ? new MixedMixedMap(*other._pMap) : new MixedMixedMap();
+    {
+        this->_pListItMap = new MixedListIteratorMap();
+        this->_buildMapByPairList();
+    }
 }
 
-// class Mixed ----------------------------------------------------------------------------
+void Collection::_buildMapByPairList()
+{
+    if ( this->_caseInsensitive )
+    {
+        for ( auto it = this->_pPairList->begin(); it != this->_pPairList->end(); it++ )
+        {
+            (*this->_pListItMapI)[it->first] = it;
+        }
+    }
+    else
+    {
+        for ( auto it = this->_pPairList->begin(); it != this->_pPairList->end(); it++ )
+        {
+            (*this->_pListItMap)[it->first] = it;
+        }
+    }
+}
+
+
+// class Mixed --------------------------------------------------------------------------------
 // union _LongUlongUnion
 union _LongUlongUnion
 {
@@ -1066,7 +1309,7 @@ union _Int64Uint64Union
     _Int64Uint64Union( uint64 v ) : ui64(v) { }
 };
 
-// enum Mixed::MixedType strings ------------------------------------------------------------
+// enum Mixed::MixedType strings --------------------------------------------------------------
 static AnsiString __MixedTypeStringsA[] = {
     "MT_NULL",
     MIXED_TYPE_LIST(MIXED_TYPE_ENUM_ITEMSTRINGA)
@@ -1312,31 +1555,31 @@ void Mixed::free() noexcept
     switch ( this->_type )
     {
     case MT_ANSI:
-        if ( this->_pStr != NULL )
+        if ( this->_pStr != nullptr )
         {
             delete this->_pStr;
         }
         break;
     case MT_UNICODE:
-        if ( this->_pWStr != NULL )
+        if ( this->_pWStr != nullptr )
         {
             delete this->_pWStr;
         }
         break;
     case MT_BINARY:
-        if ( this->_pBuf != NULL )
+        if ( this->_pBuf != nullptr )
         {
             delete this->_pBuf;
         }
         break;
     case MT_ARRAY:
-        if ( this->_pArr != NULL )
+        if ( this->_pArr != nullptr )
         {
             delete this->_pArr;
         }
         break;
     case MT_COLLECTION:
-        if ( this->_pColl != NULL )
+        if ( this->_pColl != nullptr )
         {
             delete this->_pColl;
         }
@@ -1345,7 +1588,7 @@ void Mixed::free() noexcept
     this->_zeroInit();
 }
 
-// ------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 Mixed::operator bool() const
 {
     bool b = false;
@@ -1410,7 +1653,7 @@ Mixed::operator bool() const
 }
 
 template < typename _Ty >
-inline static _Ty __MixedBaseTypeConv( Mixed const * v )
+inline static _Ty __MixedPlainTypeConv( Mixed const * v )
 {
     switch ( v->_type )
     {
@@ -1482,11 +1725,11 @@ char Mixed::toChar() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            chVal = this->_pColl->getPair(0).second.to<char>();
+            chVal = this->_pColl->getFirstPair().second.to<char>();
         }
         break;
     default:
-        chVal = __MixedBaseTypeConv<char>(this);
+        chVal = __MixedPlainTypeConv<char>(this);
         break;
     }
     return chVal;
@@ -1521,11 +1764,11 @@ Mixed::operator byte() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            btVal = this->_pColl->getPair(0).second.to<byte>();
+            btVal = this->_pColl->getFirstPair().second.to<byte>();
         }
         break;
     default:
-        btVal = __MixedBaseTypeConv<byte>(this);
+        btVal = __MixedPlainTypeConv<byte>(this);
         break;
     }
     return btVal;
@@ -1564,11 +1807,11 @@ Mixed::operator short() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            shVal = this->_pColl->getPair(0).second.to<short>();
+            shVal = this->_pColl->getFirstPair().second.to<short>();
         }
         break;
     default:
-        shVal = __MixedBaseTypeConv<short>(this);
+        shVal = __MixedPlainTypeConv<short>(this);
         break;
     }
     return shVal;
@@ -1607,11 +1850,11 @@ Mixed::operator ushort() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            ushVal = this->_pColl->getPair(0).second.to<ushort>();
+            ushVal = this->_pColl->getFirstPair().second.to<ushort>();
         }
         break;
     default:
-        ushVal = __MixedBaseTypeConv<ushort>(this);
+        ushVal = __MixedPlainTypeConv<ushort>(this);
         break;
     }
     return ushVal;
@@ -1654,11 +1897,11 @@ Mixed::operator int() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            iVal = this->_pColl->getPair(0).second.to<int>();
+            iVal = this->_pColl->getFirstPair().second.to<int>();
         }
         break;
     default:
-        iVal = __MixedBaseTypeConv<int>(this);
+        iVal = __MixedPlainTypeConv<int>(this);
         break;
     }
     return iVal;
@@ -1701,11 +1944,11 @@ Mixed::operator uint() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            uiVal = this->_pColl->getPair(0).second.to<uint>();
+            uiVal = this->_pColl->getFirstPair().second.to<uint>();
         }
         break;
     default:
-        uiVal = __MixedBaseTypeConv<uint>(this);
+        uiVal = __MixedPlainTypeConv<uint>(this);
         break;
     }
     return uiVal;
@@ -1748,11 +1991,11 @@ Mixed::operator long() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            lVal = this->_pColl->getPair(0).second.to<long>();
+            lVal = this->_pColl->getFirstPair().second.to<long>();
         }
         break;
     default:
-        lVal = __MixedBaseTypeConv<long>(this);
+        lVal = __MixedPlainTypeConv<long>(this);
         break;
     }
     return lVal;
@@ -1795,11 +2038,11 @@ Mixed::operator ulong() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            ulVal = this->_pColl->getPair(0).second.to<ulong>();
+            ulVal = this->_pColl->getFirstPair().second.to<ulong>();
         }
         break;
     default:
-        ulVal = __MixedBaseTypeConv<ulong>(this);
+        ulVal = __MixedPlainTypeConv<ulong>(this);
         break;
     }
     return ulVal;
@@ -1842,11 +2085,11 @@ Mixed::operator float() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            fltVal = this->_pColl->getPair(0).second.to<float>();
+            fltVal = this->_pColl->getFirstPair().second.to<float>();
         }
         break;
     default:
-        fltVal = __MixedBaseTypeConv<float>(this);
+        fltVal = __MixedPlainTypeConv<float>(this);
         break;
     }
     return fltVal;
@@ -1893,11 +2136,11 @@ Mixed::operator int64() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            i64Val = this->_pColl->getPair(0).second.to<int64>();
+            i64Val = this->_pColl->getFirstPair().second.to<int64>();
         }
         break;
     default:
-        i64Val = __MixedBaseTypeConv<int64>(this);
+        i64Val = __MixedPlainTypeConv<int64>(this);
         break;
     }
     return i64Val;
@@ -1944,11 +2187,11 @@ Mixed::operator uint64() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            ui64Val = this->_pColl->getPair(0).second.to<uint64>();
+            ui64Val = this->_pColl->getFirstPair().second.to<uint64>();
         }
         break;
     default:
-        ui64Val = __MixedBaseTypeConv<uint64>(this);
+        ui64Val = __MixedPlainTypeConv<uint64>(this);
         break;
     }
     return ui64Val;
@@ -1995,11 +2238,11 @@ Mixed::operator double() const
     case MT_COLLECTION:
         if ( this->_pColl->getCount() > 0 )
         {
-            dblVal = this->_pColl->getPair(0).second.to<double>();
+            dblVal = this->_pColl->getFirstPair().second.to<double>();
         }
         break;
     default:
-        dblVal = __MixedBaseTypeConv<double>(this);
+        dblVal = __MixedPlainTypeConv<double>(this);
         break;
     }
     return dblVal;
@@ -2363,12 +2606,11 @@ Mixed::operator Buffer() const
     case MT_COLLECTION:
         {
             GrowBuffer tmpBuf(64);
-            size_t n = this->getCount();
-            for ( size_t i = 0; i < n; ++i )
-            {
-                Buffer aBuf = this->getPair(i).second.operator Buffer();
+            this->_pColl->traverse( [&tmpBuf] ( MixedMixedPair & pr ) {
+                Buffer aBuf = pr.second.operator Buffer();
                 tmpBuf.append( aBuf.getBuf(), aBuf.getSize() );
-            }
+                return true;
+            } );
             buf = std::move(tmpBuf);
         }
         break;
@@ -2436,12 +2678,12 @@ Mixed::operator MixedArray() const
         arr = *this->_pArr;
         break;
     case MT_COLLECTION:
-        for ( auto itKey = this->_pColl->refKeysArray().begin(); itKey != this->_pColl->refKeysArray().end(); ++itKey )
-        {
+        this->_pColl->traverse( [this, &arr] ( MixedMixedPair const & kv ) {
             Mixed pr;
-            pr.addPair( this->_pColl->getCaseInsensitive() )( *itKey, this->_pColl->operator [] (*itKey) );
+            pr.setPair( this->_pColl->getCaseInsensitive() )( kv.first, kv.second );
             arr.push_back( std::move(pr) );
-        }
+            return true;
+        } );
         break;
     default:
         // empty array.
@@ -2456,52 +2698,52 @@ Mixed::operator Collection() const
     switch ( this->_type )
     {
     case MT_BOOLEAN:
-        coll.addPair( MT_BOOLEAN, this->_boolVal );
+        coll.setPair( MT_BOOLEAN, this->_boolVal );
         break;
     case MT_CHAR:
-        coll.addPair( MT_CHAR, this->_chVal );
+        coll.setPair( MT_CHAR, this->_chVal );
         break;
     case MT_BYTE:
-        coll.addPair( MT_BYTE, this->_btVal );
+        coll.setPair( MT_BYTE, this->_btVal );
         break;
     case MT_SHORT:
-        coll.addPair( MT_SHORT, this->_shVal );
+        coll.setPair( MT_SHORT, this->_shVal );
         break;
     case MT_USHORT:
-        coll.addPair( MT_USHORT, this->_ushVal );
+        coll.setPair( MT_USHORT, this->_ushVal );
         break;
     case MT_INT:
-        coll.addPair( MT_INT, this->_iVal );
+        coll.setPair( MT_INT, this->_iVal );
         break;
     case MT_UINT:
-        coll.addPair( MT_UINT, this->_uiVal );
+        coll.setPair( MT_UINT, this->_uiVal );
         break;
     case MT_LONG:
-        coll.addPair( MT_LONG, this->_lVal );
+        coll.setPair( MT_LONG, this->_lVal );
         break;
     case MT_ULONG:
-        coll.addPair( MT_ULONG, this->_ulVal );
+        coll.setPair( MT_ULONG, this->_ulVal );
         break;
     case MT_INT64:
-        coll.addPair( MT_INT64, this->_i64Val );
+        coll.setPair( MT_INT64, this->_i64Val );
         break;
     case MT_UINT64:
-        coll.addPair( MT_UINT64, this->_ui64Val );
+        coll.setPair( MT_UINT64, this->_ui64Val );
         break;
     case MT_FLOAT:
-        coll.addPair( MT_FLOAT, this->_fltVal );
+        coll.setPair( MT_FLOAT, this->_fltVal );
         break;
     case MT_DOUBLE:
-        coll.addPair( MT_DOUBLE, this->_dblVal );
+        coll.setPair( MT_DOUBLE, this->_dblVal );
         break;
     case MT_ANSI:
-        coll.addPair( MT_ANSI, *this->_pStr );
+        coll.setPair( MT_ANSI, *this->_pStr );
         break;
     case MT_UNICODE:
-        coll.addPair( MT_UNICODE, *this->_pWStr );
+        coll.setPair( MT_UNICODE, *this->_pWStr );
         break;
     case MT_BINARY:
-        coll.addPair( MT_BINARY, *this->_pBuf );
+        coll.setPair( MT_BINARY, *this->_pBuf );
         break;
     case MT_ARRAY:
         for ( size_t i = 0; i < this->_pArr->size(); ++i )
@@ -2509,16 +2751,14 @@ Mixed::operator Collection() const
             Mixed const & e = (*this->_pArr)[i];
             if ( e.isCollection() )
             {
-                size_t n = e._pColl->getCount();
-                for ( size_t j = 0; j < n; ++j )
-                {
-                    auto & pr = e._pColl->getPair(j);
-                    coll.addPair( pr.first, pr.second );
-                }
+                e._pColl->traverse( [&coll] ( MixedMixedPair const & pr ) {
+                    coll.setPair( pr.first, pr.second );
+                    return true;
+                } );
             }
             else
             {
-                coll.addPair( i, e );
+                coll.setPair( i, e );
             }
         }
         break;
@@ -3203,7 +3443,7 @@ Mixed & Mixed::createCollection( bool caseInsensitive )
     return *this;
 }
 
-// Buffer有关操作 --------------------------------------------------------------------------
+// Buffer有关操作 ------------------------------------------------------------------------------
 void Mixed::alloc( size_t size, bool setDataSize )
 {
     if ( this->_type == MT_BINARY )
@@ -3237,7 +3477,7 @@ void * Mixed::getBuf() const
     return NULL;
 }
 
-// Array/Collection有关的操作 --------------------------------------------------------------
+// Array/Collection有关的操作 ------------------------------------------------------------------
 Mixed & Mixed::operator [] ( Mixed const & k )
 {
     switch ( this->_type )
@@ -3268,13 +3508,13 @@ Mixed const & Mixed::operator [] ( Mixed const & k ) const
         {
             size_t i = k;
             if ( i >= this->_pArr->size() ) throw MixedError( MixedError::meOutOfArrayRange, FormatA( "Array out of bound: index:%d, size:%d", i, this->_pArr->size() ) );
-            return this->_pArr->operator [] (i);
+            return static_cast<MixedArray const *>(this->_pArr)->operator [] (i);
         }
         break;
     case MT_COLLECTION:
         {
             if ( !this->_pColl->has(k) ) throw MixedError( MixedError::meKeyNoExist, "Collection is not exist key:`" + k.toAnsi() + "`" );
-            return this->_pColl->at(k);
+            return static_cast<Collection const *>(this->_pColl)->at(k);
         }
         break;
     default:
@@ -3290,23 +3530,23 @@ Mixed const & Mixed::get( Mixed const & k, Mixed const & defval ) const
     case MT_ARRAY:
         {
             size_t i = k;
-            if ( i < this->_pArr->size() ) return this->_pArr->operator [] (i);
+            if ( i < this->_pArr->size() ) return static_cast<MixedArray const *>(this->_pArr)->operator [] (i);
         }
         break;
     case MT_COLLECTION:
         {
-            if ( this->_pColl->has(k) ) return this->_pColl->at(k);
+            if ( this->_pColl->has(k) ) return static_cast<Collection const *>(this->_pColl)->at(k);
         }
         break;
     }
     return defval;
 }
 
-MixedMixedPair & Mixed::getPair( size_t i )
+MixedMixedPair & Mixed::getFirstPair()
 {
     if ( this->isCollection() )
     {
-        return this->_pColl->getPair(i);
+        return this->_pColl->getFirstPair();
     }
     else
     {
@@ -3314,23 +3554,23 @@ MixedMixedPair & Mixed::getPair( size_t i )
     }
 }
 
-MixedMixedPair const & Mixed::getPair( size_t i ) const
+MixedMixedPair const & Mixed::getFirstPair() const
 {
     if ( this->isCollection() )
     {
-        return this->_pColl->getPair(i);
+        return this->_pColl->getFirstPair();
     }
     else
     {
-        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "()" );
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "() const" );
     }
 }
 
-Mixed & Mixed::setPair( size_t i, Mixed const & k, Mixed const & v )
+Mixed & Mixed::setNewFirstPair( Mixed const & k, Mixed const & v )
 {
     if ( this->isCollection() )
     {
-        this->_pColl->setPair( i, k, v );
+        this->_pColl->setNewFirstPair( k, v );
     }
     else
     {
@@ -3339,11 +3579,50 @@ Mixed & Mixed::setPair( size_t i, Mixed const & k, Mixed const & v )
     return *this;
 }
 
-Mixed & Mixed::addPair( Mixed const & k, Mixed const & v )
+Mixed & Mixed::setNewPair( Mixed const & oldK, Mixed const & k, Mixed const & v )
 {
     if ( this->isCollection() )
     {
-        this->_pColl->addPair( k, v );
+        this->_pColl->setNewPair( oldK, k, v );
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "()" );
+    }
+    return *this;
+}
+
+Mixed & Mixed::setNewPair( Mixed const & oldK, Mixed const & k, Mixed && v )
+{
+    if ( this->isCollection() )
+    {
+        this->_pColl->setNewPair( oldK, k, std::move(v) );
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "()" );
+    }
+    return *this;
+}
+
+Mixed & Mixed::setPair( Mixed const & k, Mixed const & v )
+{
+    if ( this->isCollection() )
+    {
+        this->_pColl->setPair( k, v );
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "()" );
+    }
+    return *this;
+}
+
+Mixed & Mixed::setPair( Mixed const & k, Mixed && v )
+{
+    if ( this->isCollection() )
+    {
+        this->_pColl->setPair( k, std::move(v) );
     }
     else
     {
@@ -3424,20 +3703,23 @@ Mixed::MixedArrayElement Mixed::addUnique( Mixed && v )
     }
 }
 
-void Mixed::del( Mixed const & k )
+bool Mixed::del( Mixed const & k )
 {
     switch ( this->_type )
     {
     case MT_ARRAY:
         {
             size_t i = k;
-            if ( i < this->_pArr->size() ) this->_pArr->erase( this->_pArr->begin() + i );
+            if ( i < this->_pArr->size() )
+                this->_pArr->erase( this->_pArr->begin() + i );
+            return true;
         }
         break;
     case MT_COLLECTION:
-        this->_pColl->del(k);
+        return this->_pColl->del(k);
         break;
     }
+    return false;
 }
 
 bool Mixed::has( Mixed const & ek ) const
@@ -3470,12 +3752,12 @@ Mixed & Mixed::merge( Mixed const & v )
             }
             break;
         case MT_COLLECTION:
-            for ( auto itKey = v._pColl->refKeysArray().begin(); itKey != v._pColl->refKeysArray().end(); ++itKey )
-            {
+            v._pColl->traverse( [this, &v] ( MixedMixedPair const & kv ) {
                 Mixed pr;
-                pr.addPair( v._pColl->getCaseInsensitive() )( *itKey, v._pColl->operator [] (*itKey) );
+                pr.setPair( v._pColl->getCaseInsensitive() )( kv.first, kv.second );
                 this->_pArr->push_back( std::move(pr) );
-            }
+                return true;
+            } );
             break;
         default:
             this->_pArr->push_back(v);
@@ -3493,26 +3775,25 @@ Mixed & Mixed::merge( Mixed const & v )
             }
             break;
         case MT_COLLECTION:
-            for ( auto itKey = v._pColl->refKeysArray().begin(); itKey != v._pColl->refKeysArray().end(); ++itKey )
-            {
-                // 如果存在此Key
-                if ( this->_pColl->has(*itKey) )
+            v._pColl->traverse( [this] ( MixedMixedPair const & pr ) {
+                if ( this->_pColl->has(pr.first) ) // 如果存在此Key
                 {
-                    Mixed & thisMx = this->_pColl->operator [] (*itKey);
+                    Mixed & thisMx = this->_pColl->operator [] (pr.first);
                     if ( thisMx.isContainer() ) // 如果是个容器，则继续调用merge()
                     {
-                        thisMx.merge( v._pColl->at(*itKey) );
+                        thisMx.merge(pr.second);
                     }
                     else // 不是容器，则替换掉
                     {
-                        thisMx = v._pColl->at(*itKey);
+                        thisMx = pr.second;
                     }
                 }
                 else // 不存在此Key
                 {
-                    this->_pColl->operator [] (*itKey) = v._pColl->at(*itKey);
+                    this->_pColl->operator [] (pr.first) = pr.second;
                 }
-            }
+                return true;
+            } );
             break;
         default:
             {
@@ -3632,7 +3913,95 @@ Mixed & Mixed::reverse()
     return *this;
 }
 
-// Assignments ------------------------------------------------------------------------------
+bool Mixed::traverse( TraverseFn cb, bool inverted )
+{
+    if ( this->isArray() )
+    {
+        if ( inverted )
+        {
+            for ( auto it = this->_pArr->rbegin(); it != this->_pArr->rend(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            for ( auto it = this->_pArr->begin(); it != this->_pArr->end(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "() for Array" );
+    }
+}
+
+bool Mixed::traverse( ConstTraverseFn cb, bool inverted ) const
+{
+    if ( this->isArray() )
+    {
+        if ( inverted )
+        {
+            for ( auto it = this->_pArr->rbegin(); it != this->_pArr->rend(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            for ( auto it = this->_pArr->begin(); it != this->_pArr->end(); it++ )
+            {
+                if ( !cb(*it) )
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "() const for Array" );
+    }
+}
+
+bool Mixed::traverse( Collection::TraverseFn cb, Collection::TraverseOrder order, bool inverted )
+{
+    if ( this->isCollection() )
+    {
+        return this->_pColl->traverse( cb, order, inverted );
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "() for Collection" );
+    }
+}
+
+bool Mixed::traverse( Collection::ConstTraverseFn cb, Collection::TraverseOrder order, bool inverted ) const
+{
+    if ( this->isCollection() )
+    {
+        return static_cast<Collection const *>(this->_pColl)->traverse( cb, order, inverted );
+    }
+    else
+    {
+        throw MixedError( MixedError::meUnexpectedType, TypeStringA(*this) + " can't support " + __FUNCTION__ + "() const for Collection" );
+    }
+}
+
+// Assignments --------------------------------------------------------------------------------
 void Mixed::assign( bool boolVal )
 {
     if ( this->_type == MT_BOOLEAN )
@@ -4051,7 +4420,7 @@ inline static void __AssignDifferentColl( Collection * pColl, bool isClear, Coll
 {
     if ( pColl->getCaseInsensitive() == coll.getCaseInsensitive() )
     {
-        pColl->refKeysArray() = coll.refKeysArray();
+        pColl->refPairList() = coll.refPairList();
         if ( pColl->getCaseInsensitive() )
         {
             pColl->refMapI() = coll.refMapI();
@@ -4064,12 +4433,10 @@ inline static void __AssignDifferentColl( Collection * pColl, bool isClear, Coll
     else
     {
         if ( isClear ) pColl->clear();
-        size_t n = coll.getCount();
-        for ( size_t i = 0; i < n; ++i )
-        {
-            auto & pr = coll.getPair(i);
+        coll.traverse( [pColl] ( MixedMixedPair const & pr ) {
             (*pColl)[pr.first] = pr.second;
-        }
+            return true;
+        } );
     }
 }
 
@@ -4188,7 +4555,7 @@ void Mixed::_copyAssignment( Mixed const & other )
     }
 }
 
-// 预定义的Mixed常量 ------------------------------------------------------------------------
+// 预定义的Mixed常量 ----------------------------------------------------------------------------
 Mixed const mxNull;
 
 // ostream 相关
@@ -4251,7 +4618,6 @@ WINUX_FUNC_IMPL(std::ostream &) operator << ( std::ostream & o, Mixed const & m 
         o << MixedToJsonA( m, false );
         break;
     }
-    //o << m.toAnsi();
     return o;
 }
 
@@ -4314,7 +4680,6 @@ WINUX_FUNC_IMPL(std::wostream &) operator << ( std::wostream & o, Mixed const & 
         o << MixedToJsonW( m, false );
         break;
     }
-    //o << m.toUnicode();
     return o;
 }
 

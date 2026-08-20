@@ -4,6 +4,42 @@
 /** \brief IO模型 */
 namespace io
 {
+namespace iocp
+{
+    class IoService;
+    struct IoAcceptCtx;
+    struct IoConnectCtx;
+    bool _PostAccept( IoService * serv, IoAcceptCtx * ctx );
+    bool _PostConnect( IoService * serv, IoConnectCtx * ctx, eiennet::EndPoint const & ep );
+}
+/** \brief IOCP封装 */
+class EIENNET_DLL Iocp
+{
+public:
+    Iocp();
+    ~Iocp();
+
+    // 初始化一些函数，因为这是属于WinSock2规范之外的微软另外提供的扩展函数，所以需要额外获取一下函数的指针
+    bool initFuncs();
+
+    // 关联句柄到IOCP
+    bool associate( HANDLE h, ULONG_PTR key );
+
+    // 投递自定义IOCP完成消息
+    void postCustom( DWORD bytesTransferred, ULONG_PTR key, LPOVERLAPPED ol );
+
+    HANDLE get() const;
+    operator bool() const;
+
+private:
+    winux::PlainMembers< struct Iocp_Data, sizeof(HANDLE) * 5 > _self;
+    friend bool iocp::_PostAccept( iocp::IoService * serv, iocp::IoAcceptCtx * ctx );
+    friend bool iocp::_PostConnect( iocp::IoService * serv, iocp::IoConnectCtx * ctx, eiennet::EndPoint const & ep );
+    friend class iocp::IoService;
+
+    DISABLE_OBJECT_COPY(Iocp)
+};
+
 /** \brief IOCP 模型 */
 namespace iocp
 {
@@ -37,7 +73,6 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->sock && this->sock->operator bool() )
             {
                 if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
@@ -46,6 +81,8 @@ public:
                 }
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -68,7 +105,6 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->sock && this->sock->operator bool() )
             {
                 if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
@@ -77,6 +113,8 @@ public:
                 }
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -101,7 +139,6 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->sock && this->sock->operator bool() )
             {
                 if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
@@ -110,6 +147,8 @@ public:
                 }
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -137,7 +176,6 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->sock && this->sock->operator bool() )
             {
                 if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
@@ -146,6 +184,8 @@ public:
                 }
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -173,7 +213,6 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->sock && this->sock->operator bool() )
             {
                 if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
@@ -182,6 +221,8 @@ public:
                 }
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -209,7 +250,6 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->sock && this->sock->operator bool() )
             {
                 if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
@@ -218,6 +258,8 @@ public:
                 }
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -243,13 +285,14 @@ public:
         {
         case stateProactiveCancel:
         case stateTimeoutCancel:
-        case stateFinish:
             if ( this->timer )
             {
                 this->timer->unset();
                 return true;
             }
             break;
+        case stateFinish:
+            ;
         }
         return false;
     }
@@ -261,35 +304,9 @@ protected:
     FRIEND_ENABLE_STATIC_NEW;
 };
 
+
 class IoService;
 class IoServiceThread;
-
-/** \brief IOCP封装 */
-class EIENNET_DLL Iocp
-{
-public:
-    Iocp();
-    ~Iocp();
-
-    // 初始化一些函数，因为这是属于WinSock2规范之外的微软另外提供的扩展函数，所以需要额外获取一下函数的指针
-    bool initFuncs();
-
-    // 关联句柄到IOCP
-    bool associate( HANDLE h, ULONG_PTR key );
-
-    // 投递自定义IOCP完成消息
-    void postCustom( DWORD bytesTransferred, ULONG_PTR key, LPOVERLAPPED ol );
-
-    HANDLE get() const;
-    operator bool() const;
-
-private:
-    winux::PlainMembers< struct Iocp_Data, sizeof(HANDLE) * 5 > _self;
-    friend void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
-    friend class IoService;
-
-    DISABLE_OBJECT_COPY(Iocp)
-};
 
 /** \brief IO事件数据 */
 class EIENNET_DLL IoEventsData
@@ -308,12 +325,12 @@ public:
         IoVecStruct() { }
     };
 
-    using IoVecMap = std::map< void *, IoVecStruct >;
+    using IoVecMap = std::map< int, IoVecStruct >;
 
     /** \brief 构造函数 */
     IoEventsData();
 
-    /** \brief 唤醒沉默的select()等待
+    /** \brief 唤醒沉默的iocp等待
     *
     *  \param type 唤醒类型 */
     void wakeUpTrigger( WakeUpType type );
@@ -342,14 +359,15 @@ private:
     winux::Mutex _mtxPreIoCtxs; //!< 互斥量，保护PreIoCtxs数据
 
     IoVecMap _ioVecMap; //!< 监听IO事件数据结构
-    winux::Mutex _mtxIoVecMap; //!< 互斥量，保护IoVecMap数据
 
     Iocp _iocp; //!< iocp实例
 
     size_t _sockIoCount; // 套接字IO数
     size_t _timerIoCount; // 定时器IO数
 
-    friend void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents );
+    friend void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop );
+    friend bool _PostAccept( IoService * serv, IoAcceptCtx * ctx );
+    friend bool _PostConnect( IoService * serv, IoConnectCtx * ctx, eiennet::EndPoint const & ep );
     friend class IoService;
     friend class IoServiceThread;
 };
@@ -358,19 +376,30 @@ private:
 class EIENNET_DLL IoServiceThread : public io::IoServiceThread
 {
 public:
-    IoServiceThread( IoService * serv ) : _serv(serv)
+    IoServiceThread( IoService * serv ) : _serv(serv), _stop(false)
     {
-        _iocp.initFuncs();
     }
 
     virtual void run() override;
 
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
+
 private:
-    Iocp _iocp;
+    IoEventsData _ioEvents;
     IoService * _serv;
-    friend void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
+    bool _stop;
+
+    friend bool _PostAccept( IoService * serv, IoAcceptCtx * ctx );
+    friend bool _PostConnect( IoService * serv, IoConnectCtx * ctx, eiennet::EndPoint const & ep );
+    friend bool _PostRecv( IoService * serv, IoRecvCtx * ctx );
+    friend bool _PostSend( IoService * serv, IoSendCtx * ctx );
+    friend bool _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx );
+    friend bool _PostSendTo( IoService * serv, IoSendToCtx * ctx );
     friend class IoService;
 
     DISABLE_OBJECT_COPY(IoServiceThread)
@@ -455,9 +484,21 @@ public:
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
     bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
 
+    /** \brief 获取套接字IO数 */
+    virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
+    /** \brief 获取定时器IO数 */
+    virtual size_t getTimerIoCount() const override { return _ioEvents._timerIoCount; }
+
 private:
-    Iocp _iocp;
-    friend void _PostAccept( IoService * serv, IoAcceptCtx * ctx );
+    IoEventsData _ioEvents;
+    bool _stop;
+
+    friend bool _PostAccept( IoService * serv, IoAcceptCtx * ctx );
+    friend bool _PostConnect( IoService * serv, IoConnectCtx * ctx, eiennet::EndPoint const & ep );
+    friend bool _PostRecv( IoService * serv, IoRecvCtx * ctx );
+    friend bool _PostSend( IoService * serv, IoSendCtx * ctx );
+    friend bool _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx );
+    friend bool _PostSendTo( IoService * serv, IoSendToCtx * ctx );
 
     DISABLE_OBJECT_COPY(IoService)
 };
