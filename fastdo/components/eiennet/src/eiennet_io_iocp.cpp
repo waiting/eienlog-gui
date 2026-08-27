@@ -179,7 +179,7 @@ static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Ti
     }
 }
 
-// IoSocketCtx 清空超时事件关联，并停止超时定时器，尝试释放IoTimerCtx ------------------------------------------------
+// IoSocketCtx 清空超时事件关联，并停止超时定时器，尝试释放IoTimerCtx -------------------------------
 static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
 {
     if ( ctx->timerCtx ) // 有超时处理
@@ -248,6 +248,25 @@ static void _ProcessCanceledIoCtx( IoCtx * assocCtx )
     }
 }
 
+// 获取IoCtx对应的fd
+inline static int _GetFdByIoCtx( io::IoCtx * ioCtx )
+{
+    int fd;
+    if ( ioCtx->type == ioTimer )
+    {
+    #if defined(OS_WIN)
+        fd = (int)dynamic_cast<io::iocp::IoTimerCtx *>(ioCtx)->timer->get();
+    #else
+        fd = dynamic_cast<io::IoTimerCtx *>(ioCtx)->timer->get();
+    #endif
+    }
+    else
+    {
+        fd = dynamic_cast<io::IoSocketCtx *>(ioCtx)->sock->get();
+    }
+    return fd;
+}
+
 // --------------------------------------------------------------------------------------------
 bool _PostAccept( IoService * serv, IoAcceptCtx * ctx );
 bool _PostConnect( IoService * serv, IoConnectCtx * ctx, eiennet::EndPoint const & ep );
@@ -297,7 +316,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 if ( timerCtx->periodic == false ) // 非周期
                                 {
                                     {
-                                        winux::ScopeGuard unguard( timer->getMutex() );
+                                        winux::ScopeUnguard unguard( timer->getMutex() );
                                         // 已处理，完成这个请求
                                         timerCtx->changeState(stateFinish);
                                     }
@@ -349,7 +368,8 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 ctx->cbOk( ctx->sock, ctx->costTimeMs );
                             }
 
-                            ctx->decRef();
+                            // 已处理，完成这个请求
+                            ctx->changeState(stateFinish);
                         }
                         break;
                     case ioRecv:
@@ -374,7 +394,8 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                     ctx->cbOk( ctx->sock, ctx->data, ctx->cnnAvail );
                                 }
 
-                                ctx->decRef();
+                                // 已处理，完成这个请求
+                                ctx->changeState(stateFinish);
                             }
                             else
                             {
@@ -414,7 +435,8 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                     ctx->cbOk( ctx->sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail );
                                 }
 
-                                ctx->decRef();
+                                // 已处理，完成这个请求
+                                ctx->changeState(stateFinish);
                             }
                             else
                             {
@@ -445,7 +467,8 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                     ctx->cbOk( ctx->sock, ctx->data, ctx->epFrom );
                                 }
 
-                                ctx->decRef();
+                                // 已处理，完成这个请求
+                                ctx->changeState(stateFinish);
                             }
                             else
                             {
@@ -485,7 +508,8 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                     ctx->cbOk( ctx->sock, ctx->hadBytes, ctx->costTimeMs );
                                 }
 
-                                ctx->decRef();
+                                // 已处理，完成这个请求
+                                ctx->changeState(stateFinish);
                             }
                             else
                             {
@@ -494,20 +518,12 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                             }
                         }
                         break;
-                    default:
-                        {
-                            ColorOutputLine( winux::fgRed, "Unknown" );
-                            ioCtx->decRef();
-                        }
-                        break;
                     }
                 }
                 else // err == ERROR_OPERATION_ABORTED
                 {
-                    _ProcessCanceledIoCtx(ioCtx);
-
-                    // 操作已经完成，但已取消，释放
-                    ioCtx->decRef();
+                    // 操作已经完成，但已取消
+                    ioCtx->changeState(stateTimeoutCancel);
                 }
             }
             else // b == FALSE
@@ -523,11 +539,12 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
 
                 if ( err == ERROR_OPERATION_ABORTED ) // 操作取消
                 {
-                    _ProcessCanceledIoCtx(ioCtx);
+                    ioCtx->changeState(stateTimeoutCancel);
                 }
-
-                // 操作取消或者其他错误，直接释放
-                ioCtx->decRef();
+                else // 其他错误
+                {
+                    ioCtx->changeState(stateProactiveCancel);
+                }
             }
         }
         //else // ol == nullptr
@@ -563,12 +580,188 @@ void IoEventsData::_handleIoCtxsPost()
     this->_preIoCtxs.clear();
 }
 
-void IoEventsData::_handleIoCtxsCallback( int rc )
-{
-}
-
 void IoEventsData::_handleIoCtxsTimeoutAndDelete()
 {
+    bool hasEraseInIoVecMap = false;
+    for ( auto itVecStruct = this->_ioVecMap.begin(); itVecStruct != this->_ioVecMap.end(); hasEraseInIoVecMap = false )
+    {
+        auto fd = itVecStruct->first;
+        auto & ioVecStruct = itVecStruct->second;
+        auto & ioVec = itVecStruct->second.ctxs;
+
+        bool hasEraseInIoVec = false;
+        for ( auto it = ioVec.begin(); it != ioVec.end(); hasEraseInIoVec = false )
+        {
+            auto * ioCtx = *it; // 当前IO事件场景
+
+            if ( ioCtx->state != stateNormal ) // 不是正常状态了，说明要么是超时取消了，要么是主动取消了，或者是已经完成了，这些都需要删除掉
+            {
+                if ( ioCtx->type == ioTimer ) // Timer的事件处理
+                {
+                    it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                    hasEraseInIoVec = true;
+                    // 删除这个IoCtx
+                    ioCtx->decRef();
+
+                    this->_timerIoCount--;
+                }
+                else // Socket的事件处理
+                {
+                    auto * sockCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
+                    if ( ioCtx->state == stateTimeoutCancel ) // 超时取消，处理超时响应
+                    {
+                        switch ( sockCtx->type )
+                        {
+                        case ioAccept:
+                            {
+                                auto * ctx = static_cast<IoAcceptCtx *>(sockCtx);
+                                if ( ctx->cbTimeout )
+                                {
+                                    if ( ctx->cbTimeout( ctx->sock, ctx ) )
+                                    {
+                                        ctx->state = stateNormal; // 重新设置为正常状态
+                                        // 重投这个IO请求和Timer
+                                        ctx->startTime = winux::GetUtcTimeMs();
+                                        _PostAccept( ctx->sock->getService<IoService>(), ctx );
+                                    }
+                                    else
+                                    {
+                                        it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                        hasEraseInIoVec = true;
+                                        // 删除这个IoCtx
+                                        ioCtx->decRef();
+
+                                        this->_sockIoCount--;
+                                    }
+                                }
+                                else
+                                {
+                                    ctx->state = stateNormal; // 重新设置为正常状态
+                                    // 重投这个IO请求和Timer
+                                    ctx->startTime = winux::GetUtcTimeMs();
+                                    _PostAccept( ctx->sock->getService<IoService>(), ctx );
+                                }
+                            }
+                            break;
+                        case ioConnect:
+                            {
+                                auto * ctx = static_cast<IoConnectCtx *>(sockCtx);
+                                if ( ctx->cbTimeout )
+                                {
+                                    ctx->cbTimeout( ctx->sock, ctx );
+                                }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
+
+                                this->_sockIoCount--;
+                            }
+                            break;
+                        case ioRecv:
+                            {
+                                auto * ctx = static_cast<IoRecvCtx *>(sockCtx);
+                                if ( ctx->cbTimeout )
+                                {
+                                    ctx->cbTimeout( ctx->sock, ctx );
+                                }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
+
+                                this->_sockIoCount--;
+                            }
+                            break;
+                        case ioSend:
+                            {
+                                auto * ctx = static_cast<IoSendCtx *>(sockCtx);
+                                if ( ctx->cbTimeout )
+                                {
+                                    ctx->cbTimeout( ctx->sock, ctx );
+                                }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
+
+                                this->_sockIoCount--;
+                            }
+                            break;
+                        case ioRecvFrom:
+                            {
+                                auto * ctx = static_cast<IoRecvFromCtx *>(sockCtx);
+                                if ( ctx->cbTimeout )
+                                {
+                                    ctx->cbTimeout( ctx->sock, ctx );
+                                }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
+
+                                this->_sockIoCount--;
+                            }
+                            break;
+                        case ioSendTo:
+                            {
+                                auto * ctx = static_cast<IoSendToCtx *>(sockCtx);
+                                if ( ctx->cbTimeout )
+                                {
+                                    ctx->cbTimeout( ctx->sock, ctx );
+                                }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
+
+                                this->_sockIoCount--;
+                            }
+                            break;
+                        }
+                    }
+                    else // ioCtx->state != stateTimeoutCancel
+                    {
+                        auto type = sockCtx->type;
+
+                        it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                        hasEraseInIoVec = true;
+                        // 删除这个IoCtx
+                        ioCtx->decRef();
+
+                        // 统计IO类型数量
+                        switch ( type )
+                        {
+                        case ioTimer:
+                            this->_timerIoCount--;
+                            break;
+                        default:
+                            this->_sockIoCount--;
+                            break;
+                        }
+                    }
+                }
+            } // ioCtx->state != stateNormal
+
+            // 如果已经是end则不能再++it
+            if ( !hasEraseInIoVec && it != ioVec.end() ) ++it;
+        } // for ( auto it = ioVec.begin(); it != ioVec.end(); hasEraseInIoVec = false )
+
+        // 如果IO表已空，则删除该fd
+        if ( ioVec.empty() )
+        {
+            itVecStruct = this->_ioVecMap.erase(itVecStruct);
+            hasEraseInIoVecMap = true;
+        }
+
+        // 如果已经是end则不能再++it
+        if ( !hasEraseInIoVecMap && itVecStruct != this->_ioVecMap.end() ) ++itVecStruct;
+    }
 }
 
 void IoEventsData::wakeUpTrigger( WakeUpType type )
@@ -584,6 +777,96 @@ void IoEventsData::prePost( IoCtx * ioCtx )
 
 void IoEventsData::post( IoCtx * ioCtx )
 {
+    switch ( ioCtx->type )
+    {
+    case ioTimer:
+        {
+            auto * timerCtx = dynamic_cast<IoTimerCtx *>(ioCtx);
+            auto timerFd = _GetFdByIoCtx(timerCtx);
+            auto itVecStruct = this->_ioVecMap.find(timerFd);
+            if ( itVecStruct != this->_ioVecMap.end() ) // 已存在此timer
+            {
+                auto & ioVecStruct = itVecStruct->second;
+                auto & ioVec = ioVecStruct.ctxs;
+                // 一个定时器只会绑定一个IoTimerCtx，因此判断是否存在
+                auto it = std::find( ioVec.begin(), ioVec.end(), ioCtx );
+                if ( it != ioVec.end() ) // 已存在此IoCtx
+                {
+                    //auto * existingTimerCtx = dynamic_cast<IoTimerCtx *>(*it);
+                    //auto timer = existingTimerCtx->timer;
+                    //if ( timer->stop() )
+                    //{
+                    //    existingTimerCtx->decRef();
+                    //    // 删除已释放的`IoTimerCtx`
+                    //    ioVec.erase(it);
+                    //}
+                }
+                else
+                {
+                    ioVec.push_back(timerCtx);
+
+                    this->_timerIoCount++;
+                }
+            }
+            else // 未存在此timer
+            {
+                auto & ioVecStruct = this->_ioVecMap[timerFd];
+                auto & ioVec = ioVecStruct.ctxs;
+                ioVec.push_back(timerCtx);
+
+                this->_timerIoCount++;
+            }
+        }
+        break;
+    default:
+        {
+            auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
+            auto sockFd = _GetFdByIoCtx(sockIoCtx);
+            auto itVecStruct = this->_ioVecMap.find(sockFd);
+            if ( itVecStruct != this->_ioVecMap.end() ) // 已存在此socket
+            {
+                auto & ioVecStruct = itVecStruct->second;
+                auto & ioVec = ioVecStruct.ctxs;
+                auto it = std::find_if( ioVec.begin(), ioVec.end(), [ioCtx] ( IoCtx * e ) { return e->type == ioCtx->type; } );
+                if ( it != ioVec.end() ) // 已存在此类型的IoCtx
+                {
+                    auto * existingCtx = dynamic_cast<IoSocketCtx *>(*it);
+                    if ( existingCtx->timerCtx ) // 如果有超时IO
+                    {
+                        auto timerFd = _GetFdByIoCtx(existingCtx->timerCtx);
+                        auto timer = existingCtx->timerCtx->timer;
+                        existingCtx->timerCtx->assocCtx = nullptr; // 解除关联
+                        if ( timer->stop() )
+                        {
+                            existingCtx->timerCtx->decRef();
+                            // 删除关联的超时timer
+                            this->_ioVecMap.erase(timerFd);
+                        }
+                        existingCtx->timerCtx = nullptr; // 解除关联
+                    }
+                    existingCtx->decRef(); // 释放已存在的IoCtx
+                    ioVec.erase(it);
+
+                    ioVec.push_back(ioCtx);
+                }
+                else // 未存在此类型的IoCtx
+                {
+                    ioVec.push_back(ioCtx);
+
+                    this->_sockIoCount++;
+                }
+            }
+            else // 未存在此socket
+            {
+                auto & ioVecStruct = this->_ioVecMap[sockFd];
+                auto & ioVec = ioVecStruct.ctxs;
+                ioVec.push_back(ioCtx);
+
+                this->_sockIoCount++;
+            }
+        }
+        break;
+    }
 }
 
 // class IoServiceThread ----------------------------------------------------------------------
@@ -644,6 +927,7 @@ bool _PostAccept( IoService * serv, IoAcceptCtx * ctx )
     BOOL b;
     IoEventsData & ioEvents = ctx->sock->getThread() ? ctx->sock->getThread<IoServiceThread>()->_ioEvents : serv->_ioEvents;
 
+    memset( &ctx->ol, 0, sizeof(ctx->ol) );
     // 投递 IO
     b = ioEvents._iocp._self->AcceptEx(
         ctx->sock->get(),
@@ -1132,10 +1416,23 @@ void IoService::postTimer( winux::SharedPointer<eiennet::async::Timer> timer, wi
     }
 
     // 分配处理线程
-    timer->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );
-    if ( timer->getThread() ) timer->getThread()->incWeight(); // 增加线程负载权重
+    if ( !timer->getThread() )
+    {
+        timer->setThread( th != (IoServiceThread *)-1 ? th : this->getMinWeightThread() );
+        if ( timer->getThread() ) timer->getThread()->incWeight(); // 增加线程负载权重
+    }
+
+    IoEventsData & ioEvents = timer->getThread() ? timer->getThread<IoServiceThread>()->_ioEvents : this->_ioEvents;
+    // 投递 IO
+    ioEvents.prePost(timerCtx);
 
     timer->set( timeoutMs, periodic );
+
+    // 如果有关联的IoSocketCtx就不必唤醒更新，因为IoSocketCtx投递时会唤醒
+    if ( !assocCtx )
+    {
+        ioEvents.wakeUpTrigger(IoEventsData::wutWantUpdate);
+    }
 }
 
 void IoService::timerTrigger( io::IoTimerCtx * timerCtx )

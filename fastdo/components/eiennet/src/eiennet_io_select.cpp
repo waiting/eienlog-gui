@@ -708,12 +708,11 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
 {
     if ( rc > 0 )
     {
-        // 处理唤醒select.wait事件
+        // 处理wake up事件
         if ( this->_sel.hasReadFd( this->_sockWakeUp.get() ) )
         {
             eiennet::ip::EndPoint ep;
-            auto data = this->_sockWakeUp.recvFrom( &ep, sizeof(winux::ushort) * 16 );
-            //ColorOutputLine( winux::fgFuchsia, "wake up:", data.size(), ", ioMaps:", this->_ioVecMap.size(), ", thread:", thread );
+            this->_sockWakeUp.recvFrom( &ep, sizeof(winux::ushort) * 16 );
             rc--;
         }
     }
@@ -816,16 +815,32 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 {
                                     if ( ctx->cbOk( sock, clientSock, ctx->clientEp ) )
                                     {
-                                        ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                        // 重投这个IO请求和Timer
+                                        ctx->startTime = winux::GetUtcTimeMs();
+                                        if ( ctx->timeoutMs != -1 )
+                                        {
+                                            eiennet::async::Timer::New( *ctx->sock->getService() )->waitAsyncEx( ctx->timeoutMs, false, [this] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+                                                _IoSocketCtxTimeoutCallback( timer, timerCtx, *this );
+                                            }, ctx, ctx->sock->getThread() );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // 已处理，完成这个请求
+                                        ctx->changeState(stateFinish);
                                     }
                                 }
                                 else
                                 {
-                                    ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                    // 重投这个IO请求和Timer
+                                    ctx->startTime = winux::GetUtcTimeMs();
+                                    if ( ctx->timeoutMs != -1 )
+                                    {
+                                        eiennet::async::Timer::New( *ctx->sock->getService() )->waitAsyncEx( ctx->timeoutMs, false, [this] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+                                            _IoSocketCtxTimeoutCallback( timer, timerCtx, *this );
+                                        }, ctx, ctx->sock->getThread() );
+                                    }
                                 }
-
-                                // 已处理，完成这个请求
-                                ctx->changeState(stateFinish);
 
                                 // 就绪数-1
                                 rc--;
@@ -1095,10 +1110,14 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
 
             if ( ioCtx->state != stateNormal ) // 不是普通状态
             {
-                it = ioVec.erase(it); // 删除已取消的IO事件
-                hasEraseInIoVec = true;
-
-                if ( ioCtx->type != ioTimer ) // Socket的事件处理
+                if ( ioCtx->type == ioTimer ) // Timer的事件处理
+                {
+                    it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                    hasEraseInIoVec = true;
+                    // 删除这个IoCtx
+                    ioCtx->decRef();
+                }
+                else // Socket的事件处理
                 {
                     auto * sockCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
                     if ( ioCtx->state == stateTimeoutCancel ) // 超时取消，处理超时响应
@@ -1112,12 +1131,35 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 {
                                     if ( ctx->cbTimeout( ctx->sock, ctx ) )
                                     {
-                                        ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                        ctx->state = stateNormal; // 重新设置为正常状态
+                                        // 重投这个IO请求和Timer
+                                        ctx->startTime = winux::GetUtcTimeMs();
+                                        if ( ctx->timeoutMs != -1 )
+                                        {
+                                            eiennet::async::Timer::New( *ctx->sock->getService() )->waitAsyncEx( ctx->timeoutMs, false, [this] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+                                                _IoSocketCtxTimeoutCallback( timer, timerCtx, *this );
+                                            }, ctx, ctx->sock->getThread() );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                        hasEraseInIoVec = true;
+                                        // 删除这个IoCtx
+                                        ioCtx->decRef();
                                     }
                                 }
                                 else
                                 {
-                                    ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
+                                    ctx->state = stateNormal; // 重新设置为正常状态
+                                    // 重投这个IO请求和Timer
+                                    ctx->startTime = winux::GetUtcTimeMs();
+                                    if ( ctx->timeoutMs != -1 )
+                                    {
+                                        eiennet::async::Timer::New( *ctx->sock->getService() )->waitAsyncEx( ctx->timeoutMs, false, [this] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+                                            _IoSocketCtxTimeoutCallback( timer, timerCtx, *this );
+                                        }, ctx, ctx->sock->getThread() );
+                                    }
                                 }
                             }
                             break;
@@ -1128,6 +1170,11 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 {
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
                             }
                             break;
                         case ioRecv:
@@ -1137,6 +1184,11 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 {
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
                             }
                             break;
                         case ioSend:
@@ -1146,6 +1198,11 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 {
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
                             }
                             break;
                         case ioRecvFrom:
@@ -1155,6 +1212,11 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 {
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
                             }
                             break;
                         case ioSendTo:
@@ -1164,14 +1226,23 @@ void  IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 {
                                     ctx->cbTimeout( ctx->sock, ctx );
                                 }
+
+                                it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                                hasEraseInIoVec = true;
+                                // 删除这个IoCtx
+                                ioCtx->decRef();
                             }
                             break;
                         }
                     }
+                    else // ioCtx->state != stateTimeoutCancel
+                    {
+                        it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
+                        hasEraseInIoVec = true;
+                        // 删除这个IoCtx
+                        ioCtx->decRef();
+                    }
                 }
-
-                // 删除`IoCtx`
-                ioCtx->decRef();
             } // ioCtx->state != stateNormal
 
             // 如果已经是end则不能再++it
@@ -1269,9 +1340,13 @@ void IoEventsData::post( IoCtx * ioCtx )
                     }
                     existingCtx->decRef(); // 释放已存在的IoCtx
                     ioVec.erase(it);
-                }
 
-                ioVec.push_back(sockCtx);
+                    ioVec.push_back(sockCtx);
+                }
+                else // 未存在此类型的IoCtx
+                {
+                    ioVec.push_back(sockCtx);
+                }
             }
             else // 未存在此socket
             {

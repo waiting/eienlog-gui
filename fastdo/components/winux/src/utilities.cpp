@@ -97,13 +97,13 @@ WINUX_FUNC_IMPL(bool) CollectionLess( Collection const & coll1, Collection const
     auto it2 = coll2.refPairList().begin();
     auto & coll = count1 < count2 ? coll1 : coll2;
     if ( !coll.traverse( [&it1, &it2, &coll1, &coll2] ( MixedMixedPair const & ) {
-        if ( coll1.at(it1->first) != coll2.at(it2->first) ) return false;
+        if ( it1->second != it2->second ) return false;
         it1++;
         it2++;
         return true;
     } ) )
     {
-        return coll1.at(it1->first) < coll2.at(it2->first);
+        return it1->second < it2->second;
     }
     else
     {
@@ -118,13 +118,13 @@ WINUX_FUNC_IMPL(bool) CollectionGreater( Collection const & coll1, Collection co
     auto it2 = coll2.refPairList().begin();
     auto & coll = count1 < count2 ? coll1 : coll2;
     if ( !coll.traverse( [&it1, &it2, &coll1, &coll2] ( MixedMixedPair const & ) {
-        if ( coll1.at(it1->first) != coll2.at(it2->first) ) return false;
+        if ( it1->second != it2->second ) return false;
         it1++;
         it2++;
         return true;
     } ) )
     {
-        return coll1.at(it1->first) > coll2.at(it2->first);
+        return it1->second > it2->second;
     }
     else
     {
@@ -139,7 +139,7 @@ WINUX_FUNC_IMPL(bool) CollectionEqual( Collection const & coll1, Collection cons
     auto it2 = coll2.refPairList().begin();
     auto & coll = count1 < count2 ? coll1 : coll2;
     if ( !coll.traverse( [&it1, &it2, &coll1, &coll2] ( MixedMixedPair const & ) {
-        if ( coll1.at(it1->first) != coll2.at(it2->first) ) return false;
+        if ( it1->second != it2->second ) return false;
         it1++;
         it2++;
         return true;

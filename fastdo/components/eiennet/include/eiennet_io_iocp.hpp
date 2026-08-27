@@ -331,27 +331,23 @@ public:
     IoEventsData();
 
     /** \brief 唤醒沉默的iocp等待
-    *
-    *  \param type 唤醒类型 */
+     *
+     *  \param type 唤醒类型 */
     void wakeUpTrigger( WakeUpType type );
 
     /** \brief 预投递
-    *
-    *  \param ioCtx IoCtx实例 */
+     *
+     *  \param ioCtx IoCtx实例 */
     void prePost( IoCtx * ioCtx );
 
     /** \brief 投递IO事件
-    *
-    *  \param ioCtx IoCtx实例 */
+     *
+     *  \param ioCtx IoCtx实例 */
     void post( IoCtx * ioCtx );
 
 private:
     // 处理IoCtxs投递
     void _handleIoCtxsPost();
-    // 处理IoCtxs监听
-    void _handleIoCtxsListen();
-    // 处理IoCtxs事件回调
-    void _handleIoCtxsCallback( int rc );
     // 处理IoCtxs超时响应以及删除取消的IO
     void _handleIoCtxsTimeoutAndDelete();
 
