@@ -194,7 +194,8 @@ io::IoTimerCtx * Timer::stop()
     {
         {
             winux::ScopeUnguard unguard(this->_mtx);
-            this->_timerCtx->changeState(io::stateProactiveCancel); // Timer::unset() inside
+            this->_timerCtx->cancel(io::cancelProactive); // Timer::unset() inside
+            this->_timerCtx->changeState(io::stateCancel);
         }
         this->_timerCtx->periodic = false; // 设为非周期
         if ( this->_posted == false ) // 还未投递

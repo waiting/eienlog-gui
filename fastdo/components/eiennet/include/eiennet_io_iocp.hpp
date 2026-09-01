@@ -66,23 +66,15 @@ public:
     winux::uint32 remoteAddrLen;
     winux::SharedPointer<eiennet::async::Socket> clientSock;
 
-    virtual bool changeState( IoState state ) override
+    virtual bool cancel( CancelType cancelType ) override
     {
-        io::IoAcceptCtx::changeState(state);
-        switch ( this->state )
+        IoCtx::cancel(cancelType);
+        if ( this->sock && this->sock->operator bool() )
         {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->sock && this->sock->operator bool() )
+            if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
-                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
-                {
-                    return true;
-                }
+                return true;
             }
-            break;
-        case stateFinish:
-            ;
         }
         return false;
     }
@@ -98,23 +90,15 @@ protected:
 struct IoConnectCtx : IoCtx, io::IoConnectCtx, winux::EnableStaticNew<IoConnectCtx>
 {
 public:
-    virtual bool changeState( IoState state ) override
+    virtual bool cancel( CancelType cancelType ) override
     {
-        io::IoConnectCtx::changeState(state);
-        switch ( this->state )
+        IoCtx::cancel(cancelType);
+        if ( this->sock && this->sock->operator bool() )
         {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->sock && this->sock->operator bool() )
+            if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
-                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
-                {
-                    return true;
-                }
+                return true;
             }
-            break;
-        case stateFinish:
-            ;
         }
         return false;
     }
@@ -132,23 +116,15 @@ struct IoRecvCtx : IoCtx, io::IoRecvCtx, winux::EnableStaticNew<IoRecvCtx>
     WSABUF wsabuf;
 
 public:
-    virtual bool changeState( IoState state ) override
+    virtual bool cancel( CancelType cancelType ) override
     {
-        io::IoRecvCtx::changeState(state);
-        switch ( this->state )
+        IoCtx::cancel(cancelType);
+        if ( this->sock && this->sock->operator bool() )
         {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->sock && this->sock->operator bool() )
+            if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
-                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
-                {
-                    return true;
-                }
+                return true;
             }
-            break;
-        case stateFinish:
-            ;
         }
         return false;
     }
@@ -169,23 +145,15 @@ struct IoSendCtx : IoCtx, io::IoSendCtx, winux::EnableStaticNew<IoSendCtx>
     WSABUF wsabuf;
 
 public:
-    virtual bool changeState( IoState state ) override
+    virtual bool cancel( CancelType cancelType ) override
     {
-        io::IoSendCtx::changeState(state);
-        switch ( this->state )
+        IoCtx::cancel(cancelType);
+        if ( this->sock && this->sock->operator bool() )
         {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->sock && this->sock->operator bool() )
+            if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
-                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
-                {
-                    return true;
-                }
+                return true;
             }
-            break;
-        case stateFinish:
-            ;
         }
         return false;
     }
@@ -206,23 +174,15 @@ struct IoRecvFromCtx : IoCtx, io::IoRecvFromCtx, winux::EnableStaticNew<IoRecvFr
     WSABUF wsabuf;
 
 public:
-    virtual bool changeState( IoState state ) override
+    virtual bool cancel( CancelType cancelType ) override
     {
-        io::IoRecvFromCtx::changeState(state);
-        switch ( this->state )
+        IoCtx::cancel(cancelType);
+        if ( this->sock && this->sock->operator bool() )
         {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->sock && this->sock->operator bool() )
+            if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
-                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
-                {
-                    return true;
-                }
+                return true;
             }
-            break;
-        case stateFinish:
-            ;
         }
         return false;
     }
@@ -243,23 +203,15 @@ struct IoSendToCtx : IoCtx, io::IoSendToCtx, winux::EnableStaticNew<IoSendToCtx>
     WSABUF wsabuf;
 
 public:
-    virtual bool changeState( IoState state ) override
+    virtual bool cancel( CancelType cancelType ) override
     {
-        io::IoSendToCtx::changeState(state);
-        switch ( this->state )
+        IoCtx::cancel(cancelType);
+        if ( this->sock && this->sock->operator bool() )
         {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->sock && this->sock->operator bool() )
+            if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
-                if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
-                {
-                    return true;
-                }
+                return true;
             }
-            break;
-        case stateFinish:
-            ;
         }
         return false;
     }
@@ -277,25 +229,7 @@ protected:
 /** \brief 定时器IO场景 */
 struct IoTimerCtx : IoCtx, io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
 {
-public:
-    virtual bool changeState( IoState state ) override
-    {
-        io::IoTimerCtx::changeState(state);
-        switch ( this->state )
-        {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-            if ( this->timer )
-            {
-                this->timer->unset();
-                return true;
-            }
-            break;
-        case stateFinish:
-            ;
-        }
-        return false;
-    }
+    virtual bool cancel( CancelType cancelType ) override { return io::IoTimerCtx::cancel(cancelType); }
 
 protected:
     IoTimerCtx() { }

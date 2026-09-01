@@ -32,9 +32,18 @@ enum IoState
 {
     statePrePost, //!< 投递前状态
     stateNormal, //!< 正常状态
-    stateProactiveCancel, //!< 主动取消
-    stateTimeoutCancel, //!< 超时取消
+    stateCancel, //!< 取消状态
+    stateError, //!< 错误状态
     stateFinish, //!< 完成状态
+};
+
+/** \brief 取消类型 */
+enum CancelType
+{
+    cancelUnknown, //!< 未知取消
+    cancelProactive, //!< 主动取消
+    cancelTimeout, //!< 超时取消
+    cancelRemove, //!< 移除取消
 };
 
 /** \brief IO模型 */
@@ -52,11 +61,12 @@ struct IoCtx
 {
     IoType type; //!< IO类型
     IoState state; //!< IO状态
+    CancelType cancelType; //!< 取消类型
     winux::uint64 startTime; //!< 请求开启的时间
     winux::uint64 timeoutMs; //!< 超时时间
 
 protected:
-    IoCtx() : type(ioNone), state(statePrePost), startTime( winux::GetUtcTimeMs() ), timeoutMs(-1), _uses(1) { }
+    IoCtx() : type(ioNone), state(statePrePost), cancelType(cancelUnknown), startTime( winux::GetUtcTimeMs() ), timeoutMs(-1), _uses(1) { }
     virtual ~IoCtx() { }
 
 public:
@@ -80,6 +90,13 @@ public:
     virtual bool changeState( IoState state )
     {
         this->state = state;
+        return true;
+    }
+
+    /** \brief 取消 */
+    virtual bool cancel( CancelType cancelType )
+    {
+        this->cancelType = cancelType;
         return true;
     }
 
@@ -226,7 +243,7 @@ protected:
 };
 
 /** \brief 定时器场景 */
-struct IoTimerCtx : virtual IoCtx
+struct EIENNET_DLL IoTimerCtx : virtual IoCtx
 {
     using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Timer> timer, IoTimerCtx * ctx ) >;
 
@@ -235,6 +252,8 @@ struct IoTimerCtx : virtual IoCtx
     winux::SharedPointer<eiennet::async::Timer> timer; //!< 定时器
     IoSocketCtx * assocCtx; //!< 关联的IO场景
     bool periodic; //!< 是否为周期的
+
+    virtual bool cancel( CancelType cancelType ) override;
 
 protected:
     IoTimerCtx() : assocCtx(nullptr), periodic(false)

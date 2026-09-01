@@ -175,7 +175,8 @@ static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Ti
     if ( assocCtx )
     {
         assocCtx->timerCtx = nullptr; // 取消关联的超时timer场景
-        assocCtx->changeState(stateTimeoutCancel); // 超时取消操作
+        assocCtx->cancel(cancelTimeout); // 超时取消操作
+        //assocCtx->changeState(stateCancel);
     }
 }
 
@@ -188,63 +189,6 @@ static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
         ctx->timerCtx->assocCtx = nullptr;
         timer->stop();
         ctx->timerCtx = nullptr;
-    }
-}
-
-// 处理取消的IO操作 -----------------------------------------------------------------------------
-static void _ProcessCanceledIoCtx( IoCtx * assocCtx )
-{
-    if ( assocCtx->state == stateTimeoutCancel ) // 超时导致的操作取消，调用超时回调函数
-    {
-        switch ( assocCtx->type )
-        {
-        case ioAccept:
-            {
-                auto * ctx = static_cast<IoAcceptCtx *>(assocCtx);
-                if ( ctx->cbTimeout )
-                {
-                    if ( ctx->cbTimeout( ctx->sock, ctx ) )
-                    {
-                        ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
-                    }
-                }
-                else
-                {
-                    ctx->sock->acceptAsync( ctx->cbOk, ctx->timeoutMs, ctx->cbTimeout, ctx->sock->getThread() );
-                }
-            }
-            break;
-        case ioConnect:
-            {
-                auto * ctx = static_cast<IoConnectCtx *>(assocCtx);
-                if ( ctx->cbTimeout ) ctx->cbTimeout( ctx->sock, ctx );
-            }
-            break;
-        case ioRecv:
-            {
-                auto * ctx = static_cast<IoRecvCtx *>(assocCtx);
-                if ( ctx->cbTimeout ) ctx->cbTimeout( ctx->sock, ctx );
-            }
-            break;
-        case ioSend:
-            {
-                auto * ctx = static_cast<IoSendCtx *>(assocCtx);
-                if ( ctx->cbTimeout ) ctx->cbTimeout( ctx->sock, ctx );
-            }
-            break;
-        case ioRecvFrom:
-            {
-                auto * ctx = static_cast<IoRecvFromCtx *>(assocCtx);
-                if ( ctx->cbTimeout ) ctx->cbTimeout( ctx->sock, ctx );
-            }
-            break;
-        case ioSendTo:
-            {
-                auto * ctx = static_cast<IoSendToCtx *>(assocCtx);
-                if ( ctx->cbTimeout ) ctx->cbTimeout( ctx->sock, ctx );
-            }
-            break;
-        }
     }
 }
 
@@ -294,9 +238,10 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
         if ( ol )
         {
             IoCtx * ioCtx = CONTAINING_RECORD( ol, IoCtx, ol );
+
             if ( b )
             {
-                winux::ColorOutputLine( winux::fgFuchsia, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
+                //winux::ColorOutputLine( winux::fgFuchsia, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
                 if ( err != ERROR_OPERATION_ABORTED )
                 {
                     switch ( ioCtx->type )
@@ -317,6 +262,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 {
                                     {
                                         winux::ScopeUnguard unguard( timer->getMutex() );
+                                        timer->unset();
                                         // 已处理，完成这个请求
                                         timerCtx->changeState(stateFinish);
                                     }
@@ -522,13 +468,13 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                 }
                 else // err == ERROR_OPERATION_ABORTED
                 {
-                    // 操作已经完成，但已取消
-                    ioCtx->changeState(stateTimeoutCancel);
+                    // 操作已经完成，但已取消，设置状态为取消
+                    ioCtx->changeState(stateCancel);
                 }
             }
             else // b == FALSE
             {
-                winux::ColorOutputLine( winux::fgRed, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
+                //winux::ColorOutputLine( winux::fgRed, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
 
                 if ( ioCtx->type != ioTimer ) // 非IoTimerCtx
                 {
@@ -539,11 +485,61 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
 
                 if ( err == ERROR_OPERATION_ABORTED ) // 操作取消
                 {
-                    ioCtx->changeState(stateTimeoutCancel);
+                    ioCtx->changeState(stateCancel);
+                    switch ( ioCtx->cancelType ) // 移除取消
+                    {
+                    case cancelRemove:
+                        switch ( ioCtx->type )
+                        {
+                        case ioRecv:
+                            {
+                                auto * recvCtx = dynamic_cast<IoRecvCtx *>(ioCtx);
+                                if ( recvCtx->cnnAvail )
+                                {
+                                    _IoSocketCtxClearTimerCtx(recvCtx);
+
+                                    recvCtx->cnnAvail = false;
+                                    recvCtx->data.free();
+
+                                    // 处理回调
+                                    if ( recvCtx->cbOk )
+                                    {
+                                        recvCtx->cbOk( recvCtx->sock, recvCtx->data, recvCtx->cnnAvail );
+                                    }
+
+                                    // 已处理，完成这个请求
+                                    recvCtx->changeState(stateFinish);
+                                }
+                            }
+                            break;
+                        case ioSend:
+                            {
+                                auto * sendCtx = dynamic_cast<IoSendCtx *>(ioCtx);
+                                if ( sendCtx->cnnAvail )
+                                {
+                                    _IoSocketCtxClearTimerCtx(sendCtx);
+
+                                    sendCtx->cnnAvail = false;
+                                    sendCtx->costTimeMs += winux::GetUtcTimeMs() - sendCtx->startTime;
+
+                                    // 处理回调
+                                    if ( sendCtx->cbOk )
+                                    {
+                                        sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
+                                    }
+
+                                    // 已处理，完成这个请求
+                                    sendCtx->changeState(stateFinish);
+                                }
+                            }
+                            break;
+                        }
+                        break;
+                    }
                 }
                 else // 其他错误
                 {
-                    ioCtx->changeState(stateProactiveCancel);
+                    ioCtx->changeState(stateError);
                 }
             }
         }
@@ -594,7 +590,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
         {
             auto * ioCtx = *it; // 当前IO事件场景
 
-            if ( ioCtx->state != stateNormal ) // 不是正常状态了，说明要么是超时取消了，要么是主动取消了，或者是已经完成了，这些都需要删除掉
+            if ( ioCtx->state != stateNormal ) // 不是正常状态了，说明要么是取消了，或者是已经完成了，这些都需要删除掉
             {
                 if ( ioCtx->type == ioTimer ) // Timer的事件处理
                 {
@@ -608,7 +604,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                 else // Socket的事件处理
                 {
                     auto * sockCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
-                    if ( ioCtx->state == stateTimeoutCancel ) // 超时取消，处理超时响应
+                    if ( ioCtx->state == stateCancel && ioCtx->cancelType == cancelTimeout ) // 超时取消，处理超时响应
                     {
                         switch ( sockCtx->type )
                         {
@@ -620,6 +616,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                     if ( ctx->cbTimeout( ctx->sock, ctx ) )
                                     {
                                         ctx->state = stateNormal; // 重新设置为正常状态
+                                        memset( &ctx->ol, 0, sizeof(ctx->ol) );
                                         // 重投这个IO请求和Timer
                                         ctx->startTime = winux::GetUtcTimeMs();
                                         _PostAccept( ctx->sock->getService<IoService>(), ctx );
@@ -637,6 +634,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                                 else
                                 {
                                     ctx->state = stateNormal; // 重新设置为正常状态
+                                    memset( &ctx->ol, 0, sizeof(ctx->ol) );
                                     // 重投这个IO请求和Timer
                                     ctx->startTime = winux::GetUtcTimeMs();
                                     _PostAccept( ctx->sock->getService<IoService>(), ctx );
@@ -725,7 +723,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                             break;
                         }
                     }
-                    else // ioCtx->state != stateTimeoutCancel
+                    else // ioCtx->state != stateCancel || ioCtx->cancelType != cancelTimeout
                     {
                         auto type = sockCtx->type;
 
@@ -920,14 +918,14 @@ bool _PostAccept( IoService * serv, IoAcceptCtx * ctx )
     ctx->sock->getBoundEp(&ep);
 
     // 创建现成的socket
-    ctx->clientSock = eiennet::async::Socket::New( *serv, ep.getAddrFamily(), eiennet::async::Socket::sockStream, eiennet::async::Socket::protoUnspec );
+    ctx->clientSock.attachNew( ctx->sock->onCreateClient( *serv, -1, false ) );
+    ctx->clientSock->setParams( ep.getAddrFamily(), eiennet::async::Socket::sockStream, eiennet::async::Socket::protoUnspec );
     ctx->clientSock->create();
 
     DWORD dw;
     BOOL b;
     IoEventsData & ioEvents = ctx->sock->getThread() ? ctx->sock->getThread<IoServiceThread>()->_ioEvents : serv->_ioEvents;
 
-    memset( &ctx->ol, 0, sizeof(ctx->ol) );
     // 投递 IO
     b = ioEvents._iocp._self->AcceptEx(
         ctx->sock->get(),
@@ -947,7 +945,7 @@ bool _PostAccept( IoService * serv, IoAcceptCtx * ctx )
         if ( err && err != ERROR_IO_PENDING )
         {
             // 其他错误，主动取消IoCtx
-            ctx->changeState(stateProactiveCancel);
+            ctx->cancel(cancelProactive);
             return false;
         }
     }
@@ -1022,7 +1020,7 @@ bool _PostConnect( IoService * serv, IoConnectCtx * ctx, eiennet::EndPoint const
         if ( err && err != ERROR_IO_PENDING )
         {
             // 其他错误，主动取消IoCtx
-            ctx->changeState(stateProactiveCancel);
+            ctx->cancel(cancelProactive);
             return false;
         }
     }
@@ -1098,8 +1096,8 @@ bool _PostRecv( IoService * serv, IoRecvCtx * ctx )
         DWORD err = WSAGetLastError();
         if ( err && err != WSA_IO_PENDING )
         {
-            // 其他错误，释放IoCtx
-            ctx->changeState(stateProactiveCancel);
+            // 其他错误，主动取消IoCtx
+            ctx->cancel(cancelProactive);
             return false;
         }
     }
@@ -1181,7 +1179,7 @@ bool _PostSend( IoService * serv, IoSendCtx * ctx )
         if ( err && err != WSA_IO_PENDING )
         {
             // 其他错误，主动取消IoCtx
-            ctx->changeState(stateProactiveCancel);
+            ctx->cancel(cancelProactive);
             return false;
         }
     }
@@ -1256,7 +1254,7 @@ bool _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx )
         if ( err && err != WSA_IO_PENDING )
         {
             // 其他错误，主动取消IoCtx
-            ctx->changeState(stateProactiveCancel);
+            ctx->cancel(cancelProactive);
             return false;
         }
     }
@@ -1340,7 +1338,7 @@ bool _PostSendTo( IoService * serv, IoSendToCtx * ctx )
         if ( err && err != WSA_IO_PENDING )
         {
             // 其他错误，主动取消IoCtx
-            ctx->changeState(stateProactiveCancel);
+            ctx->cancel(cancelProactive);
             return false;
         }
     }
@@ -1451,13 +1449,9 @@ void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
     {
         for ( auto * ioCtx : itVecStruct->second.ctxs )
         {
-            auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
-            if ( sockIoCtx->timerCtx ) // 如果有超时定时器，停止它
-            {
-                auto timer = sockIoCtx->timerCtx->timer;
-                timer->stop();
-            }
-            sockIoCtx->changeState(stateProactiveCancel);
+            _IoSocketCtxClearTimerCtx( dynamic_cast<IoSocketCtx *>(ioCtx) );
+            ioCtx->cancel(cancelRemove);
+            //ioCtx->changeState(stateCancel);
         }
     }
 }

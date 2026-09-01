@@ -133,25 +133,6 @@ struct IoTimerCtx : io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
 #else
 
 #endif
-
-    virtual bool changeState( IoState state ) override
-    {
-        io::IoTimerCtx::changeState(state);
-        switch ( this->state )
-        {
-        case stateProactiveCancel:
-        case stateTimeoutCancel:
-        case stateFinish:
-            if ( this->timer )
-            {
-                this->timer->unset();
-                return true;
-            }
-            break;
-        }
-        return false;
-    }
-
 protected:
     IoTimerCtx()
     {

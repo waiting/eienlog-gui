@@ -43,6 +43,19 @@
 
 namespace io
 {
+// struct IoTimerCtx --------------------------------------------------------------------------
+bool IoTimerCtx::cancel( CancelType cancelType )
+{
+    IoCtx::cancel(cancelType);
+    if ( this->timer )
+    {
+        this->timer->unset();
+        return true;
+    }
+    return false;
+}
+
+// class IoService ----------------------------------------------------------------------------
 EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupThread, IoModel model )
 {
     switch ( model )

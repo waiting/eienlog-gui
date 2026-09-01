@@ -132,11 +132,12 @@ static void _IoSocketCtxTimeoutCallback( winux::SharedPointer<eiennet::async::Ti
     if ( assocCtx )
     {
         assocCtx->timerCtx = nullptr; // 取消关联的超时timer场景
-        assocCtx->changeState(stateTimeoutCancel); // 超时取消操作
+        assocCtx->cancel(cancelTimeout); // 超时取消操作
+        assocCtx->changeState(stateCancel);
     }
 }
 
-// IoSocketCtx 清空超时事件关联，并停止超时定时器，尝试释放IoTimerCtx --------------------------------
+// IoSocketCtx 清空超时事件关联，并停止超时定时器
 static void _IoSocketCtxClearTimerCtx( io::IoSocketCtx * ctx )
 {
     if ( ctx->timerCtx ) // 有超时处理
@@ -172,7 +173,8 @@ static void _CancelIoCtxs( IoEventsData::IoVecStruct * ioVecStruct )
                     auto timer = sockCtx->timerCtx->timer;
                     timer->stop();
                 }
-                sockCtx->changeState(stateProactiveCancel);
+                sockCtx->cancel(cancelProactive);
+                sockCtx->changeState(stateCancel);
             }
             break;
         }
@@ -415,6 +417,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 {
                                     {
                                         winux::ScopeUnguard unguard( timer->getMutex() );
+                                        timer->unset();
                                         // 已处理，完成这个请求
                                         timerCtx->changeState(stateFinish);
                                     }
@@ -670,7 +673,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                 else // Socket的事件处理
                 {
                     auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
-                    if ( ioCtx->state == stateTimeoutCancel ) // 超时取消，处理超时响应
+                    if ( ioCtx->state == stateCancel && ioCtx->cancelType == cancelTimeout ) // 超时取消，处理超时响应
                     {
                         switch ( sockIoCtx->type )
                         {
@@ -815,7 +818,7 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                             break;
                         }
                     }
-                    else // ioCtx->state != stateTimeoutCancel
+                    else // ioCtx->state != stateCancel || ioCtx->cancelType != cancelTimeout
                     {
                         auto type = sockIoCtx->type;
                         // 清除sockIoCtx类型对应的epoll事件
@@ -1283,13 +1286,9 @@ void IoService::removeSock( winux::SharedPointer<eiennet::async::Socket> sock )
     {
         for ( auto * ioCtx : itVecStruct->second.ctxs )
         {
-            auto * sockIoCtx = dynamic_cast<IoSocketCtx *>(ioCtx);
-            if ( sockIoCtx->timerCtx )
-            {
-                auto timer = sockIoCtx->timerCtx->timer;
-                timer->stop();
-            }
-            sockIoCtx->changeState(stateProactiveCancel);
+            _IoSocketCtxClearTimerCtx( dynamic_cast<IoSocketCtx *>(ioCtx) );
+            ioCtx->cancel(cancelRemove);
+            ioCtx->changeState(stateCancel);
         }
     }
 }
