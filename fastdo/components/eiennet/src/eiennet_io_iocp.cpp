@@ -283,9 +283,12 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                             if ( ctx->cbOk )
                             {
                                 eiennet::ip::EndPoint epLocal( ctx->outputBuf.get<winux::byte>(), ctx->localAddrLen );
-                                eiennet::ip::EndPoint epRemote( ctx->outputBuf.get<winux::byte>() + ctx->localAddrLen, ctx->remoteAddrLen );
-                                //winux::ColorOutputLine( winux::fgFuchsia, "local: ", epLocal, ", remote: ", epRemote );
-                                if ( ctx->cbOk( ctx->sock, ctx->clientSock, epRemote ) )
+                                ctx->clientEp.init( ctx->outputBuf.get<winux::byte>() + ctx->localAddrLen, ctx->remoteAddrLen );
+
+                                auto clientSock = ctx->clientSock;
+                                ctx->clientSock.reset();
+
+                                if ( ctx->cbOk( ctx->sock, clientSock, ctx->clientEp ) )
                                 {
                                     ctx->startTime = winux::GetUtcTimeMs();
                                     _PostAccept( serv, ctx );

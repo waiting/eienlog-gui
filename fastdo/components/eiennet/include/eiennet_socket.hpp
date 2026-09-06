@@ -458,9 +458,12 @@ public:
      *  在Windows上，发送似乎由系统后台进行，`send()`总是立即返回全部发送的数据大小，设置超时似乎无用。 */
     bool setSendTimeout( winux::uint32 optval );
 
-    /** \brief 获取是否开启了重用地址 */
+    /** \brief 获取socket是否开启了重用地址 */
     bool getReUseAddr() const;
-    /** \brief 设置socket是否重用地址，默认false不重用 */
+    /** \brief 设置socket是否重用地址，默认false不重用
+     *
+     *  TCP主动关闭连接的一端会进入`TIME_WAIT状态，通常持续2倍的最大报文段生存时间（2MSL，约 1-4 分钟）。在此期间，该端口被占用。\n
+     *  此选项开启则允许内核重用仍处于`TIME_WAIT`状态的端口 */
     bool setReUseAddr( bool optval );
 
     /** \brief 获取是否启用广播 */
@@ -506,7 +509,7 @@ public:
     static int ErrNo();
 
 protected:
-    // 初始化全部成员
+    /** \brief 初始化全部成员 */
     void _membersInit()
     {
         this->_addrFamily = afUnspec;
@@ -529,7 +532,7 @@ protected:
         this->_resetManaged();
     }
 
-    // 重置socket资源管理相关变量
+    /** \brief 重置socket资源管理相关变量 */
     void _resetManaged() noexcept
     {
         this->_sock = -1;
@@ -537,38 +540,38 @@ protected:
     }
 
     // 延迟创建socket使用参数
-    AddrFamily _addrFamily;  // 地址族
-    SockType _sockType;      // 套接字类型
-    Protocol _protocol;      // 协议
+    AddrFamily _addrFamily;  //!< 地址族
+    SockType _sockType;      //!< 套接字类型
+    Protocol _protocol;      //!< 协议
 
     // 延迟设置socket属性
-    winux::uint32 _attrSendTimeout; // 发送超时(ms)
-    winux::uint32 _attrRecvTimeout; // 接收超时(ms)
-    int _attrSendBufSize;   // 发送缓冲区大小
-    int _attrRecvBufSize;   // 接收缓冲区大小
-    bool _attrBlocking;     // 是否阻塞
-    bool _attrBroadcast;    // 是否启用广播
-    bool _attrReUseAddr;    // 是否开启了地址重用
-    bool _attrIpv6Only;     // IPV6套接字只开启IPV6功能
+    winux::uint32 _attrSendTimeout; //!< 发送超时(ms)
+    winux::uint32 _attrRecvTimeout; //!< 接收超时(ms)
+    int _attrSendBufSize;   //!< 发送缓冲区大小
+    int _attrRecvBufSize;   //!< 接收缓冲区大小
+    bool _attrBlocking;     //!< 是否阻塞
+    bool _attrBroadcast;    //!< 是否启用广播
+    bool _attrReUseAddr;    //!< 是否开启了地址重用
+    bool _attrIpv6Only;     //!< IPV6套接字只开启IPV6功能
 
-    // 属性种类
+    /** \brief 属性种类 */
     enum AttrCategory
     {
-        attrNone,           // 无意义
-        attrBlocking,       // 是否阻塞
-        attrBroadcast,      // 是否启用广播
-        attrReUseAddr,      // 是否开启了地址重用
-        attrSendTimeout,    // 发送超时(ms)
-        attrRecvTimeout,    // 接收超时(ms)
-        attrSendBufSize,    // 发送缓冲区大小
-        attrRecvBufSize,    // 接收缓冲区大小
-        attrIpv6Only,       // IPV6套接字只开启IPV6功能
+        attrNone,           //!< 无意义
+        attrBlocking,       //!< 是否阻塞
+        attrBroadcast,      //!< 是否启用广播
+        attrReUseAddr,      //!< 是否开启了地址重用
+        attrSendTimeout,    //!< 发送超时(ms)
+        attrRecvTimeout,    //!< 接收超时(ms)
+        attrSendBufSize,    //!< 发送缓冲区大小
+        attrRecvBufSize,    //!< 接收缓冲区大小
+        attrIpv6Only,       //!< IPV6套接字只开启IPV6功能
     };
-    std::vector<AttrCategory> _attrExecSets; // 执行属性设置的操作集
+    std::vector<AttrCategory> _attrExecSets; //!< 执行属性设置的操作集
 
     // socket资源管理
-    int _sock;           // socket描述符
-    bool _isNewSock;     // 指示是否为新建socket。如果为true，则会在Socket对象析构时自动关闭sock
+    int _sock;           //!< socket描述符
+    bool _isNewSock;     //!< 指示是否为新建socket。如果为true，则会在Socket对象析构时自动关闭sock
 
     DISABLE_OBJECT_COPY(Socket)
 };
