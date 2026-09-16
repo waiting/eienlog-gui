@@ -226,6 +226,9 @@ public:
      *  可传递指定参数，若不传递则用默认参数 */
     bool _tryCreate( AddrFamily af, bool hasAf, SockType sockType, bool hasSockType, Protocol proto, bool hasProto );
 
+    /** \brief Socket句柄/描述符脱离管理 */
+    int detach() noexcept;
+
 public:
     /** \brief 关闭socket描述符 */
     int close() noexcept;
@@ -510,7 +513,7 @@ public:
 
 protected:
     /** \brief 初始化全部成员 */
-    void _membersInit()
+    void _membersInit() noexcept
     {
         this->_addrFamily = afUnspec;
         this->_sockType = sockUnknown;

@@ -56,7 +56,7 @@ bool IoTimerCtx::cancel( CancelType cancelType )
 }
 
 // class IoService ----------------------------------------------------------------------------
-EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupThread, IoModel model )
+EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t threadCount, IoModel model )
 {
     switch ( model )
     {
@@ -64,15 +64,15 @@ EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t groupT
     case modelEpoll:
     case modelIocp:
     #if defined(OS_WIN)
-        return winux::MakeSharedNew<io::iocp::IoService>(groupThread);
+        return winux::MakeSharedNew<io::iocp::IoService>(threadCount);
     #else
-        return winux::MakeSharedNew<io::epoll::IoService>(groupThread);
+        return winux::MakeSharedNew<io::epoll::IoService>(threadCount);
     #endif
     case modelPoll:
-        return winux::MakeSharedNew<io::poll::IoService>(groupThread);
+        return winux::MakeSharedNew<io::poll::IoService>(threadCount);
     case modelSelect:
     default:
-        return winux::MakeSharedNew<io::select::IoService>(groupThread);
+        return winux::MakeSharedNew<io::select::IoService>(threadCount);
     }
 }
 

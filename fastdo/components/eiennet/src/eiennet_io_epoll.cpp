@@ -1031,10 +1031,12 @@ void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
 
 
 // class IoService ----------------------------------------------------------------------------
-IoService::IoService( size_t groupThread ) : _stop(false)
+IoService::IoService( size_t threadCount ) : _stop(false)
 {
     // 创建工作线程组
-    this->_group.create<IoServiceThread>( groupThread, this );
+    this->_group.create<IoServiceThread>( threadCount, this );
+    // 设置模型类型
+    this->_model = modelEpoll;
 }
 
 void IoService::stop()
@@ -1045,7 +1047,7 @@ void IoService::stop()
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
-        auto * th = this->getGroupThread<IoServiceThread>(i);
+        auto * th = this->getThread<IoServiceThread>(i);
         th->_stop = true;
         // 投递停止信号
         th->_ioEvents.wakeUpTrigger(IoEventsData::wutWantStop);

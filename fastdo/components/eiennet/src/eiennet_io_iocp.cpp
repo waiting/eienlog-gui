@@ -542,7 +542,53 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                 }
                 else // 其他错误
                 {
+                    winux::ColorOutputLine( winux::fgRed, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
                     ioCtx->changeState(stateError);
+                    switch ( ioCtx->type )
+                    {
+                    case ioRecv:
+                        {
+                            auto * recvCtx = dynamic_cast<IoRecvCtx *>(ioCtx);
+                            if ( recvCtx->cnnAvail )
+                            {
+                                _IoSocketCtxClearTimerCtx(recvCtx);
+
+                                recvCtx->cnnAvail = false;
+                                recvCtx->data.free();
+
+                                // 处理回调
+                                if ( recvCtx->cbOk )
+                                {
+                                    recvCtx->cbOk( recvCtx->sock, recvCtx->data, recvCtx->cnnAvail );
+                                }
+
+                                // 已处理，完成这个请求
+                                recvCtx->changeState(stateFinish);
+                            }
+                        }
+                        break;
+                    case ioSend:
+                        {
+                            auto * sendCtx = dynamic_cast<IoSendCtx *>(ioCtx);
+                            if ( sendCtx->cnnAvail )
+                            {
+                                _IoSocketCtxClearTimerCtx(sendCtx);
+
+                                sendCtx->cnnAvail = false;
+                                sendCtx->costTimeMs += winux::GetUtcTimeMs() - sendCtx->startTime;
+
+                                // 处理回调
+                                if ( sendCtx->cbOk )
+                                {
+                                    sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
+                                }
+
+                                // 已处理，完成这个请求
+                                sendCtx->changeState(stateFinish);
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -730,6 +776,19 @@ void IoEventsData::_handleIoCtxsTimeoutAndDelete()
                     {
                         auto type = sockCtx->type;
 
+                        switch ( type )
+                        {
+                        case ioAccept:
+                            {
+                                if ( sockCtx->state == stateError )
+                                {
+                                    auto * accCtx = static_cast<IoAcceptCtx *>(sockCtx);
+                                    accCtx->sock->acceptAsync( accCtx->cbOk, accCtx->timeoutMs, accCtx->cbTimeout, accCtx->sock->getThread() );
+                                }
+                            }
+                            break;
+                        }
+
                         it = ioVec.erase(it); // 删除已取消或者已完成的IO事件
                         hasEraseInIoVec = true;
                         // 删除这个IoCtx
@@ -828,7 +887,16 @@ void IoEventsData::post( IoCtx * ioCtx )
             {
                 auto & ioVecStruct = itVecStruct->second;
                 auto & ioVec = ioVecStruct.ctxs;
-                auto it = std::find_if( ioVec.begin(), ioVec.end(), [ioCtx] ( IoCtx * e ) { return e->type == ioCtx->type; } );
+                auto it = std::find_if(
+                    ioVec.begin(),
+                    ioVec.end(),
+                    [ioCtx] ( IoCtx * e ) {
+                        if ( e->type != ioAccept )
+                            return e->type == ioCtx->type;
+                        else // IOCP可以投递多个ioAccept请求
+                            return false;
+                    }
+                );
                 if ( it != ioVec.end() ) // 已存在此类型的IoCtx
                 {
                     auto * existingCtx = dynamic_cast<IoSocketCtx *>(*it);
@@ -845,8 +913,9 @@ void IoEventsData::post( IoCtx * ioCtx )
                         }
                         existingCtx->timerCtx = nullptr; // 解除关联
                     }
-                    existingCtx->decRef(); // 释放已存在的IoCtx
-                    ioVec.erase(it);
+                    //existingCtx->decRef(); // 释放已存在的IoCtx
+                    //ioVec.erase(it);
+                    existingCtx->cancel(cancelProactive);
 
                     ioVec.push_back(ioCtx);
                 }
@@ -885,11 +954,12 @@ void IoServiceThread::timerTrigger( io::IoTimerCtx * timerCtx )
 
 
 // class IoService ----------------------------------------------------------------------------
-IoService::IoService( size_t groupThread ) : _stop(false)
+IoService::IoService( size_t threadCount ) : _stop(false)
 {
     // 创建工作线程组
-    this->_group.create<IoServiceThread>( groupThread, this );
-
+    this->_group.create<IoServiceThread>( threadCount, this );
+    // 设置模型类型
+    this->_model = modelIocp;
 }
 
 void IoService::stop()
@@ -899,7 +969,7 @@ void IoService::stop()
     for ( size_t i = 0; i < _group.count(); i++ )
     {
         // 给每个线程投递退出信号
-        auto * th = this->getGroupThread<IoServiceThread>(i);
+        auto * th = this->getThread<IoServiceThread>(i);
         th->_stop = true;
         th->_ioEvents.wakeUpTrigger(IoEventsData::wutWantStop);
     }
@@ -921,9 +991,8 @@ bool _PostAccept( IoService * serv, IoAcceptCtx * ctx )
     ctx->sock->getBoundEp(&ep);
 
     // 创建现成的socket
-    ctx->clientSock.attachNew( ctx->sock->onCreateClient( *serv, -1, false ) );
-    ctx->clientSock->setParams( ep.getAddrFamily(), eiennet::async::Socket::sockStream, eiennet::async::Socket::protoUnspec );
-    ctx->clientSock->create();
+    ctx->clientSock = ctx->sock->onCreateClient( *serv, -1, false );
+    ctx->clientSock->create( ep.getAddrFamily(), eiennet::async::Socket::sockStream, eiennet::async::Socket::protoUnspec );
 
     DWORD dw;
     BOOL b;

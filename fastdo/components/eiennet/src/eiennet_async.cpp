@@ -61,7 +61,7 @@ void Socket::sendToAsync( EndPoint const & ep, void const * data, size_t size, i
     this->_serv->postSendTo( this->sharedFromThis(), ep, data, size, cbOk, timeoutMs, cbTimeout, th );
 }
 
-Socket * Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock )
+winux::SharedPointer<Socket> Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock )
 {
     if ( this->_CreateClientHandler )
     {
@@ -69,7 +69,7 @@ Socket * Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock 
     }
     else
     {
-        return new Socket( serv, sock, isNewSock );
+        return winux::MakeShared( new Socket( serv, sock, isNewSock ) );
     }
 }
 

@@ -301,11 +301,17 @@ class IoService
 public:
     /** \brief 创建IoService实例
      *
-     *  \param groupThread 线程组数量
+     *  \param threadCount 线程数量
      *  \param model IO模型
-     *  \return IoService实例 */
-    static EIENNET_FUNC_DECL(winux::SharedPointer<IoService>) New( size_t groupThread = 4, IoModel model = modelAuto );
+     *  \return SharedPointer<IoService> */
+    static EIENNET_FUNC_DECL(winux::SharedPointer<IoService>) New( size_t threadCount = 4, IoModel model = modelAuto );
 
+    /** \brief 构造函数 */
+    IoService() : _model(modelAuto)
+    {
+    }
+
+    /** \brief 析构函数 */
     virtual ~IoService() { }
 
     /** \brief 停止运行 */
@@ -390,10 +396,10 @@ public:
     {
         if ( _group.count() > 0 )
         {
-            auto th0 = this->getGroupThread<_ThreadCls>(0);
+            auto th0 = this->getThread<_ThreadCls>(0);
             for ( size_t i = 1; i < _group.count(); i++ )
             {
-                auto th = this->getGroupThread<_ThreadCls>(i);
+                auto th = this->getThread<_ThreadCls>(i);
                 if ( th->getWeight() < th0->getWeight() )
                 {
                     th0 = th;
@@ -404,18 +410,22 @@ public:
         return nullptr;
     }
 
-    /** \brief 获取指定索引的组线程 */
+    /** \brief 获取指定索引的线程 */
     template < typename _ThreadCls = IoServiceThread >
-    _ThreadCls * getGroupThread( size_t i ) const
+    _ThreadCls * getThread( size_t i ) const
     {
         return static_cast<_ThreadCls *>( _group.threadAt(i).get() );
     }
 
-    /** \brief 获取组线程数 */
-    size_t getGroupThreadCount() const { return _group.count(); }
+    /** \brief 获取线程数 */
+    size_t getThreadCount() const { return _group.count(); }
+
+    /** \brief 获取IO模型类型 */
+    io::IoModel getModel() const { return _model; }
 
 protected:
     winux::ThreadGroup _group;
+    io::IoModel _model;
 
 };
 

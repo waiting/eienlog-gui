@@ -251,7 +251,7 @@ private:
 class EIENNET_DLL IoService : public io::IoService
 {
 public:
-    IoService( size_t groupThread = 4 );
+    IoService( size_t threadCount = 4 );
 
     virtual void stop() override;
     virtual int run() override;

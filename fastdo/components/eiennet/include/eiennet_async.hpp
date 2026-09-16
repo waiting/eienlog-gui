@@ -41,7 +41,7 @@ public:
     winux::SharedPointer<Socket> accept( EndPoint * ep = nullptr )
     {
         int sock;
-        return this->eiennet::Socket::accept( &sock, ep ) ? winux::SharedPointer<Socket>( this->onCreateClient( *_serv, sock, true ) ) : winux::SharedPointer<Socket>();
+        return this->eiennet::Socket::accept( &sock, ep ) ? this->onCreateClient( *_serv, sock, true ) : winux::SharedPointer<Socket>();
     }
 
     /** \brief 设置套接字关联数据 */
@@ -101,7 +101,7 @@ public:
     DEFINE_CUSTOM_EVENT( Error, ( winux::SharedPointer<Socket> sock ), (sock) )
 
     /** \brief 创建客户连接 */
-    DEFINE_CUSTOM_EVENT_RETURN_EX( Socket *, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
+    DEFINE_CUSTOM_EVENT_RETURN_EX( winux::SharedPointer<Socket>, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
 
 protected:
     io::IoService * _serv; // IO服务对象
