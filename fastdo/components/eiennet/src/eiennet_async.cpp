@@ -31,37 +31,7 @@ Socket::~Socket()
     if ( this->_thread ) this->_thread->decWeight();
 }
 
-void Socket::acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoAcceptCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
-{
-    this->_serv->postAccept( this->sharedFromThis(), cbOk, timeoutMs, cbTimeout, th );
-}
-
-void Socket::connectAsync( EndPoint const & ep, io::IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoConnectCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
-{
-    this->_serv->postConnect( this->sharedFromThis(), ep, cbOk, timeoutMs, cbTimeout, th );
-}
-
-void Socket::recvUntilSizeAsync( size_t targetSize, io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoRecvCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
-{
-    this->_serv->postRecv( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout, th );
-}
-
-void Socket::sendAsync( void const * data, size_t size, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoSendCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
-{
-    this->_serv->postSend( this->sharedFromThis(), data, size, cbOk, timeoutMs, cbTimeout, th );
-}
-
-void Socket::recvFromUntilSizeAsync( size_t targetSize, io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoRecvFromCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
-{
-    this->_serv->postRecvFrom( this->sharedFromThis(), targetSize, cbOk, timeoutMs, cbTimeout, th );
-}
-
-void Socket::sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs, io::IoSendToCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
-{
-    this->_serv->postSendTo( this->sharedFromThis(), ep, data, size, cbOk, timeoutMs, cbTimeout, th );
-}
-
-winux::SharedPointer<Socket> Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock )
+SocketSharedPtr Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock )
 {
     if ( this->_CreateClientHandler )
     {
@@ -208,11 +178,6 @@ io::IoTimerCtx * Timer::stop()
     return nullptr;
 }
 
-void Timer::waitAsyncEx( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk, io::IoSocketCtx * assocCtx, io::IoServiceThread * th )
-{
-    this->_serv->postTimer( this->sharedFromThis(), timeoutMs, periodic, cbOk, assocCtx, th );
-}
-
 intptr_t Timer::get() const
 {
 #if defined(OS_WIN)
@@ -250,3 +215,4 @@ void CALLBACK Timer_Data::_TimerCallback( PTP_CALLBACK_INSTANCE Instance, PVOID 
 
 
 } // namespace eiennet
+

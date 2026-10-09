@@ -31,6 +31,8 @@
 
 #include "eiennet_base.hpp"
 #include "eiennet_socket.hpp"
+#include "eiennet_io.hpp"
+#include "eiennet_async.hpp"
 #include "eiennet_server.hpp"
 #include "eienlog.hpp"
 
@@ -87,7 +89,7 @@ Server::Server() :
 
 }
 
-Server::Server( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, int verbose, winux::String const & logViewer ) :
+Server::Server( bool autoReadData, ip::EndPoint const & ep, size_t threadCount, int backlog, double serverWait, double verboseInterval, int verbose, winux::String const & logViewer ) :
     _mtxServer(true),
     _cumulativeClientId(0),
     _stop(false),
@@ -184,7 +186,7 @@ void __StartupSockets(
     }
 }
 
-bool Server::startup( bool autoReadData, ip::EndPoint const & ep, int threadCount, int backlog, double serverWait, double verboseInterval, int verbose, winux::String const & logViewer )
+bool Server::startup( bool autoReadData, ip::EndPoint const & ep, size_t threadCount, int backlog, double serverWait, double verboseInterval, int verbose, winux::String const & logViewer )
 {
     _pool.startup(threadCount);
 
@@ -533,4 +535,188 @@ ClientCtx * Server::onCreateClient( winux::uint64 clientId, winux::String const 
 }
 
 
+namespace async
+{
+// class ClientCtx ----------------------------------------------------------------------------
+ClientCtx::ClientCtx( Server * server, int sock, bool isNewSock ) : server(server)
+{
+    this->clientSock = ClientSocket::New( this, sock, isNewSock );
+}
+
+ClientCtx::~ClientCtx()
+{
+    if ( this->server && this->server->_verbose ) eienlog::VerboseOutput(
+        this->server->_verbose,
+        eienlog::vcaFgBlue | eienlog::vcaBgIgnore,
+        this->getStamp(),
+        " destruct"
+    );
+}
+
+winux::String ClientCtx::getStamp() const
+{
+    winux::String stamp, clientId;
+    clientId = winux::Format( "%p", this );
+    clientId = clientId.substr( clientId.length() - 6 );
+    winux::StringWriter(&stamp)
+        << "{tid:" << winux::GetTid() << "}" 
+        << "[client-" << clientId << "]<" << this->clientEp.toString() << ">";
+    return stamp;
+}
+
+// class Server -------------------------------------------------------------------------------
+Server::Server() : _infoInterval(0.0), _verbose(0), _logViewer()
+{
+}
+
+Server::Server(
+    ip::EndPoint const & ep,
+    int servSockFd,
+    io::IoModel model,
+    size_t threadCount,
+    double infoInterval,
+    int verbose,
+    winux::String const & logViewer
+)
+{
+    this->init( ep, servSockFd, model, threadCount, infoInterval, verbose, logViewer );
+}
+
+bool Server::init(
+    ip::EndPoint const & ep,
+    int servSockFd,
+    io::IoModel model,
+    size_t threadCount,
+    double infoInterval,
+    int verbose,
+    winux::String const & logViewer
+)
+{
+    this->_service = io::IoService::New( threadCount, model ); // 创建IoService
+
+    this->_infoInterval = infoInterval;
+    this->_verbose = verbose;
+    this->_logViewer = logViewer;
+
+    if ( servSockFd < 0 ) // 创建新servSock
+    {
+        this->_servSock = ServerSocket::New(this);
+        // 地址重用
+        this->_servSock->setReUseAddr(true);
+        // IPV6同时监听IPV4连接
+        if ( ep.getAddrFamily() == Socket::afInet6 )
+            this->_servSock->setIpv6Only(false);
+        // 监听
+        if ( !( this->_servSock->bind(ep) && this->_servSock->listen() ) )
+        {
+            int err = Socket::ErrNo();
+            if ( this->_verbose ) eienlog::VerboseOutput(
+                this->_verbose,
+                eienlog::vcaFgRed | eienlog::vcaBgIgnore,
+                "Server startup failed",
+                ", ep=", ep.toString(),
+                ", err=", err
+            );
+            return false;
+        }
+        else
+        {
+            if ( this->_verbose ) eienlog::VerboseOutput(
+                this->_verbose,
+                eienlog::vcaFgGreen | eienlog::vcaBgIgnore,
+                "Server startup success",
+                ", ep=", ep.toString(),
+                ", threads=", threadCount,
+                ", infoInterval=", infoInterval,
+                ", verbose=", verbose,
+                ", logViewer=", logViewer
+            );
+        }
+    }
+    else // 复用现成servSock
+    {
+        this->_servSock = ServerSocket::New( this, servSockFd, true );
+        // 复用socket已经在别的进程bind()和listen()
+    }
+
+    // 服务套接字出错响应
+    this->_servSock->onErrorHandler( [this] ( SocketSharedPtr servSock ) {
+        if ( this->_verbose ) eienlog::VerboseOutput( this->_verbose, eienlog::vcaFgRed | eienlog::vcaBgIgnore, "Server sock error, exit!" );
+        this->stop();
+    } );
+
+    // 客户套接字如何创建
+    this->_servSock->onCreateClientHandler( [this] ( io::IoService & serv, int sock, bool isNewSock ) -> SocketSharedPtr {
+        auto * clientCtx = this->onCreateClient( this, sock, isNewSock );
+        return winux::MakeShared( clientCtx->clientSock.get(), [] ( ClientSocket * p ) {
+            delete p->getClientCtx();
+        } );
+    } );
+
+    // 投递Accept IO
+    if ( this->_service->getModel() == io::modelIocp && this->_service->getThreadCount() > 0 )
+    {
+        for ( size_t i = 0; i < this->_service->getThreadCount(); i++ )
+        {
+            this->_servSock->acceptAsync( [this] ( SocketSharedPtr servSock, SocketSharedPtr clientSock, eiennet::ip::EndPoint const & ep ) {
+                return this->onAccept( servSock.ensureCast<ServerSocket>()->getServer(), clientSock.ensureCast<ClientSocket>()->getClientCtx(), ep );
+            } );
+        }
+    }
+    else
+    {
+        this->_servSock->acceptAsync( [this] ( SocketSharedPtr servSock, SocketSharedPtr clientSock, eiennet::ip::EndPoint const & ep ) {
+            return this->onAccept( servSock.ensureCast<ServerSocket>()->getServer(), clientSock.ensureCast<ClientSocket>()->getClientCtx(), ep );
+        } );
+    }
+
+    // 显示信息
+    if ( this->_infoInterval >= 0.0 ) eiennet::async::Timer::New(this->_service)->waitAsyncEx(
+        winux::uint64(this->_infoInterval * 1000),
+        true,
+        [this] ( TimerSharedPtr timer, io::IoTimerCtx * ctx ) {
+            winux::String strPrompt;
+            for ( size_t i = 0; i < this->_service->getThreadCount(); i++ )
+            {
+                auto * th = this->_service->getThread(i);
+                strPrompt += winux::Format( "T%u: t(%u),s(%u),w(%u); ", i, th->getTimerIoCount(), th->getSockIoCount(), th->getWeight() );
+            }
+            ColorOutput( winux::fgWhite, "\rM: t(", this->_service->getTimerIoCount(), "),s(", this->_service->getSockIoCount(), "); ", strPrompt, " " );
+        },
+        nullptr,
+        nullptr
+    );
+
+    return true;
+}
+
+ClientCtx * Server::onCreateClient( Server * server, int sock, bool isNewSock )
+{
+    if ( this->_CreateClientHandler )
+    {
+        return this->_CreateClientHandler( server, sock, isNewSock );
+    }
+    else
+    {
+        return new ClientCtx( server, sock, isNewSock );
+    }
+}
+
+bool Server::onAccept( Server * server, ClientCtx * clientCtx, eiennet::ip::EndPoint const & ep )
+{
+    if ( this->_AcceptHandler )
+    {
+        return this->_AcceptHandler( server, clientCtx, ep );
+    }
+    else
+    {
+        return true;
+    }
+}
+
+
+} // namespace async
+
+
 } // namespace eiennet
+

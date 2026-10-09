@@ -29,9 +29,16 @@ struct FuncTraits< _RetType CALL_OPT( _ArgTypes... ) > \
 /* 普通函数指针 */ \
 template < typename _RetType, typename... _ArgTypes > \
 struct FuncTraits< _RetType(CALL_OPT*)( _ArgTypes... ) > : FuncTraits< _RetType CALL_OPT( _ArgTypes... ) > { }; \
+template < typename _RetType, typename... _ArgTypes > \
+struct FuncTraits< _RetType(CALL_OPT&)( _ArgTypes... ) > : FuncTraits< _RetType CALL_OPT( _ArgTypes... ) > { }; \
 /* std::function */ \
 template < typename _RetType, typename... _ArgTypes > \
-struct FuncTraits< std::function< _RetType CALL_OPT( _ArgTypes... ) > > : FuncTraits< _RetType CALL_OPT( _ArgTypes... ) > { };
+struct FuncTraits< std::function< _RetType CALL_OPT( _ArgTypes... ) > > : FuncTraits< _RetType CALL_OPT( _ArgTypes... ) > { };\
+template < typename _RetType, typename... _ArgTypes > \
+struct FuncTraits< std::function< _RetType CALL_OPT( _ArgTypes... ) > & > : FuncTraits< _RetType CALL_OPT( _ArgTypes... ) > { };\
+/* std::nullptr_t */ \
+template <> \
+struct FuncTraits<std::nullptr_t> { enum { Arity = 0 }; };
 
 #if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8 || defined(OS_WIN64)
 
@@ -64,4 +71,4 @@ _MEMBER_FUNCTION_TRAITS(const volatile)
 
 /* 可调用对象 */
 template < class _Callable >
-struct FuncTraits : FuncTraits< decltype( &_Callable::operator() ) > { using ClassType = void; };
+struct FuncTraits : FuncTraits< decltype( &std::decay<_Callable>::type ::operator() ) > { using ClassType = void; };

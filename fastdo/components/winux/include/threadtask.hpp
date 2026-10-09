@@ -218,9 +218,9 @@ public:
 
     /** \brief 创建一个新任务 */
     template < typename _Fx, typename... _ArgType >
-    Task<typename FuncTraits<_Fx>::ReturnType> task( _Fx fn, _ArgType&&... arg )
+    Task<typename FuncTraits<_Fx>::ReturnType> task( _Fx && fn, _ArgType&&... arg )
     {
-        return Task<typename FuncTraits<_Fx>::ReturnType>( this, fn, std::forward<_ArgType>(arg)... );
+        return Task<typename FuncTraits<_Fx>::ReturnType>( this, std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... );
     }
 
     /** \brief 主动停止线程池运行 */
@@ -331,13 +331,13 @@ public:
 
     /** \brief Ctor1 创建一个起始任务，需要提供一个线程池 */
     template < typename _Fx, typename... _ArgType >
-    Task( ThreadPool * pool, _Fx fnRoutine, _ArgType&& ... argRoutine )
+    Task( ThreadPool * pool, _Fx && fnRoutine, _ArgType&& ... argRoutine )
     {
         static_assert( std::is_same< ReturnType, typename FuncTraits<_Fx>::ReturnType >::value , "FuncTraits<_Fx>::ReturnType is not match Task<_Ty>." );
         _taskCtx = TaskCtxT<ReturnType>::New( pool, TaskCtx::taskPending );
         //cout << "start-task: " << _taskCtx.get() << endl;
 
-        auto routine = MakeSimple( NewRunable( fnRoutine, std::forward<_ArgType>(argRoutine)... ) );
+        auto routine = MakeSimple( NewRunable( std::forward<_Fx>(fnRoutine), std::forward<_ArgType>(argRoutine)... ) );
         _taskCtx->routineForPool.attachNew( NewRunable( [routine] ( TaskCtxT<ReturnType> * taskCtx ) {
             // 执行任务例程
             taskCtx->exec( routine.get() );
@@ -353,14 +353,14 @@ public:
 
     /** \brief Ctor2-1 给一个任务创建一个后续任务 */
     template < typename _Fx, typename... _ArgType >
-    Task( SharedPointer< TaskCtxT<void> > prevTaskCtx, _Fx fnRoutine, _ArgType&& ... argRoutine )
+    Task( SharedPointer< TaskCtxT<void> > prevTaskCtx, _Fx && fnRoutine, _ArgType&& ... argRoutine )
     {
         static_assert( std::is_same< ReturnType, typename FuncTraits<_Fx>::ReturnType >::value , "FuncTraits<_Fx>::ReturnType is not match Task<_Ty>." );
         _taskCtx = TaskCtxT<ReturnType>::New( prevTaskCtx->pool, TaskCtx::taskPending );
         _taskCtx->prevTask = prevTaskCtx.get();
         //cout << "then 2-1 " << endl;
 
-        auto routine = MakeSimple( NewRunable( fnRoutine, std::forward<_ArgType>(argRoutine)... ) );
+        auto routine = MakeSimple( NewRunable( std::forward<_Fx>(fnRoutine), std::forward<_ArgType>(argRoutine)... ) );
         _taskCtx->routineForPool.attachNew( NewRunable( [routine] ( SharedPointer< TaskCtxT<void> > prevTaskCtx, TaskCtxT<ReturnType> * taskCtx ) {
             // 执行任务例程
             taskCtx->exec( routine.get() );
@@ -379,14 +379,14 @@ public:
 
     /** \brief Ctor2-2 给一个任务创建一个后续任务 - 类方法执行 */
     template < typename _Fx, typename... _ArgType >
-    Task( SharedPointer< TaskCtxT<void> > prevTaskCtx, _Fx fnRoutine, typename FuncTraits<_Fx>::ClassType * obj, _ArgType&& ... argRoutine )
+    Task( SharedPointer< TaskCtxT<void> > prevTaskCtx, _Fx && fnRoutine, typename FuncTraits<_Fx>::ClassType * obj, _ArgType&& ... argRoutine )
     {
         static_assert( std::is_same< ReturnType, typename FuncTraits<_Fx>::ReturnType >::value , "FuncTraits<_Fx>::ReturnType is not match Task<_Ty>." );
         _taskCtx = TaskCtxT<ReturnType>::New( prevTaskCtx->pool, TaskCtx::taskPending );
         _taskCtx->prevTask = prevTaskCtx.get();
         //cout << "then 2-2 " << endl;
 
-        auto routine = MakeSimple( NewRunable( fnRoutine, obj, std::forward<_ArgType>(argRoutine)... ) );
+        auto routine = MakeSimple( NewRunable( std::forward<_Fx>(fnRoutine), obj, std::forward<_ArgType>(argRoutine)... ) );
         _taskCtx->routineForPool.attachNew( NewRunable( [routine] ( SharedPointer< TaskCtxT<void> > prevTaskCtx, TaskCtxT<ReturnType> * taskCtx ) {
             // 执行任务例程
             taskCtx->exec( routine.get() );
@@ -405,14 +405,14 @@ public:
 
     /** \brief Ctor3-1 给一个任务创建一个后续任务，并把上一个任务返回值移动给后续任务 */
     template < typename _Ty2, typename _Fx, typename... _ArgType >
-    Task( SharedPointer< TaskCtxT<_Ty2> > prevTaskCtx, _Fx fnRoutine, _ArgType&& ... argRoutine )
+    Task( SharedPointer< TaskCtxT<_Ty2> > prevTaskCtx, _Fx && fnRoutine, _ArgType&& ... argRoutine )
     {
         static_assert( std::is_same< ReturnType, typename FuncTraits<_Fx>::ReturnType >::value , "FuncTraits<_Fx>::ReturnType is not match Task<_Ty>." );
         _taskCtx = TaskCtxT<ReturnType>::New( prevTaskCtx->pool, TaskCtx::taskPending );
         _taskCtx->prevTask = prevTaskCtx.get();
         //cout << "then 3-1 " << endl;
 
-        auto routine = MakeSimple( NewRunable( fnRoutine, _Ty2(), std::forward<_ArgType>(argRoutine)... ) );
+        auto routine = MakeSimple( NewRunable( std::forward<_Fx>(fnRoutine), _Ty2(), std::forward<_ArgType>(argRoutine)... ) );
         _taskCtx->routineForPool.attachNew( NewRunable( [routine] ( SharedPointer< TaskCtxT<_Ty2> > prevTaskCtx, TaskCtxT<ReturnType> * taskCtx ) {
             // 执行任务例程
             std::get<0>(routine->_tuple) = std::move(prevTaskCtx->val);
@@ -432,14 +432,14 @@ public:
 
     /** \brief Ctor3-2 给一个任务创建一个后续任务，并把上一个任务返回值移动给后续任务 - 类方法执行 */
     template < typename _Ty2, typename _Fx, typename... _ArgType >
-    Task( SharedPointer< TaskCtxT<_Ty2> > prevTaskCtx, _Fx fnRoutine, typename FuncTraits<_Fx>::ClassType * obj, _ArgType&& ... argRoutine )
+    Task( SharedPointer< TaskCtxT<_Ty2> > prevTaskCtx, _Fx && fnRoutine, typename FuncTraits<_Fx>::ClassType * obj, _ArgType&& ... argRoutine )
     {
         static_assert( std::is_same< ReturnType, typename FuncTraits<_Fx>::ReturnType >::value , "FuncTraits<_Fx>::ReturnType is not match Task<_Ty>." );
         _taskCtx = TaskCtxT<ReturnType>::New( prevTaskCtx->pool, TaskCtx::taskPending );
         _taskCtx->prevTask = prevTaskCtx.get();
         //cout << "then 3-2 " << endl;
 
-        auto routine = MakeSimple( NewRunable( fnRoutine, obj, _Ty2(), std::forward<_ArgType>(argRoutine)... ) );
+        auto routine = MakeSimple( NewRunable( std::forward<_Fx>(fnRoutine), obj, _Ty2(), std::forward<_ArgType>(argRoutine)... ) );
         _taskCtx->routineForPool.attachNew( NewRunable( [routine] ( SharedPointer< TaskCtxT<_Ty2> > prevTaskCtx, TaskCtxT<ReturnType> * taskCtx ) {
             // 执行任务例程
             std::get<1>(routine->_tuple) = std::move(prevTaskCtx->val);
@@ -463,9 +463,9 @@ public:
 
     /** \brief 创建一个后续任务 */
     template < typename _Fx, typename... _ArgType >
-    Task<typename FuncTraits<_Fx>::ReturnType> then( _Fx fn, _ArgType&& ... arg )
+    Task<typename FuncTraits<_Fx>::ReturnType> then( _Fx && fn, _ArgType&& ... arg )
     {
-        return Task<typename FuncTraits<_Fx>::ReturnType>( _taskCtx, fn, std::forward<_ArgType>(arg)... );
+        return Task<typename FuncTraits<_Fx>::ReturnType>( _taskCtx, std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... );
     }
 
     /** \brief 任务必须投递，否则不会被执行 */
@@ -528,3 +528,4 @@ private:
 
 
 } // namespace winux
+

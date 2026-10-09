@@ -5,6 +5,11 @@ namespace eiennet
 /** \brief 异步套接字相关 */
 namespace async
 {
+class Socket;
+class Timer;
+typedef winux::SharedPointer<Socket> SocketSharedPtr;
+typedef winux::SharedPointer<Timer> TimerSharedPtr;
+
 /** \brief 异步套接字 */
 class EIENNET_DLL Socket : public eiennet::Socket, public winux::EnableSharedFromThis<Socket>
 {
@@ -16,32 +21,32 @@ protected:
     Socket( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto );
 
 public:
-    static winux::SharedPointer<Socket> New( io::IoService & serv, int sock = -1, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoService & serv, int sock = -1, bool isNewSock = false )
     {
-        return winux::SharedPointer<Socket>( new Socket( serv, sock, isNewSock ) );
+        return SocketSharedPtr( new Socket( serv, sock, isNewSock ) );
     }
 
-    static winux::SharedPointer<Socket> New( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto )
+    static SocketSharedPtr New( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto )
     {
-        return winux::SharedPointer<Socket>( new Socket( serv, af, sockType, proto ) );
+        return SocketSharedPtr( new Socket( serv, af, sockType, proto ) );
     }
 
-    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, int sock = -1, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoServiceSharedPtr serv, int sock = -1, bool isNewSock = false )
     {
-        return winux::SharedPointer<Socket>( new Socket( *serv.get(), sock, isNewSock ) );
+        return SocketSharedPtr( new Socket( *serv.get(), sock, isNewSock ) );
     }
 
-    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, AddrFamily af, SockType sockType, Protocol proto )
+    static SocketSharedPtr New( io::IoServiceSharedPtr serv, AddrFamily af, SockType sockType, Protocol proto )
     {
-        return winux::SharedPointer<Socket>( new Socket( *serv.get(), af, sockType, proto ) );
+        return SocketSharedPtr( new Socket( *serv.get(), af, sockType, proto ) );
     }
 
     virtual ~Socket();
 
-    winux::SharedPointer<Socket> accept( EndPoint * ep = nullptr )
+    SocketSharedPtr accept( EndPoint * ep = nullptr )
     {
         int sock;
-        return this->eiennet::Socket::accept( &sock, ep ) ? this->onCreateClient( *_serv, sock, true ) : winux::SharedPointer<Socket>();
+        return this->eiennet::Socket::accept( &sock, ep ) ? this->onCreateClient( *_serv, sock, true ) : SocketSharedPtr();
     }
 
     /** \brief 设置套接字关联数据 */
@@ -63,51 +68,124 @@ public:
     _ServiceCls * getService() const { return static_cast<_ServiceCls *>(_serv); }
 
     /** \brief 接受客户连接（异步） */
-    void acceptAsync( io::IoAcceptCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoAcceptCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = nullptr );
-    /** \brief 连接服务器（异步） */
-    void connectAsync( EndPoint const & ep, io::IoConnectCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoConnectCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
-    /** \brief 接收直到指定大小的数据（异步） */
-    void recvUntilSizeAsync( size_t targetSize, io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
-    /** \brief 接收数据（异步） */
-    void recvAsync( io::IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void acceptAsync( _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = nullptr )
     {
-        this->recvUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout, th );
+        this->_serv->postAccept(
+            this->sharedFromThis(),
+            winux::FuncWrap<io::IoAcceptCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoAcceptCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 连接服务器（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void connectAsync( EndPoint const & ep, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->_serv->postConnect(
+            this->sharedFromThis(),
+            ep,
+            winux::FuncWrap<io::IoConnectCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoConnectCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 接收直到指定大小的数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void recvUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->_serv->postRecv(
+            this->sharedFromThis(),
+            targetSize,
+            winux::FuncWrap<io::IoRecvCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoRecvCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 接收数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void recvAsync( _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->recvUntilSizeAsync( 0, std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
     }
     /** \brief 发送数据（异步） */
-    void sendAsync( void const * data, size_t size, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
-    /** \brief 发送数据（异步） */
-    void sendAsync( winux::Buffer const & data, io::IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void sendAsync( void const * data, size_t size, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->sendAsync( data.get(), data.size(), cbOk, timeoutMs, cbTimeout, th );
+        this->_serv->postSend(
+            this->sharedFromThis(),
+            data,
+            size,
+            winux::FuncWrap<io::IoSendCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoSendCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 发送数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void sendAsync( winux::Buffer const & data, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->sendAsync( data.get(), data.size(), std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
     }
     /** \brief 无连接，接收直到指定大小的数据（异步） */
-    void recvFromUntilSizeAsync( size_t targetSize, io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvFromCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
-    /** \brief 无连接，接收数据（异步） */
-    void recvFromAsync( io::IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoRecvFromCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void recvFromUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->recvFromUntilSizeAsync( 0, cbOk, timeoutMs, cbTimeout, th );
+        this->_serv->postRecvFrom(
+            this->sharedFromThis(),
+            targetSize,
+            winux::FuncWrap<io::IoRecvFromCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoRecvFromCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 无连接，接收数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void recvFromAsync( _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->recvFromUntilSizeAsync( 0, std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
     }
     /** \brief 无连接，发送数据（异步） */
-    void sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
-    /** \brief 无连接，发送数据（异步） */
-    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->sendToAsync( ep, data.get(), data.size(), cbOk, timeoutMs, cbTimeout, th );
+        this->_serv->postSendTo(
+            this->sharedFromThis(),
+            ep,
+            data,
+            size,
+            winux::FuncWrap<io::IoSendToCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoSendToCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 无连接，发送数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
+    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->sendToAsync( ep, data.get(), data.size(), std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
     }
 
     /** \brief 错误处理
      *
      *  \param sock 出错的Socket */
-    DEFINE_CUSTOM_EVENT( Error, ( winux::SharedPointer<Socket> sock ), (sock) )
+    DEFINE_CUSTOM_EVENT( Error, ( SocketSharedPtr sock ), (sock) )
 
     /** \brief 创建客户连接 */
-    DEFINE_CUSTOM_EVENT_RETURN_EX( winux::SharedPointer<Socket>, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
+    DEFINE_CUSTOM_EVENT_RETURN_EX( SocketSharedPtr, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
 
 protected:
     io::IoService * _serv; // IO服务对象
     void * _data; // 套接字关联数据
     io::IoServiceThread * _thread; // 线程
 };
+
 
 /** \brief 定时器 */
 class EIENNET_DLL Timer : public winux::EnableSharedFromThis<Timer>
@@ -116,14 +194,14 @@ protected:
     Timer( io::IoService & serv );
 
 public:
-    static winux::SharedPointer<Timer> New( io::IoService & serv )
+    static TimerSharedPtr New( io::IoService & serv )
     {
-        return winux::SharedPointer<Timer>( new Timer(serv) );
+        return TimerSharedPtr( new Timer(serv) );
     }
 
-    static winux::SharedPointer<Timer> New( winux::SharedPointer<io::IoService> serv )
+    static TimerSharedPtr New( io::IoServiceSharedPtr serv )
     {
-        return winux::SharedPointer<Timer>( new Timer( *serv.get() ) );
+        return TimerSharedPtr( new Timer( *serv.get() ) );
     }
 
     virtual ~Timer();
@@ -142,18 +220,30 @@ public:
      *  如果定时器未触发信号，返回`IoTimerCtx`并设置`Timer::_timerCtx`为`nullptr`，否则返回`nullptr`。 */
     io::IoTimerCtx * stop();
 
-    void waitAsync( winux::uint64 timeoutMs, bool periodic, io::IoTimerCtx::OkFn cbOk )
+    template < typename _Fx1 >
+    void waitAsync( winux::uint64 timeoutMs, bool periodic, _Fx1 && cbOk )
     {
-        this->waitAsyncEx( timeoutMs, periodic, cbOk );
+        this->waitAsyncEx( timeoutMs, periodic, std::forward<_Fx1>(cbOk) );
     }
 
+    template < typename _Fx1 >
     void waitAsyncEx(
         winux::uint64 timeoutMs,
         bool periodic,
-        io::IoTimerCtx::OkFn cbOk,
+        _Fx1 && cbOk,
         io::IoSocketCtx * assocCtx = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
-    );
+    )
+    {
+        this->_serv->postTimer(
+            this->sharedFromThis(),
+            timeoutMs,
+            periodic,
+            winux::FuncWrap<io::IoTimerCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            assocCtx,
+            th
+        );
+    }
 
     /** \brief 设置关联线程 */
     void setThread( io::IoServiceThread * th ) { _thread = th; }
@@ -198,6 +288,9 @@ namespace tcp
 {
 namespace async
 {
+class Socket;
+typedef winux::SharedPointer<Socket> SocketSharedPtr;
+
 /** \brief TCP/IP异步套接字 */
 class EIENNET_DLL Socket : public eiennet::async::Socket
 {
@@ -210,24 +303,24 @@ protected:
     explicit Socket( io::IoService & serv ) : BaseClass( serv, BaseClass::afInet, BaseClass::sockStream, BaseClass::protoUnspec ) { }
 
 public:
-    static winux::SharedPointer<Socket> New( io::IoService & serv, int sock, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoService & serv, int sock, bool isNewSock = false )
     {
-        return winux::SharedPointer<Socket>( new Socket( serv, sock, isNewSock ) );
+        return SocketSharedPtr( new Socket( serv, sock, isNewSock ) );
     }
 
-    static winux::SharedPointer<Socket> New( io::IoService & serv )
+    static SocketSharedPtr New( io::IoService & serv )
     {
-        return winux::SharedPointer<Socket>( new Socket(serv) );
+        return SocketSharedPtr( new Socket(serv) );
     }
 
-    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, int sock, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoServiceSharedPtr serv, int sock, bool isNewSock = false )
     {
-        return winux::SharedPointer<Socket>( new Socket( *serv.get(), sock, isNewSock ) );
+        return SocketSharedPtr( new Socket( *serv.get(), sock, isNewSock ) );
     }
 
-    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv )
+    static SocketSharedPtr New( io::IoServiceSharedPtr serv )
     {
-        return winux::SharedPointer<Socket>( new Socket( *serv.get() ) );
+        return SocketSharedPtr( new Socket( *serv.get() ) );
     }
 };
 
@@ -242,6 +335,9 @@ namespace udp
 {
 namespace async
 {
+class Socket;
+typedef winux::SharedPointer<Socket> SocketSharedPtr;
+
 /** \brief UDP/IP异步套接字 */
 class EIENNET_DLL Socket : public eiennet::async::Socket
 {
@@ -254,24 +350,24 @@ protected:
     explicit Socket( io::IoService & serv ) : BaseClass( serv, BaseClass::afInet, BaseClass::sockDatagram, BaseClass::protoUnspec ) { }
 
 public:
-    static winux::SharedPointer<Socket> New( io::IoService & serv, int sock, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoService & serv, int sock, bool isNewSock = false )
     {
-        return winux::SharedPointer<Socket>( new Socket( serv, sock, isNewSock ) );
+        return SocketSharedPtr( new Socket( serv, sock, isNewSock ) );
     }
 
-    static winux::SharedPointer<Socket> New( io::IoService & serv )
+    static SocketSharedPtr New( io::IoService & serv )
     {
-        return winux::SharedPointer<Socket>( new Socket(serv) );
+        return SocketSharedPtr( new Socket(serv) );
     }
 
-    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv, int sock, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoServiceSharedPtr serv, int sock, bool isNewSock = false )
     {
-        return winux::SharedPointer<Socket>( new Socket( *serv.get(), sock, isNewSock ) );
+        return SocketSharedPtr( new Socket( *serv.get(), sock, isNewSock ) );
     }
 
-    static winux::SharedPointer<Socket> New( winux::SharedPointer<io::IoService> serv )
+    static SocketSharedPtr New( io::IoServiceSharedPtr serv )
     {
-        return winux::SharedPointer<Socket>( new Socket( *serv.get() ) );
+        return SocketSharedPtr( new Socket( *serv.get() ) );
     }
 };
 

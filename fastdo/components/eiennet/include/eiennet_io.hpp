@@ -7,6 +7,8 @@ namespace async
 {
     class Socket;
     class Timer;
+    typedef winux::SharedPointer<Socket> SocketSharedPtr;
+    typedef winux::SharedPointer<Timer> TimerSharedPtr;
 } // namespace async
 
 } // namespace eiennet
@@ -14,6 +16,9 @@ namespace async
 /** \brief IO模型 */
 namespace io
 {
+using eiennet::async::SocketSharedPtr;
+using eiennet::async::TimerSharedPtr;
+
 /** \brief IO类型 */
 enum IoType
 {
@@ -108,7 +113,7 @@ struct IoTimerCtx;
 /** \brief 套接字IO场景 */
 struct IoSocketCtx : virtual IoCtx
 {
-    winux::SharedPointer<eiennet::async::Socket> sock; //!< 异步套接字
+    SocketSharedPtr sock; //!< 异步套接字
     IoTimerCtx * timerCtx;  //!< 超时场景
 
 protected:
@@ -119,8 +124,8 @@ protected:
 /** \brief 接受场景接口 */
 struct IoAcceptCtx : IoSocketCtx
 {
-    using OkFn = std::function< bool ( winux::SharedPointer<eiennet::async::Socket> servSock, winux::SharedPointer<eiennet::async::Socket> clientSock, eiennet::ip::EndPoint const & ep ) >;
-    using TimeoutFn = std::function< bool ( winux::SharedPointer<eiennet::async::Socket> servSock, IoAcceptCtx * ctx ) >;
+    using OkFn = std::function< bool ( SocketSharedPtr servSock, SocketSharedPtr clientSock, eiennet::ip::EndPoint const & ep ) >;
+    using TimeoutFn = std::function< bool ( SocketSharedPtr servSock, IoAcceptCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
@@ -138,8 +143,8 @@ protected:
 /** \brief 连接场景接口 */
 struct IoConnectCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, winux::uint64 costTimeMs ) >;
-    using TimeoutFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, IoConnectCtx * ctx ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::uint64 costTimeMs ) >;
+    using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoConnectCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
@@ -157,8 +162,8 @@ protected:
 /** \brief 数据接收场景接口 */
 struct IoRecvCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, winux::Buffer & data, bool cnnAvail ) >;
-    using TimeoutFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, IoRecvCtx * ctx ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, bool cnnAvail ) >;
+    using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoRecvCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
@@ -179,8 +184,8 @@ protected:
 /** \brief 数据发送场景接口 */
 struct IoSendCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, size_t hadBytes, winux::uint64 costTimeMs, bool cnnAvail ) >;
-    using TimeoutFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, IoSendCtx * ctx ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, size_t hadBytes, winux::uint64 costTimeMs, bool cnnAvail ) >;
+    using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoSendCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
@@ -201,8 +206,8 @@ protected:
 /** \brief 无连接，数据接收场景接口 */
 struct IoRecvFromCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, winux::Buffer & data, eiennet::EndPoint const & ep ) >;
-    using TimeoutFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, IoRecvFromCtx * ctx ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, eiennet::EndPoint const & ep ) >;
+    using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoRecvFromCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
@@ -223,8 +228,8 @@ protected:
 /** \brief 无连接，数据发送场景接口 */
 struct IoSendToCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, size_t hadBytes, winux::uint64 costTimeMs ) >;
-    using TimeoutFn = std::function< void ( winux::SharedPointer<eiennet::async::Socket> sock, IoSendToCtx * ctx ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, size_t hadBytes, winux::uint64 costTimeMs ) >;
+    using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoSendToCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
@@ -245,11 +250,11 @@ protected:
 /** \brief 定时器场景 */
 struct EIENNET_DLL IoTimerCtx : virtual IoCtx
 {
-    using OkFn = std::function< void ( winux::SharedPointer<eiennet::async::Timer> timer, IoTimerCtx * ctx ) >;
+    using OkFn = std::function< void ( TimerSharedPtr timer, IoTimerCtx * ctx ) >;
 
     OkFn cbOk; //!< 回调函数
 
-    winux::SharedPointer<eiennet::async::Timer> timer; //!< 定时器
+    TimerSharedPtr timer; //!< 定时器
     IoSocketCtx * assocCtx; //!< 关联的IO场景
     bool periodic; //!< 是否为周期的
 
@@ -295,6 +300,9 @@ private:
     std::atomic<size_t> _weight;
 };
 
+class IoService;
+typedef winux::SharedPointer<IoService> IoServiceSharedPtr;
+
 /** \brief IoService基类 */
 class IoService
 {
@@ -304,7 +312,7 @@ public:
      *  \param threadCount 线程数量
      *  \param model IO模型
      *  \return SharedPointer<IoService> */
-    static EIENNET_FUNC_DECL(winux::SharedPointer<IoService>) New( size_t threadCount = 4, IoModel model = modelAuto );
+    static EIENNET_FUNC_DECL(IoServiceSharedPtr) New( size_t threadCount = 4, IoModel model = modelAuto );
 
     /** \brief 构造函数 */
     IoService() : _model(modelAuto)
@@ -321,14 +329,14 @@ public:
     virtual int run() = 0;
 
     virtual void postAccept(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         IoAcceptCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoAcceptCtx::TimeoutFn cbTimeout = nullptr,
         IoServiceThread * th = nullptr
     ) = 0;
     virtual void postConnect(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         eiennet::EndPoint const & ep,
         IoConnectCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
@@ -336,7 +344,7 @@ public:
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postRecv(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         size_t targetSize,
         IoRecvCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
@@ -344,7 +352,7 @@ public:
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postSend(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         void const * data,
         size_t size,
         IoSendCtx::OkFn cbOk,
@@ -353,7 +361,7 @@ public:
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postRecvFrom(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         size_t targetSize,
         IoRecvFromCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
@@ -361,7 +369,7 @@ public:
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postSendTo(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         eiennet::EndPoint const & ep,
         void const * data,
         size_t size,
@@ -371,7 +379,7 @@ public:
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postTimer(
-        winux::SharedPointer<eiennet::async::Timer> timer,
+        TimerSharedPtr timer,
         winux::uint64 timeoutMs,
         bool periodic,
         IoTimerCtx::OkFn cbOk,
@@ -383,7 +391,7 @@ public:
     virtual void timerTrigger( IoTimerCtx * timerCtx ) { }
 
     /** \brief 标记删除指定sock所有IO监听 */
-    virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) { }
+    virtual void removeSock( SocketSharedPtr sock ) { }
 
     /** \brief 获取套接字IO数 */
     virtual size_t getSockIoCount() const { return 0; }

@@ -191,9 +191,9 @@ public:
      *
      *  立即创建一个线程，以routine作为线程处理例程 */
     template < typename _Fx, typename... _ArgType >
-    explicit Thread( bool isStartup, _Fx routine, _ArgType&&... arg ) : _param(nullptr), _attr(false), _exitVal(nullptr), _deleter(nullptr), _group(nullptr), _isRunning(false)
+    explicit Thread( bool isStartup, _Fx && routine, _ArgType&&... arg ) : _param(nullptr), _attr(false), _exitVal(nullptr), _deleter(nullptr), _group(nullptr), _isRunning(false)
     {
-        this->setRunable( routine, std::forward<_ArgType>(arg)... );
+        this->setRunable( std::forward<_Fx>(routine), std::forward<_ArgType>(arg)... );
         if ( isStartup ) this->startup();
     }
 
@@ -214,9 +214,9 @@ public:
 
     /** \brief 实际创建一个线程，提供你自己的处理例程 */
     template < typename _Fx, typename... _ArgType >
-    int startup( _Fx routine, _ArgType&&... arg )
+    int startup( _Fx && routine, _ArgType&&... arg )
     {
-        this->setRunable( routine, std::forward<_ArgType>(arg)... );
+        this->setRunable( std::forward<_Fx>(routine), std::forward<_ArgType>(arg)... );
         return this->startup();
     }
 
@@ -251,9 +251,9 @@ public:
 
     /** \brief 设置`Runable`，`run()`默认会调用它 */
     template < typename _Fx, typename... _ArgType >
-    Thread & setRunable( _Fx routine, _ArgType&&... arg )
+    Thread & setRunable( _Fx && routine, _ArgType&&... arg )
     {
-        this->_runable.attachNew( NewRunable( routine, std::forward<_ArgType>(arg)... ) );
+        this->_runable.attachNew( NewRunable( std::forward<_Fx>(routine), std::forward<_ArgType>(arg)... ) );
         return *this;
     }
 
@@ -533,11 +533,11 @@ public:
 
     /** \brief 构造函数2 提供一个线程处理例程，并指定创建的线程数量 */
     template < typename _Fx, typename... _ArgType >
-    ThreadGroup( size_t count, _Fx fn, _ArgType&&... arg ) : _mtxGroup(true), _cdtGroup(true)
+    ThreadGroup( size_t count, _Fx && fn, _ArgType&&... arg ) : _mtxGroup(true), _cdtGroup(true)
     {
         for ( size_t i = 0; i < count; i++ )
         {
-            Thread * p = new Thread( false, fn, std::forward<_ArgType>(arg)... );
+            Thread * p = new Thread( false, std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... );
             p->_group = this;
             _threads.emplace_back(p);
         }
@@ -570,13 +570,13 @@ public:
 
     /** \brief 按指定的线程处理例程，创建一定数量的线程 */
     template < typename _Fx, typename... _ArgType >
-    ThreadGroup & create( size_t count, _Fx fn, _ArgType&&... arg )
+    ThreadGroup & create( size_t count, _Fx && fn, _ArgType&&... arg )
     {
         this->destroy();
 
         for ( size_t i = 0; i < count; i++ )
         {
-            Thread * p = new Thread( false, fn, std::forward<_ArgType>(arg)... );
+            Thread * p = new Thread( false, std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... );
             p->_group = this;
             _threads.emplace_back(p);
         }

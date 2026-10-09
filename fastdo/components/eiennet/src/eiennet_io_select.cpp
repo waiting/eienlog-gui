@@ -913,13 +913,12 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 }
                                 else
                                 {
-                                    IoEventsData & ioEvents = *this;
                                     // 重投这个IO请求和Timer
                                     ctx->startTime = winux::GetUtcTimeMs();
                                     if ( ctx->timeoutMs != -1 )
                                     {
-                                        eiennet::async::Timer::New( *sock->getService() )->waitAsyncEx( ctx->timeoutMs, false, [&ioEvents] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
-                                            _IoSocketCtxTimeoutCallback( timer, timerCtx, ioEvents );
+                                        eiennet::async::Timer::New( *sock->getService() )->waitAsyncEx( ctx->timeoutMs, false, [this] ( winux::SharedPointer<eiennet::async::Timer> timer, io::IoTimerCtx * timerCtx ) {
+                                            _IoSocketCtxTimeoutCallback( timer, timerCtx, *this );
                                         }, ctx, sock->getThread() );
                                     }
                                 }
@@ -956,7 +955,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                     // 处理回调
                                     if ( ctx->cbOk )
                                     {
-                                        ctx->cbOk( sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail );
+                                        ctx->cbOk( sock, ctx->data, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail );
                                     }
 
                                     // 已处理，完成这个请求
@@ -1055,7 +1054,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                     // 处理回调
                                     if ( ctx->cbOk )
                                     {
-                                        ctx->cbOk( sock, ctx->hadBytes, ctx->costTimeMs );
+                                        ctx->cbOk( sock, ctx->data, ctx->hadBytes, ctx->costTimeMs );
                                     }
 
                                     // 已处理，完成这个请求

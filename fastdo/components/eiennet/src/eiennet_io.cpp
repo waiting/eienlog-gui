@@ -56,7 +56,7 @@ bool IoTimerCtx::cancel( CancelType cancelType )
 }
 
 // class IoService ----------------------------------------------------------------------------
-EIENNET_FUNC_IMPL(winux::SharedPointer<IoService>) IoService::New( size_t threadCount, IoModel model )
+EIENNET_FUNC_IMPL(IoServiceSharedPtr) IoService::New( size_t threadCount, IoModel model )
 {
     switch ( model )
     {

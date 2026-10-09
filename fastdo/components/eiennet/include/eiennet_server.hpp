@@ -60,7 +60,7 @@ public:
     Server(
         bool autoReadData,
         ip::EndPoint const & ep,
-        int threadCount = 4,
+        size_t threadCount = 4,
         int backlog = 0,
         double serverWait = 0.002,
         double verboseInterval = 0.01,
@@ -82,7 +82,7 @@ public:
     bool startup(
         bool autoReadData,
         ip::EndPoint const & ep,
-        int threadCount = 4,
+        size_t threadCount = 4,
         int backlog = 0,
         double serverWait = 0.002,
         double verboseInterval = 0.01,
@@ -109,9 +109,9 @@ protected:
     bool _addClient( ip::EndPoint const & clientEp, winux::SharedPointer<ip::tcp::Socket> clientSockPtr, winux::SharedPointer<ClientCtx> ** ppClientCtxPtr );
     /** \brief 往线程池投递任务 */
     template < typename _Fx, typename... _ArgType >
-    void _postTask( winux::SharedPointer<ClientCtx> clientCtxPtr, _Fx fn, _ArgType&& ... arg )
+    void _postTask( winux::SharedPointer<ClientCtx> clientCtxPtr, _Fx && fn, _ArgType&& ... arg )
     {
-        auto routine = MakeSimple( NewRunable( fn, std::forward<_ArgType>(arg)... ) );
+        auto routine = MakeSimple( NewRunable( std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... ) );
         // 标记为处理事件中
         clientCtxPtr->processingEvents++;
         this->_pool.task( [routine, clientCtxPtr] () {
@@ -159,11 +159,11 @@ protected:
      *
      *  \param clientId 客户唯一标识（64位数字）
      *  \param clientEpStr `ip#EndPoint`字符串
-     *  \param clientSockPtr 客户套接字 */
+     *  \param clientSock 客户套接字 */
     DEFINE_CUSTOM_EVENT_RETURN_EX(
         ClientCtx *,
         CreateClient,
-        ( winux::uint64 clientId, winux::String const & clientEpStr, winux::SharedPointer<ip::tcp::Socket> clientSockPtr )
+        ( winux::uint64 clientId, winux::String const & clientEpStr, winux::SharedPointer<ip::tcp::Socket> clientSock )
     );
 
 protected:
@@ -190,6 +190,179 @@ protected:
 };
 
 
+namespace async
+{
+class ClientCtx;
+class Server;
+
+class ClientSocket;
+typedef winux::SharedPointer<ClientSocket> ClientSocketSharedPtr;
+
+/** \brief 客户套接字类 */
+class ClientSocket : public Socket
+{
+protected:
+    explicit ClientSocket( ClientCtx * clientCtx, int sock = -1, bool isNewSock = false );
+
+public:
+    static ClientSocketSharedPtr New( ClientCtx * clientCtx, int sock = -1, bool isNewSock = false )
+    {
+        return winux::MakeShared( new ClientSocket( clientCtx, sock, isNewSock ) );
+    }
+
+    template < class _ClientCtx = ClientCtx >
+    _ClientCtx * getClientCtx() const { return static_cast<_ClientCtx *>(this->_clientCtx); }
+
+private:
+    ClientCtx * _clientCtx;
+};
+
+class ServerSocket;
+typedef winux::SharedPointer<ServerSocket> ServerSocketSharedPtr;
+
+/** \brief 服务器套接字类 */
+class ServerSocket : public Socket
+{
+protected:
+    explicit ServerSocket( Server * server );
+    explicit ServerSocket( Server * server, int sock, bool isNewSock );
+
+public:
+    static ServerSocketSharedPtr New( Server * server )
+    {
+        return winux::MakeShared( new ServerSocket(server) );
+    }
+
+    static ServerSocketSharedPtr New( Server * server, int sock, bool isNewSock )
+    {
+        return winux::MakeShared( new ServerSocket( server, sock, isNewSock ) );
+    }
+
+    template < class _Server = Server >
+    _Server * getServer() const { return static_cast<_Server *>(this->_server); }
+
+private:
+    Server * _server;
+};
+
+/** \brief 基础客户场景类 */
+class EIENNET_DLL ClientCtx
+{
+public:
+    ClientCtx( Server * server, int sock, bool isNewSock );
+
+    virtual ~ClientCtx();
+
+    winux::String getStamp() const;
+
+    Server * server;
+    eiennet::ip::EndPoint clientEp;
+    ClientSocketSharedPtr clientSock;
+};
+
+/** \brief 基础服务器类 */
+class EIENNET_DLL Server
+{
+public:
+    Server();
+
+    Server(
+        ip::EndPoint const & ep,
+        int servSockFd = -1,
+        io::IoModel model = io::modelAuto,
+        size_t threadCount = 4,
+        double infoInterval = 0.1,
+        int verbose = 1,
+        winux::String const & logViewer = $T("127.0.0.1:22345")
+    );
+
+    bool init(
+        ip::EndPoint const & ep,
+        int servSockFd = -1,
+        io::IoModel model = io::modelAuto,
+        size_t threadCount = 4,
+        double infoInterval = 0.1,
+        int verbose = 1,
+        winux::String const & logViewer = $T("127.0.0.1:22345")
+    );
+
+    virtual int run()
+    {
+        return this->_service->run();
+    }
+
+    void stop()
+    {
+        this->_service->stop();
+    }
+
+    // 当创建客户连接对象
+    /** \brief 创建客户连接对象
+     *
+     *  \param server Server *
+     *  \param sock int
+     *  \param isNewSock bool
+     *  \return eiennet::async::ClientCtx * */
+    DEFINE_CUSTOM_EVENT_RETURN_EX(
+        ClientCtx *,
+        CreateClient,
+        ( Server * server, int sock, bool isNewSock )
+    );
+
+    // 接受连接
+    /** \brief 接受连接
+     *
+     *  \param servSock ServerSocketSharedPtr
+     *  \param clientSock ClientSocketSharedPtr
+     *  \param ep eiennet::ip::EndPoint const &
+     *  \return bool */
+    DEFINE_CUSTOM_EVENT_RETURN_EX(
+        bool,
+        Accept,
+        ( Server * server, ClientCtx * clientCtx, eiennet::ip::EndPoint const & ep )
+    );
+
+private:
+    io::IoServiceSharedPtr _service;
+    ServerSocketSharedPtr _servSock;
+    double _infoInterval;
+    int _verbose;
+    winux::String _logViewer;
+
+    friend class ClientCtx;
+    friend class ClientSocket;
+    friend class ServerSocket;
+    DISABLE_OBJECT_COPY(Server)
+};
+
+// class ClientSocket implements --------------------------------------------------------------
+inline ClientSocket::ClientSocket( ClientCtx * clientCtx, int sock, bool isNewSock ) :
+    Socket( *clientCtx->server->_service.get(), sock, isNewSock ),
+    _clientCtx(clientCtx)
+{
+
+}
+
+// class ServerSocket implements --------------------------------------------------------------
+inline ServerSocket::ServerSocket( Server * server ) :
+    Socket( *server->_service.get(), Socket::afInet, Socket::sockStream, Socket::protoUnspec ),
+    _server(server)
+{
+
+}
+
+inline ServerSocket::ServerSocket( Server * server, int sock, bool isNewSock ) :
+    Socket( *server->_service.get(), sock, isNewSock ),
+    _server(server)
+{
+}
+
+
+} // namespace async
+
+
 } // namespace eiennet
 
+
 #endif // __EIENNET_SERVER_HPP__
+

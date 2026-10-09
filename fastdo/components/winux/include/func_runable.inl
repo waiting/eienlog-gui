@@ -25,13 +25,14 @@ class RunableT : public RunableInvoker<typename winux::FuncTraits<_Fx>::ReturnTy
 {
 public:
     using FuncTraits = winux::FuncTraits<_Fx>;
+    using Fx = typename std::decay<_Fx>::type;
     using TargetTuple = _TargetTuple;
     using ParamsIndexSequence = typename MakeIndexSequence< std::tuple_size< typename FuncTraits::ParamsTuple >::value >::Type;
     using ReturnType = typename winux::FuncTraits<_Fx>::ReturnType;
     using ClassType = typename winux::FuncTraits<_Fx>::ClassType;
 
     template < typename... _ArgType >
-    RunableT( _Fx pfn, _ArgType&&... arg ) : _pfn(pfn), _tuple( std::forward<_ArgType>(arg)... )
+    RunableT( _Fx && fn, _ArgType&&... arg ) : _fn( std::forward<_Fx>(fn) ), _tuple( std::forward<_ArgType>(arg)... )
     {
     }
 
@@ -42,7 +43,7 @@ public:
 
     virtual RunableT * clone()
     {
-        return new RunableT(_pfn, _tuple);
+        return new RunableT( _fn, _tuple );
     }
 
     virtual ReturnType invoke()
@@ -53,14 +54,14 @@ public:
     template < size_t... _Index >
     ReturnType _invoke( IndexSequence<_Index...> )
     {
-        return (std::get<0>(_tuple)->*_pfn)( std::get<_Index + 1>(_tuple)... );
+        return (std::get<0>(_tuple)->*_fn)( std::get<_Index + 1>(_tuple)... );
     }
 
-    _Fx _pfn;
+    Fx _fn;
     TargetTuple _tuple;
 
 protected:
-    RunableT( _Fx pfn, TargetTuple && tuple ) : _pfn(pfn), _tuple( std::forward<TargetTuple>(tuple) )
+    RunableT( Fx & fn, TargetTuple & tuple ) : _fn(fn), _tuple(tuple)
     {
     }
 };
@@ -70,13 +71,14 @@ class RunableT< _Fx, _TargetTuple, void > : public RunableInvoker<typename winux
 {
 public:
     using FuncTraits = winux::FuncTraits<_Fx>;
+    using Fx = typename std::decay<_Fx>::type;
     using TargetTuple = _TargetTuple;
     using ParamsIndexSequence = typename MakeIndexSequence< std::tuple_size< typename FuncTraits::ParamsTuple >::value >::Type;
     using ReturnType = typename winux::FuncTraits<_Fx>::ReturnType;
     using ClassType = typename winux::FuncTraits<_Fx>::ClassType;
 
     template < typename... _ArgType >
-    RunableT( _Fx fn, _ArgType&&... arg ) : _fn(fn), _tuple( std::forward<_ArgType>(arg)... )
+    RunableT( _Fx && fn, _ArgType&&... arg ) : _fn( std::forward<_Fx>(fn) ), _tuple( std::forward<_ArgType>(arg)... )
     {
     }
 
@@ -87,7 +89,7 @@ public:
 
     virtual RunableT * clone()
     {
-        return new RunableT(_fn, _tuple);
+        return new RunableT( _fn, _tuple );
     }
 
     virtual ReturnType invoke()
@@ -101,11 +103,11 @@ public:
         return _fn( std::get<_Index>(_tuple)... );
     }
 
-    _Fx _fn;
+    Fx _fn;
     TargetTuple _tuple;
 
 protected:
-    RunableT( _Fx fn, TargetTuple && tuple ) : _fn(fn), _tuple( std::forward<TargetTuple>(tuple) )
+    RunableT( Fx & fn, TargetTuple & tuple ) : _fn(fn), _tuple(tuple)
     {
     }
 };
@@ -115,7 +117,7 @@ protected:
  *  \param fn 执行函数。可以是普通函数，成员函数，lambda表达式。
  *  \param arg... 传递的参数。内部会使用tuple保存参数的副本（会存在一个实际的同类型对象）。所以要想不进行值拷贝构造，可以使用std::ref()保存引用包装对象，或者使用std::move()触发移动构造。 */
 template < typename _Fx, typename... _ArgType >
-RunableT< _Fx, std::tuple< typename std::decay<_ArgType>::type... > > * NewRunable( _Fx fn, _ArgType&&... arg )
+RunableT< _Fx, std::tuple< typename std::decay<_ArgType>::type... > > * NewRunable( _Fx && fn, _ArgType&&... arg )
 {
-    return new RunableT< _Fx, std::tuple<typename std::decay<_ArgType>::type...> >( fn, std::forward<_ArgType>(arg)... );
+    return new RunableT< _Fx, std::tuple<typename std::decay<_ArgType>::type...> >( std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... );
 }

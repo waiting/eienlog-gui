@@ -535,7 +535,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( sendCtx->cbOk )
                                 {
-                                    sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
+                                    sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
                                 }
 
                                 // 已处理，完成这个请求
@@ -583,7 +583,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( sendToCtx->cbOk )
                                 {
-                                    sendToCtx->cbOk( sendToCtx->sock, sendToCtx->hadBytes, sendToCtx->costTimeMs );
+                                    sendToCtx->cbOk( sendToCtx->sock, sendToCtx->data, sendToCtx->hadBytes, sendToCtx->costTimeMs );
                                 }
 
                                 // 已处理，完成这个请求
@@ -652,7 +652,7 @@ void IoEventsData::_handleIoCtxsCallback( int rc )
                                 // 处理回调
                                 if ( sendCtx->cbOk )
                                 {
-                                    sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
+                                    sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
                                 }
 
                                 // 已处理，完成这个请求

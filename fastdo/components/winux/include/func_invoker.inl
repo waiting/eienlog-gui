@@ -13,13 +13,14 @@ class Invoker
 {
 public:
     using FuncTraits = winux::FuncTraits<_Fx>;
+    using Fx = typename std::decay<_Fx>::type;
     using ParamsTuple = typename FuncTraits::ParamsTuple;
     using ParamsIndexSequence = typename MakeIndexSequence< std::tuple_size<ParamsTuple>::value >::Type;
     using ClassType = typename FuncTraits::ClassType;
     using ReturnType = typename FuncTraits::ReturnType;
 
     template < typename... _ArgType >
-    Invoker( _Fx func, ClassType * obj, _ArgType&&... arg ) : _func(func), _obj(obj), _params( std::forward<_ArgType>(arg)... )
+    Invoker( _Fx && func, ClassType * obj, _ArgType&&... arg ) : _func( std::forward<_Fx>(func) ), _obj(obj), _params( std::forward<_ArgType>(arg)... )
     {
     }
 
@@ -34,7 +35,7 @@ protected:
         return (_obj->*_func)( std::get<_Index>(_params)... );
     }
 
-    _Fx _func;
+    Fx _func;
     ClassType * _obj;
     ParamsTuple _params;
 };
@@ -48,12 +49,13 @@ class Invoker<
 {
 public:
     using FuncTraits = winux::FuncTraits<_Fx>;
+    using Fx = typename std::decay<_Fx>::type;
     using ParamsTuple = typename FuncTraits::ParamsTuple;
     using ParamsIndexSequence = typename MakeIndexSequence< std::tuple_size<ParamsTuple>::value >::Type;
     using ClassType = typename FuncTraits::ClassType;
 
     template < typename... _ArgType >
-    Invoker( _Fx func, ClassType * obj, _ArgType&&... arg ) : _func(func), _obj(obj), _params( std::forward<_ArgType>(arg)... )
+    Invoker( _Fx && func, ClassType * obj, _ArgType&&... arg ) : _func( std::forward<_Fx>(func) ), _obj(obj), _params( std::forward<_ArgType>(arg)... )
     {
     }
 
@@ -68,7 +70,7 @@ protected:
         (_obj->*_func)( std::get<_Index>(_params)... );
     }
 
-    _Fx _func;
+    Fx _func;
     ClassType * _obj;
     ParamsTuple _params;
 };
@@ -82,12 +84,13 @@ class Invoker<
 {
 public:
     using FuncTraits = winux::FuncTraits<_Fx>;
+    using Fx = typename std::decay<_Fx>::type;
     using ParamsTuple = typename FuncTraits::ParamsTuple;
     using ParamsIndexSequence = typename MakeIndexSequence< std::tuple_size<ParamsTuple>::value >::Type;
     using ReturnType = typename FuncTraits::ReturnType;
 
     template < typename... _ArgType >
-    Invoker( _Fx func, _ArgType&&... arg ) : _func(func), _params( std::forward<_ArgType>(arg)... )
+    Invoker( _Fx && func, _ArgType&&... arg ) : _func( std::forward<_Fx>(func) ), _params( std::forward<_ArgType>(arg)... )
     {
     }
 
@@ -102,7 +105,7 @@ protected:
         return _func( std::get<_Index>(_params)... );
     }
 
-    _Fx _func;
+    Fx _func;
     ParamsTuple _params;
 };
 
@@ -115,11 +118,12 @@ class Invoker<
 {
 public:
     using FuncTraits = winux::FuncTraits<_Fx>;
+    using Fx = typename std::decay<_Fx>::type;
     using ParamsTuple = typename FuncTraits::ParamsTuple;
     using ParamsIndexSequence = typename MakeIndexSequence< std::tuple_size<ParamsTuple>::value >::Type;
 
     template < typename... _ArgType >
-    Invoker( _Fx func, _ArgType&&... arg ) : _func(func), _params( std::forward<_ArgType>(arg)... )
+    Invoker( _Fx && func, _ArgType&&... arg ) : _func( std::forward<_Fx>(func) ), _params( std::forward<_ArgType>(arg)... )
     {
     }
 
@@ -134,12 +138,12 @@ protected:
         _func( std::get<_Index>(_params)... );
     }
 
-    _Fx _func;
+    Fx _func;
     ParamsTuple _params;
 };
 
 template < typename _Fx, typename... _ArgType >
-Invoker<_Fx> * NewInvoker( _Fx fn, _ArgType&& ... arg )
+Invoker<_Fx> * NewInvoker( _Fx && fn, _ArgType&& ... arg )
 {
-    return new Invoker<_Fx>( fn, std::forward<_ArgType>(arg)... );
+    return new Invoker<_Fx>( std::forward<_Fx>(fn), std::forward<_ArgType>(arg)... );
 }

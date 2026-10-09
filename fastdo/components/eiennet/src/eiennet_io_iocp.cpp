@@ -381,7 +381,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 // 处理回调
                                 if ( ctx->cbOk )
                                 {
-                                    ctx->cbOk( ctx->sock, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail );
+                                    ctx->cbOk( ctx->sock, ctx->data, ctx->hadBytes, ctx->costTimeMs, ctx->cnnAvail );
                                 }
 
                                 // 已处理，完成这个请求
@@ -454,7 +454,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 // 处理回调
                                 if ( ctx->cbOk )
                                 {
-                                    ctx->cbOk( ctx->sock, ctx->hadBytes, ctx->costTimeMs );
+                                    ctx->cbOk( ctx->sock, ctx->data, ctx->hadBytes, ctx->costTimeMs );
                                 }
 
                                 // 已处理，完成这个请求
@@ -528,7 +528,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                     // 处理回调
                                     if ( sendCtx->cbOk )
                                     {
-                                        sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
+                                        sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
                                     }
 
                                     // 已处理，完成这个请求
@@ -580,7 +580,7 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 // 处理回调
                                 if ( sendCtx->cbOk )
                                 {
-                                    sendCtx->cbOk( sendCtx->sock, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
+                                    sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
                                 }
 
                                 // 已处理，完成这个请求

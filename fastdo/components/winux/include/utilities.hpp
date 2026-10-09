@@ -355,15 +355,18 @@ struct MakeIndexSequence< 0, IndexSequence<_Index...> >
 /** \brief 函数特征 */
 #include "func_traits.inl"
 
+/** \brief 函数包装 */
+#include "func_wrapper.inl"
+
 /** \brief Runable模板 */
 #include "func_runable.inl"
 
 /** \brief Invoker模板 */
 #include "func_invoker.inl"
 
-/** \brief 函数包装,用来将不同调用约定的函数统一包装成默认约定 */
+/** \brief 调用约定包装，用来将不同调用约定的函数统一包装成默认约定 */
 template < typename _PfnType, _PfnType pfn >
-struct FuncWrapper
+struct ConventionWrapper
 {
     template < typename... _ArgType >
     static typename FuncTraits<_PfnType>::ReturnType func( _ArgType&& ...arg )
