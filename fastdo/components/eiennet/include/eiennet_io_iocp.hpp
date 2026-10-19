@@ -64,7 +64,7 @@ public:
     winux::Buffer outputBuf; // for AcceptEx() lpOutputBuffer
     winux::uint32 localAddrLen;
     winux::uint32 remoteAddrLen;
-    winux::SharedPointer<eiennet::async::Socket> clientSock;
+    SocketSharedPtr clientSock;
 
     virtual bool cancel( CancelType cancelType ) override
     {
@@ -345,14 +345,14 @@ public:
     virtual int run() override;
 
     virtual void postAccept(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         IoAcceptCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
         IoAcceptCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = nullptr
     ) override;
     virtual void postConnect(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         eiennet::EndPoint const & ep,
         IoConnectCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
@@ -360,7 +360,7 @@ public:
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postRecv(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         size_t targetSize,
         IoRecvCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
@@ -368,7 +368,7 @@ public:
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postSend(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         void const * data,
         size_t size,
         IoSendCtx::OkFn cbOk,
@@ -377,7 +377,7 @@ public:
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postRecvFrom(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         size_t targetSize,
         IoRecvFromCtx::OkFn cbOk,
         winux::uint64 timeoutMs = -1,
@@ -385,7 +385,7 @@ public:
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postSendTo(
-        winux::SharedPointer<eiennet::async::Socket> sock,
+        SocketSharedPtr sock,
         eiennet::EndPoint const & ep,
         void const * data,
         size_t size,
@@ -395,7 +395,7 @@ public:
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postTimer(
-        winux::SharedPointer<eiennet::async::Timer> timer,
+        TimerSharedPtr timer,
         winux::uint64 timeoutMs,
         bool periodic,
         IoTimerCtx::OkFn cbOk,
@@ -406,13 +406,13 @@ public:
     virtual void timerTrigger( io::IoTimerCtx * timerCtx ) override;
 
     /** \brief 标记删除指定sock所有IO监听 */
-    virtual void removeSock( winux::SharedPointer<eiennet::async::Socket> sock ) override;
+    virtual void removeSock( SocketSharedPtr sock ) override;
 
     /** \brief 关联线程
      *
      *  \param sock 异步套接字
      *  \param th 为空表示主线程，为-1表示自动分配，其他则为指定线程 */
-    bool associate( winux::SharedPointer<eiennet::async::Socket> sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
+    bool associate( SocketSharedPtr sock, io::IoServiceThread * th = (io::IoServiceThread *)-1 );
 
     /** \brief 获取套接字IO数 */
     virtual size_t getSockIoCount() const override { return _ioEvents._sockIoCount; }
@@ -441,3 +441,4 @@ private:
 
 
 #endif // __EIENNET_IO_IOCP_HPP__
+

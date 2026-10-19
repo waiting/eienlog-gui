@@ -172,10 +172,11 @@ public:
         this->sendToAsync( ep, data.get(), data.size(), std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
     }
 
-    /** \brief 错误处理
-     *
-     *  \param sock 出错的Socket */
+    /** \brief 错误事件处理 */
     DEFINE_CUSTOM_EVENT( Error, ( SocketSharedPtr sock ), (sock) )
+
+    /** \brief 关闭事件处理 */
+    DEFINE_CUSTOM_EVENT( Close, ( SocketSharedPtr sock ), (sock) )
 
     /** \brief 创建客户连接 */
     DEFINE_CUSTOM_EVENT_RETURN_EX( SocketSharedPtr, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );

@@ -162,7 +162,7 @@ protected:
 /** \brief 数据接收场景接口 */
 struct IoRecvCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, bool cnnAvail ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data ) >;
     using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoRecvCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
@@ -184,7 +184,7 @@ protected:
 /** \brief 数据发送场景接口 */
 struct IoSendCtx : IoSocketCtx
 {
-    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, size_t hadBytes, winux::uint64 costTimeMs, bool cnnAvail ) >;
+    using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, size_t hadBytes, winux::uint64 costTimeMs ) >;
     using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoSendCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
