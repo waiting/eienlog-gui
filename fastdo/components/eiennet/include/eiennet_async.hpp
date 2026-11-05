@@ -79,6 +79,7 @@ public:
             th
         );
     }
+
     /** \brief 连接服务器（异步） */
     template < typename _Fx1, typename _Fx2 = std::nullptr_t >
     void connectAsync( EndPoint const & ep, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
@@ -92,67 +93,106 @@ public:
             th
         );
     }
+
     /** \brief 接收直到指定大小的数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void recvUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void recvUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
         this->_serv->postRecv(
             this->sharedFromThis(),
+            false,
             targetSize,
             winux::FuncWrap<io::IoRecvCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            winux::FuncWrap<io::IoRecvCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
             timeoutMs,
-            winux::FuncWrap<io::IoRecvCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            winux::FuncWrap<io::IoRecvCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 跳过直到指定大小的数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void skipUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->_serv->postRecv(
+            this->sharedFromThis(),
+            true,
+            targetSize,
+            winux::FuncWrap<io::IoRecvCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            winux::FuncWrap<io::IoRecvCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoRecvCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
             th
         );
     }
     /** \brief 接收数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void recvAsync( _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void recvAsync( _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->recvUntilSizeAsync( 0, std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
+        this->recvUntilSizeAsync( 0, std::forward<_Fx1>(cbOk), std::forward<_Fx2>(cbFail), timeoutMs, std::forward<_Fx3>(cbTimeout), th );
     }
+
     /** \brief 发送数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void sendAsync( void const * data, size_t size, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void sendAsync( void const * data, size_t size, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
         this->_serv->postSend(
             this->sharedFromThis(),
             data,
             size,
             winux::FuncWrap<io::IoSendCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            winux::FuncWrap<io::IoSendCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
             timeoutMs,
-            winux::FuncWrap<io::IoSendCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            winux::FuncWrap<io::IoSendCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
             th
         );
     }
     /** \brief 发送数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void sendAsync( winux::Buffer const & data, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void sendAsync( winux::Buffer const & data, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->sendAsync( data.get(), data.size(), std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
+        this->sendAsync( data.get(), data.size(), std::forward<_Fx1>(cbOk), std::forward<_Fx2>(cbFail), timeoutMs, std::forward<_Fx3>(cbTimeout), th );
     }
+
     /** \brief 无连接，接收直到指定大小的数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void recvFromUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void recvFromUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
         this->_serv->postRecvFrom(
             this->sharedFromThis(),
+            false,
             targetSize,
             winux::FuncWrap<io::IoRecvFromCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            winux::FuncWrap<io::IoRecvFromCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
             timeoutMs,
-            winux::FuncWrap<io::IoRecvFromCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            winux::FuncWrap<io::IoRecvFromCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
+            th
+        );
+    }
+    /** \brief 无连接，跳过直到指定大小的数据（异步） */
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void cnnlessSkipUntilSizeAsync( size_t targetSize, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    {
+        this->_serv->postRecvFrom(
+            this->sharedFromThis(),
+            true,
+            targetSize,
+            winux::FuncWrap<io::IoRecvFromCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            winux::FuncWrap<io::IoRecvFromCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
+            timeoutMs,
+            winux::FuncWrap<io::IoRecvFromCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
             th
         );
     }
     /** \brief 无连接，接收数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void recvFromAsync( _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void recvFromAsync( _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->recvFromUntilSizeAsync( 0, std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
+        this->recvFromUntilSizeAsync( 0, std::forward<_Fx1>(cbOk), std::forward<_Fx2>(cbFail), timeoutMs, std::forward<_Fx3>(cbTimeout), th );
     }
+
     /** \brief 无连接，发送数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void sendToAsync( EndPoint const & ep, void const * data, size_t size, io::IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs = -1, io::IoSendToCtx::TimeoutFn cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void sendToAsync( EndPoint const & ep, void const * data, size_t size, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
         this->_serv->postSendTo(
             this->sharedFromThis(),
@@ -160,23 +200,21 @@ public:
             data,
             size,
             winux::FuncWrap<io::IoSendToCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
+            winux::FuncWrap<io::IoSendToCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
             timeoutMs,
-            winux::FuncWrap<io::IoSendToCtx::TimeoutFn>( std::forward<_Fx2>(cbTimeout) ),
+            winux::FuncWrap<io::IoSendToCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
             th
         );
     }
     /** \brief 无连接，发送数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t >
-    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, _Fx1 && cbOk, winux::uint64 timeoutMs = -1, _Fx2 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
+    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
-        this->sendToAsync( ep, data.get(), data.size(), std::forward<_Fx1>(cbOk), timeoutMs, std::forward<_Fx2>(cbTimeout), th );
+        this->sendToAsync( ep, data.get(), data.size(), std::forward<_Fx1>(cbOk), std::forward<_Fx2>(cbFail), timeoutMs, std::forward<_Fx3>(cbTimeout), th );
     }
 
     /** \brief 错误事件处理 */
     DEFINE_CUSTOM_EVENT( Error, ( SocketSharedPtr sock ), (sock) )
-
-    /** \brief 关闭事件处理 */
-    DEFINE_CUSTOM_EVENT( Close, ( SocketSharedPtr sock ), (sock) )
 
     /** \brief 创建客户连接 */
     DEFINE_CUSTOM_EVENT_RETURN_EX( SocketSharedPtr, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
@@ -383,3 +421,4 @@ public:
 
 
 } // namespace eiennet
+

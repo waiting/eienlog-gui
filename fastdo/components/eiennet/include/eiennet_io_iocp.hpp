@@ -95,8 +95,11 @@ public:
         IoCtx::cancel(cancelType);
         if ( this->sock && this->sock->operator bool() )
         {
+            //ColorOutput( winux::fgPurple, sock->get(), ": CancelIoEx()" );
             if ( CancelIoEx( (HANDLE)(INT_PTR)this->sock->get(), &this->ol ) )
             {
+                DWORD err = WSAGetLastError();
+                //ColorOutputLine( winux::fgPurple, "=true, ", err );
                 return true;
             }
         }
@@ -229,10 +232,31 @@ protected:
 /** \brief 定时器IO场景 */
 struct IoTimerCtx : IoCtx, io::IoTimerCtx, winux::EnableStaticNew<IoTimerCtx>
 {
+    eiennet::ip::udp::Socket _sockSignal; //!< UDP套接字，用于发送定时信号的管道
+    winux::ushort _portSockSignal; //!< 信号套接字端口
+
+    WSABUF wsabuf;
+    winux::uint64 data;
+    size_t hadBytes;
+    eiennet::ip::EndPoint epFrom;
+
     virtual bool cancel( CancelType cancelType ) override { return io::IoTimerCtx::cancel(cancelType); }
 
 protected:
-    IoTimerCtx() { }
+    IoTimerCtx()
+    {
+        _portSockSignal = 0;
+        if ( _sockSignal.bind( eiennet::ip::EndPoint( "", 0 ) ) )
+        {
+            eiennet::ip::EndPoint ep;
+            _sockSignal.getBoundEp(&ep);
+            _portSockSignal = ep.getPort();
+        }
+
+        ZeroMemory( &this->wsabuf, sizeof(WSABUF) );
+        this->data = 0;
+        this->hadBytes = 0;
+    }
     virtual ~IoTimerCtx() { }
 
     FRIEND_ENABLE_STATIC_NEW;
@@ -361,8 +385,10 @@ public:
     ) override;
     virtual void postRecv(
         SocketSharedPtr sock,
+        bool discard,
         size_t targetSize,
         IoRecvCtx::OkFn cbOk,
+        IoRecvCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoRecvCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
@@ -372,14 +398,17 @@ public:
         void const * data,
         size_t size,
         IoSendCtx::OkFn cbOk,
+        IoSendCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoSendCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postRecvFrom(
         SocketSharedPtr sock,
+        bool discard,
         size_t targetSize,
         IoRecvFromCtx::OkFn cbOk,
+        IoRecvFromCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
@@ -390,6 +419,7 @@ public:
         void const * data,
         size_t size,
         IoSendToCtx::OkFn cbOk,
+        IoSendToCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoSendToCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1

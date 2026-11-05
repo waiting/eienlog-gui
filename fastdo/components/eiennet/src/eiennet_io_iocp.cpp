@@ -218,6 +218,7 @@ bool _PostRecv( IoService * serv, IoRecvCtx * ctx );
 bool _PostSend( IoService * serv, IoSendCtx * ctx );
 bool _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx );
 bool _PostSendTo( IoService * serv, IoSendToCtx * ctx );
+bool _PostTimer( IoService * serv, IoTimerCtx * ctx );
 
 // IOCP工作函数 --------------------------------------------------------------------------------
 void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData & ioEvents, bool * stop )
@@ -228,13 +229,12 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
 
     while ( !*stop )
     {
-        ioEvents._handleIoCtxsPost();
-
         DWORD bytesTransferred;
         ULONG_PTR key;
         SetLastError(0);
         b = GetQueuedCompletionStatus( ioEvents._iocp.get(), &bytesTransferred, &key, &ol, INFINITE );
         err = GetLastError();
+        ioEvents._handleIoCtxsPost();
         if ( ol )
         {
             IoCtx * ioCtx = CONTAINING_RECORD( ol, IoCtx, ol );
@@ -332,14 +332,14 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                             if ( recvCtx->cnnAvail )
                             {
                                 recvCtx->hadBytes += bytesTransferred;
-                                recvCtx->data._setSize(recvCtx->hadBytes);
+                                if ( !recvCtx->discard ) recvCtx->data._setSize(recvCtx->hadBytes);
                             }
 
                             if ( recvCtx->hadBytes >= recvCtx->targetBytes || !recvCtx->cnnAvail )
                             {
                                 if ( recvCtx->cnnAvail ) // 连接有效
                                 {
-                                    // 处理回调
+                                    // 处理成功回调
                                     if ( recvCtx->cbOk )
                                     {
                                         recvCtx->cbOk( recvCtx->sock, recvCtx->data );
@@ -347,8 +347,11 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 }
                                 else // 连接无效
                                 {
-                                    // 处理关闭事件
-                                    recvCtx->sock->onClose(recvCtx->sock);
+                                    // 处理失败回调
+                                    if ( recvCtx->cbFail )
+                                    {
+                                        recvCtx->cbFail( recvCtx->sock, recvCtx );
+                                    }
                                 }
 
                                 // 已处理，完成这个请求
@@ -368,7 +371,6 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
 
                             // 因为是完成端口，不用手动发送
 
-                            //sendCtx->cnnAvail = true;
                             sendCtx->costTimeMs += winux::GetUtcTimeMs() - sendCtx->startTime;
 
                             if ( sendCtx->hadBytes < sendCtx->data.size() )
@@ -380,15 +382,15 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 }
                                 else
                                 {
-                                    sendCtx->cnnAvail = false;
+                                    sendCtx->sendOk = false;
                                 }
                             }
 
-                            if ( sendCtx->hadBytes >= sendCtx->data.size() || !sendCtx->cnnAvail )
+                            if ( sendCtx->hadBytes >= sendCtx->data.size() || !sendCtx->sendOk )
                             {
-                                if ( sendCtx->cnnAvail )
+                                if ( sendCtx->sendOk )
                                 {
-                                    // 处理回调
+                                    // 处理成功回调
                                     if ( sendCtx->cbOk )
                                     {
                                         sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs );
@@ -396,6 +398,11 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 }
                                 else
                                 {
+                                    // 处理失败回调
+                                    if ( sendCtx->cbFail )
+                                    {
+                                        sendCtx->cbFail( sendCtx->sock, sendCtx );
+                                    }
                                 }
 
                                 // 已处理，完成这个请求
@@ -419,15 +426,26 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                             if ( ok )
                             {
                                 recvFromCtx->hadBytes += bytesTransferred;
-                                recvFromCtx->data._setSize(recvFromCtx->hadBytes);
+                                if ( !recvFromCtx->discard ) recvFromCtx->data._setSize(recvFromCtx->hadBytes);
                             }
 
                             if ( recvFromCtx->hadBytes >= recvFromCtx->targetBytes || !ok )
                             {
-                                // 处理回调
-                                if ( recvFromCtx->cbOk )
+                                if ( ok )
                                 {
-                                    recvFromCtx->cbOk( recvFromCtx->sock, recvFromCtx->data, recvFromCtx->epFrom );
+                                    // 处理成功回调
+                                    if ( recvFromCtx->cbOk )
+                                    {
+                                        recvFromCtx->cbOk( recvFromCtx->sock, recvFromCtx->data, recvFromCtx->epFrom );
+                                    }
+                                }
+                                else
+                                {
+                                    // 处理失败回调
+                                    if ( recvFromCtx->cbFail )
+                                    {
+                                        recvFromCtx->cbFail( recvFromCtx->sock, recvFromCtx );
+                                    }
                                 }
 
                                 // 已处理，完成这个请求
@@ -465,10 +483,21 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
 
                             if ( sendToCtx->hadBytes >= sendToCtx->data.size() || !ok )
                             {
-                                // 处理回调
-                                if ( sendToCtx->cbOk )
+                                if ( ok )
                                 {
-                                    sendToCtx->cbOk( sendToCtx->sock, sendToCtx->data, sendToCtx->hadBytes, sendToCtx->costTimeMs );
+                                    // 处理成功回调
+                                    if ( sendToCtx->cbOk )
+                                    {
+                                        sendToCtx->cbOk( sendToCtx->sock, sendToCtx->data, sendToCtx->hadBytes, sendToCtx->costTimeMs );
+                                    }
+                                }
+                                else
+                                {
+                                    // 处理失败回调
+                                    if ( sendToCtx->cbFail )
+                                    {
+                                        sendToCtx->cbFail( sendToCtx->sock, sendToCtx );
+                                    }
                                 }
 
                                 // 已处理，完成这个请求
@@ -518,8 +547,11 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                     recvCtx->cnnAvail = false;
                                     recvCtx->data.free();
 
-                                    // 处理关闭事件
-                                    recvCtx->sock->onClose(recvCtx->sock);
+                                    // 处理失败回调
+                                    if ( recvCtx->cbFail )
+                                    {
+                                        recvCtx->cbFail( recvCtx->sock, recvCtx );
+                                    }
 
                                     // 已处理，完成这个请求
                                     recvCtx->changeState(stateFinish);
@@ -529,18 +561,18 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                         case ioSend:
                             {
                                 auto * sendCtx = dynamic_cast<IoSendCtx *>(ioCtx);
-                                if ( sendCtx->cnnAvail )
+                                if ( sendCtx->sendOk )
                                 {
                                     _IoSocketCtxClearTimerCtx(sendCtx);
 
-                                    sendCtx->cnnAvail = false;
+                                    sendCtx->sendOk = false;
                                     sendCtx->costTimeMs += winux::GetUtcTimeMs() - sendCtx->startTime;
 
-                                    // 处理回调
-                                    // if ( sendCtx->cbOk )
-                                    // {
-                                    //     sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
-                                    // }
+                                    // 处理失败回调
+                                    if ( sendCtx->cbFail )
+                                    {
+                                        sendCtx->cbFail( sendCtx->sock, sendCtx );
+                                    }
 
                                     // 已处理，完成这个请求
                                     sendCtx->changeState(stateFinish);
@@ -550,11 +582,14 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                         }
                         break;
                     }
+
                 }
-                else // 其他错误
+                else // 其他错误 err != ERROR_OPERATION_ABORTED
                 {
-                    winux::ColorOutputLine( winux::fgRed, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
+                    winux::ColorOutputLine( winux::fgRed, "[tid:", winux::GetTid(), "] transferred=", bytesTransferred, ", key=", key, ", type=", ioCtx->type, ", weight=", thread ? (winux::ssize_t)thread->getWeight() : -1, ", err=", err );
+
                     ioCtx->changeState(stateError);
+
                     switch ( ioCtx->type )
                     {
                     case ioRecv:
@@ -567,8 +602,11 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                                 recvCtx->cnnAvail = false;
                                 recvCtx->data.free();
 
-                                // 处理关闭事件
-                                recvCtx->sock->onClose(recvCtx->sock);
+                                // 处理失败回调
+                                if ( recvCtx->cbFail )
+                                {
+                                    recvCtx->cbFail( recvCtx->sock, recvCtx );
+                                }
 
                                 // 已处理，完成这个请求
                                 recvCtx->changeState(stateFinish);
@@ -578,18 +616,18 @@ void _IocpWorkerFunc( IoService * serv, IoServiceThread * thread, IoEventsData &
                     case ioSend:
                         {
                             auto * sendCtx = dynamic_cast<IoSendCtx *>(ioCtx);
-                            if ( sendCtx->cnnAvail )
+                            if ( sendCtx->sendOk )
                             {
                                 _IoSocketCtxClearTimerCtx(sendCtx);
 
-                                sendCtx->cnnAvail = false;
+                                sendCtx->sendOk = false;
                                 sendCtx->costTimeMs += winux::GetUtcTimeMs() - sendCtx->startTime;
 
-                                // 处理回调
-                                // if ( sendCtx->cbOk )
-                                // {
-                                //     sendCtx->cbOk( sendCtx->sock, sendCtx->data, sendCtx->hadBytes, sendCtx->costTimeMs, sendCtx->cnnAvail );
-                                // }
+                                // 处理失败回调
+                                if ( sendCtx->cbFail )
+                                {
+                                    sendCtx->cbFail( sendCtx->sock, sendCtx );
+                                }
 
                                 // 已处理，完成这个请求
                                 sendCtx->changeState(stateFinish);
@@ -926,6 +964,8 @@ void IoEventsData::post( IoCtx * ioCtx )
                     existingCtx->cancel(cancelProactive);
 
                     ioVec.push_back(ioCtx);
+
+                    this->_sockIoCount++;
                 }
                 else // 未存在此类型的IoCtx
                 {
@@ -1153,8 +1193,16 @@ bool _PostRecv( IoService * serv, IoRecvCtx * ctx )
     DWORD dwBytes = 0;
     DWORD flag = 0;
 
-    ctx->wsabuf.len = (ULONG)( ctx->data.capacity() - ctx->hadBytes );
-    ctx->wsabuf.buf = ctx->data.getAt<CHAR>(ctx->hadBytes);
+    if ( !ctx->discard )
+    {
+        ctx->wsabuf.len = (ULONG)( ctx->data.capacity() - ctx->hadBytes );
+        ctx->wsabuf.buf = ctx->data.getAt<CHAR>(ctx->hadBytes);
+    }
+    else
+    {
+        ctx->wsabuf.len = (ULONG)ctx->data.capacity();
+        ctx->wsabuf.buf = ctx->data.get<CHAR>();
+    }
 
     IoEventsData & ioEvents = ctx->sock->getThread() ? ctx->sock->getThread<IoServiceThread>()->_ioEvents : serv->_ioEvents;
 
@@ -1193,7 +1241,7 @@ bool _PostRecv( IoService * serv, IoRecvCtx * ctx )
     return true;
 }
 
-void IoService::postRecv( SocketSharedPtr sock, size_t targetSize, IoRecvCtx::OkFn cbOk, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
+void IoService::postRecv( SocketSharedPtr sock, bool discard, size_t targetSize, IoRecvCtx::OkFn cbOk, IoRecvCtx::FailFn cbFail, winux::uint64 timeoutMs, IoRecvCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
     if ( !this->associate( sock, th ) ) return;
 
@@ -1201,10 +1249,12 @@ void IoService::postRecv( SocketSharedPtr sock, size_t targetSize, IoRecvCtx::Ok
     ctx->timeoutMs = timeoutMs;
     ctx->sock = sock;
     ctx->cbOk = cbOk;
+    ctx->cbFail = cbFail;
     ctx->cbTimeout = cbTimeout;
     ctx->targetBytes = targetSize;
+    ctx->discard = discard;
 
-    if ( ctx->targetBytes > 0 )
+    if ( ctx->targetBytes > 0 && !ctx->discard )
     {
         ctx->data.alloc( ctx->targetBytes, false );
     }
@@ -1275,7 +1325,7 @@ bool _PostSend( IoService * serv, IoSendCtx * ctx )
     return true;
 }
 
-void IoService::postSend( SocketSharedPtr sock, void const * data, size_t size, IoSendCtx::OkFn cbOk, winux::uint64 timeoutMs, IoSendCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
+void IoService::postSend( SocketSharedPtr sock, void const * data, size_t size, IoSendCtx::OkFn cbOk, IoSendCtx::FailFn cbFail, winux::uint64 timeoutMs, IoSendCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
     if ( !this->associate( sock, th ) ) return;
 
@@ -1283,6 +1333,7 @@ void IoService::postSend( SocketSharedPtr sock, void const * data, size_t size, 
     ctx->timeoutMs = timeoutMs;
     ctx->sock = sock;
     ctx->cbOk = cbOk;
+    ctx->cbFail = cbFail;
     ctx->cbTimeout = cbTimeout;
     ctx->data.setBuf( data, size, false );
 
@@ -1308,8 +1359,16 @@ bool _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx )
     DWORD dwBytes = 0;
     DWORD flag = 0;
 
-    ctx->wsabuf.len = (ULONG)( ctx->data.capacity() - ctx->hadBytes );
-    ctx->wsabuf.buf = ctx->data.getAt<CHAR>(ctx->hadBytes);
+    if ( !ctx->discard )
+    {
+        ctx->wsabuf.len = (ULONG)( ctx->data.capacity() - ctx->hadBytes );
+        ctx->wsabuf.buf = ctx->data.getAt<CHAR>(ctx->hadBytes);
+    }
+    else
+    {
+        ctx->wsabuf.len = (ULONG)ctx->data.capacity();
+        ctx->wsabuf.buf = ctx->data.get<CHAR>();
+    }
 
     IoEventsData & ioEvents = ctx->sock->getThread() ? ctx->sock->getThread<IoServiceThread>()->_ioEvents : serv->_ioEvents;
 
@@ -1350,7 +1409,7 @@ bool _PostRecvFrom( IoService * serv, IoRecvFromCtx * ctx )
     return true;
 }
 
-void IoService::postRecvFrom( SocketSharedPtr sock, size_t targetSize, IoRecvFromCtx::OkFn cbOk, winux::uint64 timeoutMs, IoRecvFromCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
+void IoService::postRecvFrom( SocketSharedPtr sock, bool discard, size_t targetSize, IoRecvFromCtx::OkFn cbOk, IoRecvFromCtx::FailFn cbFail, winux::uint64 timeoutMs, IoRecvFromCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
     if ( !this->associate( sock, th ) ) return;
 
@@ -1358,10 +1417,12 @@ void IoService::postRecvFrom( SocketSharedPtr sock, size_t targetSize, IoRecvFro
     ctx->timeoutMs = timeoutMs;
     ctx->sock = sock;
     ctx->cbOk = cbOk;
+    ctx->cbFail = cbFail;
     ctx->cbTimeout = cbTimeout;
     ctx->targetBytes = targetSize;
+    ctx->discard = discard;
 
-    if ( ctx->targetBytes > 0 )
+    if ( ctx->targetBytes > 0 && !ctx->discard )
     {
         ctx->data.alloc( ctx->targetBytes, false );
     }
@@ -1434,7 +1495,7 @@ bool _PostSendTo( IoService * serv, IoSendToCtx * ctx )
     return true;
 }
 
-void IoService::postSendTo( SocketSharedPtr sock, eiennet::EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFn cbOk, winux::uint64 timeoutMs, IoSendToCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
+void IoService::postSendTo( SocketSharedPtr sock, eiennet::EndPoint const & ep, void const * data, size_t size, IoSendToCtx::OkFn cbOk, IoSendToCtx::FailFn cbFail, winux::uint64 timeoutMs, IoSendToCtx::TimeoutFn cbTimeout, io::IoServiceThread * th )
 {
     if ( !this->associate( sock, th ) ) return;
 
@@ -1442,6 +1503,7 @@ void IoService::postSendTo( SocketSharedPtr sock, eiennet::EndPoint const & ep, 
     ctx->timeoutMs = timeoutMs;
     ctx->sock = sock;
     ctx->cbOk = cbOk;
+    ctx->cbFail = cbFail;
     ctx->cbTimeout = cbTimeout;
     ctx->data.setBuf( data, size, false );
     ctx->epTo.attachNew( ep.clone() );
@@ -1471,7 +1533,7 @@ void IoService::postTimer( TimerSharedPtr timer, winux::uint64 timeoutMs, bool p
         timer->_posted = false;
         if ( timer->_timerCtx )
         {
-            timerCtx = static_cast<IoTimerCtx*>(timer->_timerCtx);
+            timerCtx = static_cast<IoTimerCtx *>(timer->_timerCtx);
         }
         else
         {
@@ -1527,8 +1589,9 @@ void IoService::removeSock( SocketSharedPtr sock )
     auto itVecStruct = ioVecMap.find( sock->get() );
     if ( itVecStruct != ioVecMap.end() )
     {
-        for ( auto * ioCtx : itVecStruct->second.ctxs )
+        for ( auto it = itVecStruct->second.ctxs.begin(); it != itVecStruct->second.ctxs.end(); it++ )
         {
+            auto * ioCtx = *it;
             auto * ctx = dynamic_cast<IoSocketCtx *>(ioCtx);
             _IoSocketCtxClearTimerCtx(ctx);
             ioCtx->cancel(cancelRemove);
@@ -1546,7 +1609,19 @@ bool IoService::associate( SocketSharedPtr sock, io::IoServiceThread * th )
         if ( th1 != nullptr )
         {
             th1->incWeight(); // 增加线程负载权重
-            return th1->_ioEvents._iocp.associate( (HANDLE)(INT_PTR)sock->get(), sock->get() );
+            th1->_ioEvents._iocp.associate( (HANDLE)(INT_PTR)sock->get(), sock->get() );
+        }
+        else // th1 == nullptr
+        {
+            this->_ioEvents._iocp.associate( (HANDLE)(INT_PTR)sock->get(), sock->get() );
+        }
+    }
+    else
+    {
+        auto * th1 = static_cast<IoServiceThread *>( sock->getThread() );
+        if ( th1 != nullptr )
+        {
+            th1->_ioEvents._iocp.associate( (HANDLE)(INT_PTR)sock->get(), sock->get() );
         }
         else // th1 == nullptr
         {

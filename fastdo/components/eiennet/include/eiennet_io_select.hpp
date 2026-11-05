@@ -341,8 +341,10 @@ public:
     ) override;
     virtual void postRecv(
         SocketSharedPtr sock,
+        bool discard,
         size_t targetSize,
         IoRecvCtx::OkFn cbOk,
+        IoRecvCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoRecvCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
@@ -352,14 +354,17 @@ public:
         void const * data,
         size_t size,
         IoSendCtx::OkFn cbOk,
+        IoSendCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoSendCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
     ) override;
     virtual void postRecvFrom(
         SocketSharedPtr sock,
+        bool discard,
         size_t targetSize,
         IoRecvFromCtx::OkFn cbOk,
+        IoRecvFromCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1
@@ -370,6 +375,7 @@ public:
         void const * data,
         size_t size,
         IoSendToCtx::OkFn cbOk,
+        IoSendToCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoSendToCtx::TimeoutFn cbTimeout = nullptr,
         io::IoServiceThread * th = (io::IoServiceThread *)-1

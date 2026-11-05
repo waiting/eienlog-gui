@@ -163,18 +163,21 @@ protected:
 struct IoRecvCtx : IoSocketCtx
 {
     using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data ) >;
+    using FailFn = std::function< void ( SocketSharedPtr sock, IoRecvCtx * ctx ) >;
     using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoRecvCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
+    FailFn cbFail; //!< 失败回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
 
     size_t hadBytes;        //!< 已接收数据量
     size_t targetBytes;     //!< 目标数据量
     winux::GrowBuffer data; //!< 已接收的数据
     bool cnnAvail; //!< 连接是否有效
+    bool discard; //!< 丢弃数据不接收
 
 protected:
-    IoRecvCtx() : hadBytes(0), targetBytes(0), cnnAvail(true)
+    IoRecvCtx() : hadBytes(0), targetBytes(0), cnnAvail(true), discard(false)
     {
         this->type = ioRecv;
     }
@@ -185,18 +188,20 @@ protected:
 struct IoSendCtx : IoSocketCtx
 {
     using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, size_t hadBytes, winux::uint64 costTimeMs ) >;
+    using FailFn = std::function< void ( SocketSharedPtr sock, IoSendCtx * ctx ) >;
     using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoSendCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
+    FailFn cbFail; //!< 失败回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
 
     size_t hadBytes;    //!< 已发送数据量
     winux::uint64 costTimeMs; //!< 总花费时间
     winux::Buffer data; //!< 待发送的数据
-    bool cnnAvail; //!< 连接是否有效
+    bool sendOk; //!< 连接是否有效
 
 protected:
-    IoSendCtx() : hadBytes(0), costTimeMs(0), cnnAvail(true)
+    IoSendCtx() : hadBytes(0), costTimeMs(0), sendOk(true)
     {
         this->type = ioSend;
     }
@@ -207,18 +212,21 @@ protected:
 struct IoRecvFromCtx : IoSocketCtx
 {
     using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, eiennet::EndPoint const & ep ) >;
+    using FailFn = std::function< void ( SocketSharedPtr sock, IoRecvFromCtx * ctx ) >;
     using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoRecvFromCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
+    FailFn cbFail; //!< 失败回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
 
     size_t hadBytes;        //!< 已接收数据量
     size_t targetBytes;     //!< 目标数据量
     winux::GrowBuffer data; //!< 已接收的数据
     eiennet::ip::EndPoint epFrom;    //!< 数据来自的EP
+    bool discard; //!< 丢弃数据不接收
 
 protected:
-    IoRecvFromCtx() : hadBytes(0), targetBytes(0)
+    IoRecvFromCtx() : hadBytes(0), targetBytes(0), discard(false)
     {
         this->type = ioRecvFrom;
     }
@@ -229,9 +237,11 @@ protected:
 struct IoSendToCtx : IoSocketCtx
 {
     using OkFn = std::function< void ( SocketSharedPtr sock, winux::Buffer & data, size_t hadBytes, winux::uint64 costTimeMs ) >;
+    using FailFn = std::function< void ( SocketSharedPtr sock, IoSendToCtx * ctx ) >;
     using TimeoutFn = std::function< void ( SocketSharedPtr sock, IoSendToCtx * ctx ) >;
 
     OkFn cbOk; //!< 成功回调函数
+    FailFn cbFail; //!< 失败回调函数
     TimeoutFn cbTimeout; //!< 超时回调函数
 
     size_t hadBytes;    //!< 已发送数据量
@@ -345,8 +355,10 @@ public:
     ) = 0;
     virtual void postRecv(
         SocketSharedPtr sock,
+        bool discard,
         size_t targetSize,
         IoRecvCtx::OkFn cbOk,
+        IoRecvCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoRecvCtx::TimeoutFn cbTimeout = nullptr,
         IoServiceThread * th = (IoServiceThread *)-1
@@ -356,14 +368,17 @@ public:
         void const * data,
         size_t size,
         IoSendCtx::OkFn cbOk,
+        IoSendCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoSendCtx::TimeoutFn cbTimeout = nullptr,
         IoServiceThread * th = (IoServiceThread *)-1
     ) = 0;
     virtual void postRecvFrom(
         SocketSharedPtr sock,
+        bool discard,
         size_t targetSize,
         IoRecvFromCtx::OkFn cbOk,
+        IoRecvFromCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoRecvFromCtx::TimeoutFn cbTimeout = nullptr,
         IoServiceThread * th = (IoServiceThread *)-1
@@ -374,6 +389,7 @@ public:
         void const * data,
         size_t size,
         IoSendToCtx::OkFn cbOk,
+        IoSendToCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
         IoSendToCtx::TimeoutFn cbTimeout = nullptr,
         IoServiceThread * th = (IoServiceThread *)-1
@@ -442,3 +458,4 @@ protected:
 
 
 #endif // __EIENNET_IO_HPP__
+

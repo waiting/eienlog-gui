@@ -506,6 +506,9 @@ public:
     /** \brief 判断Socket是否有效 */
     operator bool() const { return this->get() > -1; }
 
+    /** \brief 分辩套接字的提示内容 */
+    virtual winux::String prompt() const;
+
     // static ---------------------------------------------------------------------------------
 
     /** \brief 从errno获取错误码 */

@@ -1292,6 +1292,11 @@ int Socket::get() const
     return this->_sock;
 }
 
+winux::String Socket::prompt() const
+{
+    return winux::Format( $T("sock-%d"), this->_sock );
+}
+
 int Socket::ErrNo()
 {
     return socket_errno;
