@@ -530,9 +530,9 @@ protected:
         this->_attrSendBufSize = 0;
         this->_attrRecvBufSize = 0;
     #if defined(OS_WIN)
-        this->_attrIpv6Only = true;   // IPV6套接字只开启IPV6功能
+        this->_attrIpv6Only = true;
     #else
-        this->_attrIpv6Only = false;  // IPV6套接字只开启IPV6功能
+        this->_attrIpv6Only = false;
     #endif
 
         this->_resetManaged();

@@ -215,6 +215,8 @@ public:
 
 private:
     ClientCtx * _clientCtx;
+
+    friend class Server;
 };
 
 class ServerSocket;
@@ -254,10 +256,11 @@ public:
     virtual ~ClientCtx();
 
     winux::String getStamp() const;
+    ClientSocketSharedPtr lockSocket() const;
 
     Server * server;
     eiennet::ip::EndPoint clientEp;
-    ClientSocketSharedPtr clientSock;
+    winux::WeakPointer<ClientSocket> _weakClientSock;
 };
 
 /** \brief 基础服务器类 */
@@ -288,12 +291,12 @@ public:
 
     virtual int run()
     {
-        return this->_service->run();
+        return this->_service ? this->_service->run() : 0;
     }
 
     void stop()
     {
-        this->_service->stop();
+        if ( this->_service ) this->_service->stop();
     }
 
     // 当创建客户连接对象
@@ -337,7 +340,7 @@ private:
 
 // class ClientSocket implements --------------------------------------------------------------
 inline ClientSocket::ClientSocket( ClientCtx * clientCtx, int sock, bool isNewSock ) :
-    Socket( *clientCtx->server->_service.get(), sock, isNewSock ),
+    Socket( clientCtx->server->_service.get(), sock, isNewSock ),
     _clientCtx(clientCtx)
 {
 
@@ -345,14 +348,14 @@ inline ClientSocket::ClientSocket( ClientCtx * clientCtx, int sock, bool isNewSo
 
 // class ServerSocket implements --------------------------------------------------------------
 inline ServerSocket::ServerSocket( Server * server ) :
-    Socket( *server->_service.get(), Socket::afInet, Socket::sockStream, Socket::protoUnspec ),
+    Socket( server->_service.get(), Socket::afInet, Socket::sockStream, Socket::protoUnspec ),
     _server(server)
 {
 
 }
 
 inline ServerSocket::ServerSocket( Server * server, int sock, bool isNewSock ) :
-    Socket( *server->_service.get(), sock, isNewSock ),
+    Socket( server->_service.get(), sock, isNewSock ),
     _server(server)
 {
 }

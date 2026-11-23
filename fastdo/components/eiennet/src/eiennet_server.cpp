@@ -540,7 +540,6 @@ namespace async
 // class ClientCtx ----------------------------------------------------------------------------
 ClientCtx::ClientCtx( Server * server, int sock, bool isNewSock ) : server(server)
 {
-    this->clientSock = ClientSocket::New( this, sock, isNewSock );
 }
 
 ClientCtx::~ClientCtx()
@@ -556,12 +555,19 @@ ClientCtx::~ClientCtx()
 winux::String ClientCtx::getStamp() const
 {
     winux::String stamp, clientId;
-    clientId = winux::Format( "%p", this );
-    clientId = clientId.substr( clientId.length() - 6 );
+    //clientId = winux::Format( "%p", this );
+    //clientId = clientId.substr( clientId.length() - 6 );
+    auto clientSock = this->lockSocket();
+    if ( clientSock ) clientId += winux::Format( "-%d", clientSock->get() );
     winux::StringWriter(&stamp)
         << "{tid:" << winux::GetTid() << "}" 
-        << "[client-" << clientId << "]<" << this->clientEp.toString() << ">";
+        << "[client" << clientId << "]<" << this->clientEp.toString() << ">";
     return stamp;
+}
+
+ClientSocketSharedPtr ClientCtx::lockSocket() const
+{
+    return this->_weakClientSock.lock();
 }
 
 // class Server -------------------------------------------------------------------------------
@@ -598,6 +604,12 @@ bool Server::init(
     this->_verbose = verbose;
     this->_logViewer = logViewer;
 
+    if ( !this->_logViewer.empty() )
+    {
+        ip::EndPoint ep(this->_logViewer);
+        eienlog::EnableLog( ep.getIp(), ep.getPort() );
+    }
+
     if ( servSockFd < 0 ) // 创建新servSock
     {
         this->_servSock = ServerSocket::New(this);
@@ -624,6 +636,7 @@ bool Server::init(
             if ( this->_verbose ) eienlog::VerboseOutput(
                 this->_verbose,
                 eienlog::vcaFgGreen | eienlog::vcaBgIgnore,
+                "{tid:", winux::GetTid(), "}",
                 "Server startup success",
                 ", ep=", ep.toString(),
                 ", threads=", threadCount,
@@ -646,32 +659,35 @@ bool Server::init(
     } );
 
     // 客户套接字如何创建
-    this->_servSock->onCreateClientHandler( [this] ( io::IoService & serv, int sock, bool isNewSock ) -> SocketSharedPtr {
+    this->_servSock->onCreateClientHandler( [this] ( io::IoService * serv, int sock, bool isNewSock ) -> SocketSharedPtr {
         auto * clientCtx = this->onCreateClient( this, sock, isNewSock );
-        return winux::MakeShared( clientCtx->clientSock.get(), [] ( ClientSocket * p ) {
-            delete p->getClientCtx();
-        } );
+        auto clientSock = winux::MakeShared(
+            new ClientSocket( clientCtx, sock, isNewSock ),
+            [] ( ClientSocket * p ) {
+                delete p->getClientCtx();
+                delete p;
+            }
+        );
+        clientCtx->_weakClientSock = clientSock;
+        return clientSock;
     } );
 
     // 投递Accept IO
-    if ( this->_service->getModel() == io::modelIocp && this->_service->getThreadCount() > 0 )
+    size_t postAcceptCount;
+    postAcceptCount = this->_service->getModel() == io::modelIocp ? this->_service->getThreadCount() : 1;
+    postAcceptCount = postAcceptCount > 0 ? postAcceptCount : 1;
+    for ( size_t i = 0; i < postAcceptCount; i++ )
     {
-        for ( size_t i = 0; i < this->_service->getThreadCount(); i++ )
-        {
-            this->_servSock->acceptAsync( [this] ( SocketSharedPtr servSock, SocketSharedPtr clientSock, eiennet::ip::EndPoint const & ep ) {
-                return this->onAccept( servSock.ensureCast<ServerSocket>()->getServer(), clientSock.ensureCast<ClientSocket>()->getClientCtx(), ep );
-            } );
-        }
-    }
-    else
-    {
-        this->_servSock->acceptAsync( [this] ( SocketSharedPtr servSock, SocketSharedPtr clientSock, eiennet::ip::EndPoint const & ep ) {
-            return this->onAccept( servSock.ensureCast<ServerSocket>()->getServer(), clientSock.ensureCast<ClientSocket>()->getClientCtx(), ep );
+        _servSock->acceptAsync( [this] ( SocketSharedPtr servSock, SocketSharedPtr sock, ip::EndPoint const & ep ) -> bool {
+            auto * server = servSock.ensureCast<ServerSocket>()->getServer();
+            auto clientSock = sock.ensureCast<ClientSocket>();
+            clientSock->getClientCtx()->clientEp = ep;
+            return this->onAccept( server, clientSock->getClientCtx(), ep );
         } );
     }
 
     // 显示信息
-    if ( this->_infoInterval >= 0.0 ) eiennet::async::Timer::New(this->_service)->waitAsyncEx(
+    if ( this->_infoInterval >= 0.0 ) eiennet::async::Timer::New( this->_service.get() )->waitAsyncEx(
         winux::uint64(this->_infoInterval * 1000),
         true,
         [this] ( TimerSharedPtr timer, io::IoTimerCtx * ctx ) {

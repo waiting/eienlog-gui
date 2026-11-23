@@ -1320,7 +1320,14 @@ inline SharedPointer<_Ty> MakeSharedNew( _ArgType&& ... arg )
     return SharedPointer<_Ty>( new _Ty( std::forward<_ArgType>(arg)... ) );
 }
 
+#define FRIEND_MAKE_SMARTPTR_NEW \
+template < typename _HTy > friend class SharedDefaultDeleterContext; \
+template < typename _Ty, typename... _ArgType > friend winux::SharedPointer<_Ty> winux::MakeSharedNew( _ArgType&& ... arg ); \
+template < typename _HTy > friend class SimpleDefaultDeleterContext; \
+template < typename _Ty, typename... _ArgType > friend winux::SimplePointer<_Ty> winux::MakeSimpleNew( _ArgType&& ... arg )
 
 } // namespace winux
 
+
 #endif // __SMARTPTR_HPP__
+

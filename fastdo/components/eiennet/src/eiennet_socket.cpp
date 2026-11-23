@@ -512,12 +512,8 @@ bool Socket::_tryCreate( AddrFamily af, bool hasAf, SockType sockType, bool hasS
 
 int Socket::detach() noexcept
 {
-    int sock = -1;
-    if ( this->_isNewSock )
-    {
-        sock = this->_sock;
-        this->_resetManaged();
-    }
+    int sock = this->_sock;
+    this->_resetManaged();
     return sock;
 }
 
@@ -527,8 +523,8 @@ int Socket::close() noexcept
     if ( this->_isNewSock )
     {
         rc = closesocket(this->_sock);
-        this->_resetManaged();
     }
+    this->_resetManaged();
     return rc;
 }
 

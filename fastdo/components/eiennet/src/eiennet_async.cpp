@@ -15,12 +15,12 @@ namespace eiennet
 namespace async
 {
 // class Socket -------------------------------------------------------------------------------
-Socket::Socket( io::IoService & serv, int sock, bool isNewSock ) : eiennet::Socket( sock, isNewSock ), _serv(&serv), _data(nullptr), _thread(nullptr)
+Socket::Socket( io::IoService * serv, int sock, bool isNewSock ) : eiennet::Socket( sock, isNewSock ), _serv(serv), _data(nullptr), _thread(nullptr)
 {
     this->setBlocking(false);
 }
 
-Socket::Socket( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto ) : eiennet::Socket( af, sockType, proto ), _serv(&serv), _data(nullptr), _thread(nullptr)
+Socket::Socket( io::IoService * serv, AddrFamily af, SockType sockType, Protocol proto ) : eiennet::Socket( af, sockType, proto ), _serv(serv), _data(nullptr), _thread(nullptr)
 {
     this->setBlocking(false);
 }
@@ -31,7 +31,7 @@ Socket::~Socket()
     if ( this->_thread ) this->_thread->decWeight();
 }
 
-SocketSharedPtr Socket::onCreateClient( io::IoService & serv, int sock, bool isNewSock )
+SocketSharedPtr Socket::onCreateClient( io::IoService * serv, int sock, bool isNewSock )
 {
     if ( this->_CreateClientHandler )
     {
@@ -65,7 +65,7 @@ struct Timer_Data
 };
 
 // class Timer --------------------------------------------------------------------------------
-Timer::Timer( io::IoService & serv ) : _timerCtx(nullptr), _posted(false), _serv(&serv), _thread(nullptr)
+Timer::Timer( io::IoService * serv ) : _timerCtx(nullptr), _posted(false), _serv(serv), _thread(nullptr)
 {
     this->create();
 

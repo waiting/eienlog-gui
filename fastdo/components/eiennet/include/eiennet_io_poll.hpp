@@ -283,8 +283,7 @@ public:
     ) override;
     virtual void postSend(
         SocketSharedPtr sock,
-        void const * data,
-        size_t size,
+        winux::Buffer && data,
         IoSendCtx::OkFn cbOk,
         IoSendCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,
@@ -304,8 +303,7 @@ public:
     virtual void postSendTo(
         SocketSharedPtr sock,
         eiennet::EndPoint const & ep,
-        void const * data,
-        size_t size,
+        winux::Buffer && data,
         IoSendToCtx::OkFn cbOk,
         IoSendToCtx::FailFn cbFail = nullptr,
         winux::uint64 timeoutMs = -1,

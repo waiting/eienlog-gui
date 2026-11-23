@@ -15,30 +15,20 @@ class EIENNET_DLL Socket : public eiennet::Socket, public winux::EnableSharedFro
 {
 protected:
     /** \brief 构造函数1 */
-    explicit Socket( io::IoService & serv, int sock = -1, bool isNewSock = false );
+    explicit Socket( io::IoService * serv, int sock = -1, bool isNewSock = false );
 
     /** \brief 构造函数2 */
-    Socket( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto );
+    Socket( io::IoService * serv, AddrFamily af, SockType sockType, Protocol proto );
 
 public:
-    static SocketSharedPtr New( io::IoService & serv, int sock = -1, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoService * serv, int sock = -1, bool isNewSock = false )
     {
         return SocketSharedPtr( new Socket( serv, sock, isNewSock ) );
     }
 
-    static SocketSharedPtr New( io::IoService & serv, AddrFamily af, SockType sockType, Protocol proto )
+    static SocketSharedPtr New( io::IoService * serv, AddrFamily af, SockType sockType, Protocol proto )
     {
         return SocketSharedPtr( new Socket( serv, af, sockType, proto ) );
-    }
-
-    static SocketSharedPtr New( io::IoServiceSharedPtr serv, int sock = -1, bool isNewSock = false )
-    {
-        return SocketSharedPtr( new Socket( *serv.get(), sock, isNewSock ) );
-    }
-
-    static SocketSharedPtr New( io::IoServiceSharedPtr serv, AddrFamily af, SockType sockType, Protocol proto )
-    {
-        return SocketSharedPtr( new Socket( *serv.get(), af, sockType, proto ) );
     }
 
     virtual ~Socket();
@@ -46,7 +36,7 @@ public:
     SocketSharedPtr accept( EndPoint * ep = nullptr )
     {
         int sock;
-        return this->eiennet::Socket::accept( &sock, ep ) ? this->onCreateClient( *_serv, sock, true ) : SocketSharedPtr();
+        return this->eiennet::Socket::accept( &sock, ep ) ? this->onCreateClient( _serv, sock, true ) : SocketSharedPtr();
     }
 
     /** \brief 设置套接字关联数据 */
@@ -133,24 +123,17 @@ public:
 
     /** \brief 发送数据（异步） */
     template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
-    void sendAsync( void const * data, size_t size, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    void sendAsync( winux::Buffer && data, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
         this->_serv->postSend(
             this->sharedFromThis(),
-            data,
-            size,
+            std::move(data),
             winux::FuncWrap<io::IoSendCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
             winux::FuncWrap<io::IoSendCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
             timeoutMs,
             winux::FuncWrap<io::IoSendCtx::TimeoutFn>( std::forward<_Fx3>(cbTimeout) ),
             th
         );
-    }
-    /** \brief 发送数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
-    void sendAsync( winux::Buffer const & data, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
-    {
-        this->sendAsync( data.get(), data.size(), std::forward<_Fx1>(cbOk), std::forward<_Fx2>(cbFail), timeoutMs, std::forward<_Fx3>(cbTimeout), th );
     }
 
     /** \brief 无连接，接收直到指定大小的数据（异步） */
@@ -192,13 +175,12 @@ public:
 
     /** \brief 无连接，发送数据（异步） */
     template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
-    void sendToAsync( EndPoint const & ep, void const * data, size_t size, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
+    void sendToAsync( EndPoint const & ep, winux::Buffer && data, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
     {
         this->_serv->postSendTo(
             this->sharedFromThis(),
             ep,
-            data,
-            size,
+            std::move(data),
             winux::FuncWrap<io::IoSendToCtx::OkFn>( std::forward<_Fx1>(cbOk) ),
             winux::FuncWrap<io::IoSendToCtx::FailFn>( std::forward<_Fx2>(cbFail) ),
             timeoutMs,
@@ -206,18 +188,12 @@ public:
             th
         );
     }
-    /** \brief 无连接，发送数据（异步） */
-    template < typename _Fx1, typename _Fx2 = std::nullptr_t, typename _Fx3 = std::nullptr_t >
-    void sendToAsync( EndPoint const & ep, winux::Buffer const & data, _Fx1 && cbOk, _Fx2 && cbFail = nullptr, winux::uint64 timeoutMs = -1, _Fx3 && cbTimeout = nullptr, io::IoServiceThread * th = (io::IoServiceThread *)-1 )
-    {
-        this->sendToAsync( ep, data.get(), data.size(), std::forward<_Fx1>(cbOk), std::forward<_Fx2>(cbFail), timeoutMs, std::forward<_Fx3>(cbTimeout), th );
-    }
 
     /** \brief 错误事件处理 */
     DEFINE_CUSTOM_EVENT( Error, ( SocketSharedPtr sock ), (sock) )
 
     /** \brief 创建客户连接 */
-    DEFINE_CUSTOM_EVENT_RETURN_EX( SocketSharedPtr, CreateClient, ( io::IoService & serv, int sock, bool isNewSock ) );
+    DEFINE_CUSTOM_EVENT_RETURN_EX( SocketSharedPtr, CreateClient, ( io::IoService * serv, int sock, bool isNewSock ) );
 
 protected:
     io::IoService * _serv; // IO服务对象
@@ -230,17 +206,12 @@ protected:
 class EIENNET_DLL Timer : public winux::EnableSharedFromThis<Timer>
 {
 protected:
-    Timer( io::IoService & serv );
+    Timer( io::IoService * serv );
 
 public:
-    static TimerSharedPtr New( io::IoService & serv )
+    static TimerSharedPtr New( io::IoService * serv )
     {
         return TimerSharedPtr( new Timer(serv) );
-    }
-
-    static TimerSharedPtr New( io::IoServiceSharedPtr serv )
-    {
-        return TimerSharedPtr( new Timer( *serv.get() ) );
     }
 
     virtual ~Timer();
@@ -337,29 +308,19 @@ public:
     typedef eiennet::async::Socket BaseClass;
 
 protected:
-    Socket( io::IoService & serv, int sock, bool isNewSock = false ) : BaseClass( serv, sock, isNewSock ) { }
+    Socket( io::IoService * serv, int sock, bool isNewSock = false ) : BaseClass( serv, sock, isNewSock ) { }
 
-    explicit Socket( io::IoService & serv ) : BaseClass( serv, BaseClass::afInet, BaseClass::sockStream, BaseClass::protoUnspec ) { }
+    explicit Socket( io::IoService * serv ) : BaseClass( serv, BaseClass::afInet, BaseClass::sockStream, BaseClass::protoUnspec ) { }
 
 public:
-    static SocketSharedPtr New( io::IoService & serv, int sock, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoService * serv, int sock, bool isNewSock = false )
     {
         return SocketSharedPtr( new Socket( serv, sock, isNewSock ) );
     }
 
-    static SocketSharedPtr New( io::IoService & serv )
+    static SocketSharedPtr New( io::IoService * serv )
     {
         return SocketSharedPtr( new Socket(serv) );
-    }
-
-    static SocketSharedPtr New( io::IoServiceSharedPtr serv, int sock, bool isNewSock = false )
-    {
-        return SocketSharedPtr( new Socket( *serv.get(), sock, isNewSock ) );
-    }
-
-    static SocketSharedPtr New( io::IoServiceSharedPtr serv )
-    {
-        return SocketSharedPtr( new Socket( *serv.get() ) );
     }
 };
 
@@ -384,29 +345,19 @@ public:
     typedef eiennet::async::Socket BaseClass;
 
 protected:
-    Socket( io::IoService & serv, int sock, bool isNewSock = false ) : BaseClass( serv, sock, isNewSock ) { }
+    Socket( io::IoService * serv, int sock, bool isNewSock = false ) : BaseClass( serv, sock, isNewSock ) { }
 
-    explicit Socket( io::IoService & serv ) : BaseClass( serv, BaseClass::afInet, BaseClass::sockDatagram, BaseClass::protoUnspec ) { }
+    explicit Socket( io::IoService * serv ) : BaseClass( serv, BaseClass::afInet, BaseClass::sockDatagram, BaseClass::protoUnspec ) { }
 
 public:
-    static SocketSharedPtr New( io::IoService & serv, int sock, bool isNewSock = false )
+    static SocketSharedPtr New( io::IoService * serv, int sock, bool isNewSock = false )
     {
         return SocketSharedPtr( new Socket( serv, sock, isNewSock ) );
     }
 
-    static SocketSharedPtr New( io::IoService & serv )
+    static SocketSharedPtr New( io::IoService * serv )
     {
         return SocketSharedPtr( new Socket(serv) );
-    }
-
-    static SocketSharedPtr New( io::IoServiceSharedPtr serv, int sock, bool isNewSock = false )
-    {
-        return SocketSharedPtr( new Socket( *serv.get(), sock, isNewSock ) );
-    }
-
-    static SocketSharedPtr New( io::IoServiceSharedPtr serv )
-    {
-        return SocketSharedPtr( new Socket( *serv.get() ) );
     }
 };
 
